@@ -1,0 +1,98 @@
+RDFpro 1.0 - http://bitbucket.org/fracor/rdfpro (Public Domain software)
+
+Builds and runs an RDF processing pipeline composed of one or more processors,
+reading/writing compressed RDF data from/to FILEs or SPARQL endpoints.
+
+
+USAGE: rdfpro -v | -h | [-V] CMD    show version [-v], help [-h] or perform CMD
+
+CMD ::=
+  @p args1                          builtin processor (see below)
+  @p1 args1 ... @pN argsN           sequence composition
+  { @p1 args1 , ... , @pN argsN }M  parallel composition, merge criterion M
+
+M ::=
+  <none>  union of @p1 .. @pN outputs, keep duplicates (very fast)
+  u       union of @p1 .. @pN outputs, no duplicates (as with @union)
+  m       union of @p1 .. @pN outputs, no duplicates (as with @union -m)
+  i       intersection of @p1 .. @pN outputs, no duplicates (as with @union)
+  d       difference @p1 \ (union of @p2 .. @pN), no duplicates (as with @union)
+
+
+BUILTIN PROCESSORS:
+
+@read|@r        Read quads from files, augmenting the input stream
+  [-b BASE]     use BASE to resolve relative URIs (default: empty base)
+  [-w]          rewrites BNodes on a per-file basis to avoid clashes
+  FILE...       read from specified FILEs
+
+@write|@w       Writes quads to FILEs (round-robin) and emits them in output
+  FILE...       write to the specified FILEs
+
+@download|@d    Download quads from a SPARQL endpoint, augmenting the stream
+  [-q QUERY]    use specified SPARQL QUERY (use quoting!)
+  [-f FILE]     load SPARQL QUERY from FILE
+  [-w]          rewrite downloaded BNodes on a per-query basis
+  URL           use endpoint at URL
+
+@upload|@l      Uploads quads to a SPARQL endpoint and emits them in output
+  [-s SIZE]     use chunks of SIZE quads for each upload call (default: 1024)
+  URL           use endpoint at URL
+
+@filter|@f      Discards/replaces quads based on matching and replace exp.
+  [EXP]         use matching expression EXP to select quads in the input stream
+  [-k]          keep also unselected quads (default: drop them)
+  [-r EXP]      use replacement expression EXP to rewrite selected quads
+
+@infer|@i       Emits the RDFS closure of input quads
+  [-r RULES]    use only comma-separated list of RULES (default: all rules)
+  [-d]          decompose OWL axioms to RDFS (e.g. equivalentClass -> subClass)
+  [-C | -c URI] emits closed TBox to default graph [-C] or graph URI [-c]
+  [-b BASE][-w] use BASE and optional BNode rewriting [-w] to load TBox files
+  [FILE...]     load TBox from FILE... (default: extract from input stream)
+
+@smush|@s       Performs smushing, using a single URI for each sameAs cluster
+  [-s SIZE]     use table of SIZE bytes (default 128M) - increase if needed!
+  NAMESPACE...  use ranked NAMESPACEs to select canonical URIs
+
+@stats|@x       Emits VOID structural statistics for its input
+  [-n NS]       use namespace NS to mint URIs for VOID dataset instances
+  [-p URI]      create a dataset for graphs linked to a source via property URI
+  [-c URI]      look for graph-to-source quads in graph URI
+
+@tbox|@t        Emits only quads belonging to RDFS or OWL TBox axioms.
+
+@unique|@u      Discards duplicates in the input stream
+  [-m]          merges quads with same <s,p,o> and different graphs in a unique
+                quad, put in a graph described with quads of all source graphs
+
+@prefix|@p      Adds missing prefix-to-namespace bindings
+  [-f FILE]     use prefixes from FILE instead of prefix.cc
+
+
+FILTER SYNTAX:
+
+A MATCHING EXPRESSION is a sequence of TARGET RULE... blocks. TARGET is a string
+with zero or more letters s,p,o,c,t (t = class in rdf:type quad) to select quad
+components (default: all selected) and one or more letters u,b,l,@,^ to select
+URI, BNode, Literal, lit. language and lit. datatype of a component. RULE is
++EXP or -EXP, where expression EXP  is 'constant', "constant", <uri>, |regex|,
+prefix:name. Regex follow Java syntax and may contain capturing groups (...).
+Evaluation: for each quad component rules are selected (based on TARGET). Rules
+are evaluated in order. If a +EXP rule matches evaluation moves to the next
+component. A quad is accepted if no -EXP rule matches.
+
+A REPLACEMENT EXPRESSION is a sequence of TARGET EXP blocks. TARGET is defined
+as above. EXP is 'constant', "constant", <uri>, |pattern|, prefix:name. Patterns
+may contain \i references to matched groups (i = #group in whole matching exp.)
+Evaluation: for each quad component the first applicable EXP is selected (based
+on TARGET). If EXP exists it is evaluated and the quad component replaced.
+
+
+FORMATS AND COMPRESSION:
+
+RDF format and compression are detected based from the file extension or from a
+'prefix' explicitly supplied using syntax 'prefix:filename'
+
+RDF formats: rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf, geonames
+Compression schemes: gz, bz2, xz, 7z (need resp. gzip, bzip2, xz, 7za)

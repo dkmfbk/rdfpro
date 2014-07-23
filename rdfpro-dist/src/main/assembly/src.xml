@@ -1,0 +1,26 @@
+<assembly>
+  <id>src</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <baseDirectory>rdfp</baseDirectory>
+  <fileSets>
+    <fileSet>
+      <directory>..</directory>
+      <outputDirectory>/</outputDirectory>
+      <excludes>
+        <exclude>target/**</exclude>
+        <exclude>.settings/**</exclude>
+        <exclude>.checkstyle</exclude>
+        <exclude>.classpath</exclude>
+        <exclude>.project</exclude>
+        <exclude>*/target/**</exclude>
+        <exclude>*/.settings/**</exclude>
+        <exclude>*/.checkstyle</exclude>
+        <exclude>*/.classpath</exclude>
+        <exclude>*/.project</exclude>
+      </excludes>
+    </fileSet>
+  </fileSets>
+</assembly>

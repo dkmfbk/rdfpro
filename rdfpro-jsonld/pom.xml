@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<project
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>eu.fbk.rdfpro</groupId>
+    <artifactId>rdfpro</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <groupId>eu.fbk.rdfpro</groupId>
+  <artifactId>rdfpro-jsonld</artifactId>
+  <packaging>jar</packaging>
+
+  <name>rdfpro-jsonld</name>
+  <description>
+    Parser and writer for RDF in JSON-LD format. JSON-LD is a JSON-based
+    format for serializing data in (a superset of) RDF as JSON and
+    interpreting JSON contents as RDF. See http://www.w3.org/TR/json-ld/
+    for the format specification.
+  </description>
+  <url>http://www.fbk.eu</url>
+
+  <!--
+  <scm>
+    <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</connection>
+    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</url>
+  </scm>
+  -->
+
+  <distributionManagement>
+    <site>
+      <id>siterdfpro</id>
+      <url>${site-path}/rdfpro-core/</url>
+    </site>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-model</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-rio-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.semarglproject</groupId>
+      <artifactId>semargl-jsonld</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <properties>
+    <parent-path>..</parent-path>
+  </properties>
+
+</project>

@@ -1,0 +1,67 @@
+/*
+ * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
+ * 
+ * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
+ * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * 
+ * To the extent possible under law, the author has dedicated all copyright and related and
+ * neighboring rights to this software to the public domain worldwide. This software is
+ * distributed without any warranty.
+ * 
+ * You should have received a copy of the CC0 Public Domain Dedication along with this software.
+ * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
+package eu.fbk.rdfpro.tql;
+
+import java.nio.charset.Charset;
+
+import org.openrdf.rio.RDFFormat;
+
+/**
+ * Constants for the Turtle Quads (TQL) format.
+ * <p>
+ * The Turtle Quads {@link RDFFormat} is defined by constant {@link #FORMAT}. As this constant is
+ * not part of the predefined set of formats in {@link RDFFormat}, it is necessary to register it.
+ * This can be done either via {@link RDFFormat#register(RDFFormat)}, or by simply calling method
+ * {@link #register()} on this class, which ensures that multiple calls will result in a single
+ * registration.
+ * </p>
+ */
+public final class TQL {
+
+    /** RDFFormat constant for the Turtle Quads (TQL) format). */
+    public static final RDFFormat FORMAT = new RDFFormat("Turtle Quads", "application/x-tql",
+            Charset.forName("UTF-8"), "tql", false, true);
+
+    static {
+        RDFFormat.register(FORMAT);
+    }
+
+    /**
+     * Registers the Turtle Quads format in the RIO registry. Calling this method multiple times
+     * results in a single registration. Note that registration is also done transparently the
+     * first time this class is accessed.
+     */
+    public static void register() {
+        // Calling this method will cause the static initializer to run once
+    }
+
+    // Package protected utility methods
+
+    static boolean isLetterOrNumber(final int c) {
+        return isLetter(c) || isNumber(c);
+    }
+
+    static boolean isLangChar(final int c) {
+        return isLetter(c) || c == 45 || isNumber(c);
+    }
+
+    static boolean isLetter(final int c) {
+        return c >= 65 && c <= 90 || c >= 97 && c <= 122;
+    }
+
+    static boolean isNumber(final int c) {
+        return c >= 48 && c <= 57;
+    }
+
+}

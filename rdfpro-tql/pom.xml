@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<project
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>eu.fbk.rdfpro</groupId>
+    <artifactId>rdfpro</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <groupId>eu.fbk.rdfpro</groupId>
+  <artifactId>rdfpro-tql</artifactId>
+  <packaging>jar</packaging>
+
+  <name>rdfpro-tql</name>
+  <description>
+    Parser and writer for RDF in Turtle Quads (TQL) format. TQL is N-Quads
+    with the more permissive (and efficient!) Turtle encoding. TQL is used in
+    DBpedia exports and is supported in input by the Virtuoso triple store.
+  </description>
+  <url>http://www.fbk.eu</url>
+
+  <!--
+  <scm>
+    <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfpro/rdfp-tql</connection>
+    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-tql</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-tql</url>
+  </scm>
+  -->
+
+  <distributionManagement>
+    <site>
+      <id>siterdfpro</id>
+      <url>${site-path}/rdfpro-core/</url>
+    </site>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-model</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-rio-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <properties>
+    <parent-path>..</parent-path>
+  </properties>
+
+</project>
