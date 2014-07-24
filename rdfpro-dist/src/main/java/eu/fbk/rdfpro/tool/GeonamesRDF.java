@@ -11,7 +11,7 @@
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-package eu.fbk.rdfpro;
+package eu.fbk.rdfpro.tool;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,16 +24,19 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
 import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.rio.ParserConfig;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.RDFParserFactory;
+import org.openrdf.rio.Rio;
+import org.openrdf.rio.helpers.BasicParserSettings;
+import org.openrdf.rio.helpers.RDFHandlerWrapper;
 import org.openrdf.rio.helpers.RDFParserBase;
-
-import eu.fbk.rdfpro.Handlers;
-import eu.fbk.rdfpro.Util;
+import org.openrdf.rio.helpers.XMLParserSettings;
 
 public class GeonamesRDF implements RDFParserFactory {
 
@@ -77,7 +80,17 @@ public class GeonamesRDF implements RDFParserFactory {
         public void parse(final InputStream in, final String baseURI) throws IOException,
                 RDFParseException, RDFHandlerException {
 
-            final RDFHandler handler = Handlers.dropStartEnd(getRDFHandler());
+            final RDFHandler handler = new RDFHandlerWrapper(getRDFHandler()) {
+
+                @Override
+                public void startRDF() throws RDFHandlerException {
+                }
+
+                @Override
+                public void endRDF() throws RDFHandlerException {
+                }
+
+            };
 
             getRDFHandler().startRDF();
 
@@ -88,8 +101,27 @@ public class GeonamesRDF implements RDFParserFactory {
                             Charset.forName("UTF-8")));
                     while (reader.readLine() != null) { // read and drop URI
                         final String entry = reader.readLine();
-                        final RDFParser parser = Util.newRDFParser(RDFFormat.RDFXML);
+
+                        final RDFParser parser = Rio.createParser(RDFFormat.RDFXML);
                         parser.setRDFHandler(handler);
+                        parser.setValueFactory(ValueFactoryImpl.getInstance());
+
+                        final ParserConfig config = parser.getParserConfig();
+                        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
+                        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES, false);
+                        config.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
+                        config.set(BasicParserSettings.VERIFY_LANGUAGE_TAGS, false);
+                        config.set(BasicParserSettings.VERIFY_RELATIVE_URIS, false);
+                        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, true);
+                        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
+                        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
+                        config.set(XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID, false);
+                        config.set(XMLParserSettings.FAIL_ON_INVALID_NCNAME, false);
+                        config.set(XMLParserSettings.FAIL_ON_INVALID_QNAME, false);
+                        config.set(XMLParserSettings.FAIL_ON_MISMATCHED_TAGS, false);
+                        config.set(XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES, false);
+                        config.set(XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS, false);
+
                         parser.parse(new StringReader(entry), baseURI);
                     }
                 }
@@ -99,7 +131,7 @@ public class GeonamesRDF implements RDFParserFactory {
                 }
 
             } finally {
-                Util.closeQuietly(stream);
+                stream.close();
             }
 
             getRDFHandler().endRDF();

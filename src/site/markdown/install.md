@@ -4,8 +4,8 @@ RDFpro installation
 
 The RDFpro command line tool is packaged as a self-contained, cross-platform Java application. Download it from the following links:
 
-  * [rdfpro-dist-1.0-bin.tar.gz](http://api.bitbucket.org/1.0/repositories/fracor/mvnrepo/raw/master/eu/fbk/rdfpro/rdfpro-dist/1.0/rdfpro-dist-1.0-bin.tar.gz)
-  * [rdfpro-dist-1.0-bin.zip](http://api.bitbucket.org/1.0/repositories/fracor/mvnrepo/raw/master/eu/fbk/rdfpro/rdfpro-dist/1.0/rdfpro-dist-1.0-bin.zip)
+  * [rdfpro-dist-0.1-bin.tar.gz](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/0.1/rdfpro-dist-0.1-bin.tar.gz)
+  * [rdfpro-dist-0.1-bin.zip](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/0.1/rdfpro-dist-0.1-bin.zip)
 
 Then, unpack the compressed archive in the location you prefer. The following, optional steps are recommended:
 

@@ -33,4 +33,4 @@ for _JAR in `ls $_LIB/*.jar` ; do
 done
 
 # Execute the program
-$_JAVA $JAVA_OPTS -classpath $_CLASSPATH eu.fbk.rdfpro.Main "$@"
+$_JAVA $JAVA_OPTS -classpath $_CLASSPATH eu.fbk.rdfpro.tool.Main "$@"

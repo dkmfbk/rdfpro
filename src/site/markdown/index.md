@@ -5,7 +5,8 @@
 <div class="span12">
 <div class="well sidebar" style="text-align: center">
 <h1 style="font-size:400%">RDF<sub>pro</sub></h1><br/>
-<p style="font-size:200%">An Extensible Tool for Building Stream-Oriented RDF Processing Pipelines</p>
+<p style="font-size:200%">An Extensible Tool for Building Stream-Oriented RDF Processing Pipelines</p><br/>
+<form method="GET" action="install.html"><button class="btn btn-primary btn-large" type="submit" style="font-size:150%">Download</button></form>
 </div>
 </div>
 </div>
@@ -36,4 +37,4 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### News
 
-- 2014-07-23 Version 1.0 has been released
+- 2014-07-24 Version 0.1 has been released

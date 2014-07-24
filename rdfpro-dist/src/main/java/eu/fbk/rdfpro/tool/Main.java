@@ -11,7 +11,7 @@
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-package eu.fbk.rdfpro;
+package eu.fbk.rdfpro.tool;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
 
-import eu.fbk.rdfpro.Handlers;
 import eu.fbk.rdfpro.RDFProcessor;
 
 public class Main {
@@ -128,7 +127,7 @@ public class Main {
 
         try {
             final long ts = System.currentTimeMillis();
-            final RDFHandler handler = processor.getHandler(Handlers.nop());
+            final RDFHandler handler = processor.getHandler();
             final int repetitions = processor.getExtraPasses() + 1;
             for (int i = 0; i < repetitions; ++i) {
                 if (repetitions > 1) {

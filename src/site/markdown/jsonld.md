@@ -11,19 +11,19 @@ In order to use the `rdfpro-jsonld` library you have to include the following de
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-jsonld</artifactId>
-      <version>1.0</version>
+      <version>0.1</version>
     </dependency>
 
 Then, make sure to include `rdfpro` artifact repository:
 
     <repository>
       <id>rdfpro</id>
-      <url>https://api.bitbucket.org/1.0/repositories/fracor/mvnrepo/raw/master</url>
+      <url>http://fracor.bitbucket.org/rdfpro/mvnrepo</url>
     </repository>
 
 If you don't use Maven, you have to download and include the following JARs in the classpath:
 
-  * [rdfpro-jsonld-1.0.jar](http://api.bitbucket.org/1.0/repositories/fracor/mvnrepo/raw/master/eu/fbk/rdfpro/rdfpro-jsonld/1.0/rdfpro-jsonld-1.0.jar)
+  * [rdfpro-jsonld-1.0.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-jsonld/0.1/rdfpro-jsonld-0.1.jar)
   * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or higher version)
   * [sesame-rio-api-2.7.12.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.12/sesame-rio-api-2.7.12.jar) (or higher version)
   * [sesame-model-2.7.12.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.12/sesame-model-2.7.12.jar) (or higher version)

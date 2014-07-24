@@ -11,7 +11,7 @@
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-package eu.fbk.rdfpro;
+package eu.fbk.rdfpro.tool;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -27,8 +27,6 @@ import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase;
 import ch.qos.logback.core.spi.DeferredProcessingAware;
 import ch.qos.logback.core.status.ErrorStatus;
 import ch.qos.logback.core.util.EnvUtil;
-
-import eu.fbk.rdfpro.Util;
 
 final class Logging {
 
@@ -249,7 +247,13 @@ final class Logging {
                         }
                     }
                 } catch (final Throwable ex) {
-                    Util.propagate(ex);
+                    if (ex instanceof Error) {
+                        throw (Error) ex;
+                    } else if (ex instanceof RuntimeException) {
+                        throw (RuntimeException) ex;
+                    } else {
+                        throw new RuntimeException(ex);
+                    }
                 }
             }
         }

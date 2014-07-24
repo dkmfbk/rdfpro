@@ -9,7 +9,7 @@
   <parent>
     <groupId>eu.fbk.rdfpro</groupId>
     <artifactId>rdfpro</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -18,13 +18,11 @@
   <packaging>jar</packaging>
 
   <name>rdfpro-dist</name>
-  <description>rdfpro-dist</description>
-  <url>http://www.fbk.eu</url>
-
-  <!-- <scm> <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-dist</connection> 
-    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-dist</developerConnection> 
-    <tag>HEAD</tag> <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-dist</url> 
-    </scm> -->
+  <description>
+    Distribution module providing source and binary assemblies.
+    Includes also RDFpro command line tool main class. 
+  </description>
+  <url>http://fracor.bitbucket.org/rdfpro/</url>
 
   <distributionManagement>
     <site>

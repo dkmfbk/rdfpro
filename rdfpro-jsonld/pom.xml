@@ -9,7 +9,7 @@
   <parent>
     <groupId>eu.fbk.rdfpro</groupId>
     <artifactId>rdfpro</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -24,12 +24,7 @@
     interpreting JSON contents as RDF. See http://www.w3.org/TR/json-ld/
     for the format specification.
   </description>
-  <url>http://www.fbk.eu</url>
-
-  <!-- <scm> <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</connection> 
-    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</developerConnection> 
-    <tag>HEAD</tag> <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</url> 
-    </scm> -->
+  <url>http://fracor.bitbucket.org/rdfpro/jsonld.html</url>
 
   <distributionManagement>
     <site>

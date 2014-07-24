@@ -39,6 +39,10 @@ public abstract class RDFProcessor {
 
     public abstract int getExtraPasses();
 
+    public final RDFHandler getHandler() {
+        return getHandler(Handlers.nop());
+    }
+
     public abstract RDFHandler getHandler(RDFHandler sink);
 
     public static RDFProcessor parallel(final Merging merging, final RDFProcessor... processors) {

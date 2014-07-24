@@ -6,7 +6,7 @@
   <groupId>eu.fbk.rdfpro</groupId>
   <artifactId>rdfpro</artifactId>
   <packaging>pom</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>0.1</version>
 
   <name>rdfpro</name>
   <description>RDFpro - an extensible tool for building stream-oriented RDF processing pipelines</description>
@@ -76,14 +76,11 @@
     </license>
   </licenses>
 
-  <!--
   <scm>
-    <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp</connection>
-    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp</developerConnection>
-    <tag>HEAD</tag>
-    <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp</url>
+    <connection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</connection>
+    <developerConnection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</developerConnection>
+    <url>https://bitbucket.org/fracor/rdfpro.git</url>
   </scm>
-  -->
 
   <distributionManagement>
     <repository>
@@ -105,20 +102,6 @@
       <url>${site-path}/</url>
     </site>
   </distributionManagement>
-
-  <!--
-  <repositories>
-    <repository>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <id>local-repo</id>
-      <name>Local Project Repository</name>
-      <layout>default</layout>
-      <url>file:///${basedir}/${parent-path}/mvnrepo</url>
-    </repository>
-  </repositories>
-  -->
 
   <dependencyManagement>
     <dependencies>
@@ -397,11 +380,7 @@
             </tags>
             <show>protected</show>
             <quiet>true</quiet>
-            <sourceFileExcludes>
-              <sourceFileExclude>eu.fbk.rdfpro.Main</sourceFileExclude>
-              <sourceFileExclude>eu.fbk.rdfpro.GeonamesRDF</sourceFileExclude>
-              <sourceFileExclude>eu.fbk.rdfpro.Logging</sourceFileExclude>
-            </sourceFileExcludes>
+            <excludePackageNames>eu.fbk.rdfpro.tool</excludePackageNames>
           </configuration>
         </plugin>
       </plugins>
@@ -436,7 +415,6 @@
           </execution>
         </executions>
       </plugin>
-      <!--
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -453,7 +431,6 @@
           </execution>
         </executions>
       </plugin>
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -551,6 +528,7 @@
           </tags>
           <show>protected</show>
           <quiet>true</quiet>
+          <excludePackageNames>eu.fbk.rdfpro.tool</excludePackageNames>
           <!-- This is currently broken...
             <doclet>org.jboss.apiviz.APIviz</doclet>
             <docletArtifact>
@@ -701,15 +679,12 @@
           </reportSet>
         </reportSets>
       </plugin>
-      <!-- TO BE ENABLED AND CONFIGURED FOR GIT
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-changelog-plugin</artifactId>
         <version>${changelog-plugin.version}</version>
         <inherited>false</inherited>
         <configuration>
-          <username>${kssvn.user}</username>
-          <password>${kssvn.password}</password>
           <type>range</type>
           <range>30</range>
         </configuration>
@@ -723,7 +698,6 @@
           </reportSet>
         </reportSets>
       </plugin>
-      -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
@@ -819,11 +793,9 @@
     <!-- Paths -->
     <parent-path>.</parent-path>
     <javadoc-skip>false</javadoc-skip>
-
     <aggregate>true</aggregate>
-    <site-path>file:///home/corcoglio/2013_nwr/git/rdfpro/target/website</site-path>
-    <!-- <site-path>dav:https://newsreader.fbk.eu/knowdav/data/</site-path> -->
-    <!-- <repo-path>dav:https://newsreader.fbk.eu/knowdav/data/mvnrepo/</repo-path> -->
+    <site-path>file:///${basedir}/${parent-path}/target/website</site-path>
+    <repo-path>file:///${basedir}/${parent-path}/target/mvnrepo</repo-path>
 
     <!-- Build configuration -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -832,7 +804,7 @@
 
     <!-- Dependency versions -->
     <junit.version>4.11</junit.version>
-    <jsr305.version>2.0.3</jsr305.version>
+    <jsr305.version>3.0.0</jsr305.version>
     <slf4j.version>1.7.7</slf4j.version>
     <logback.version>1.1.2</logback.version>
     <sesame.version>2.7.12</sesame.version>
@@ -844,19 +816,18 @@
     <assembly-plugin.version>2.4</assembly-plugin.version>
     <eclipse-plugin.version>2.9</eclipse-plugin.version>
     <surefire-plugin.version>2.17</surefire-plugin.version>
-    <source-plugin.version>2.2.1</source-plugin.version>
-    <jar-plugin.version>2.4</jar-plugin.version>
+    <source-plugin.version>2.3</source-plugin.version>
+    <jar-plugin.version>2.5</jar-plugin.version>
     <dependency-plugin.version>2.8</dependency-plugin.version>
     <wagon.version>2.4</wagon.version>
 
     <!-- Reporting plugin versions -->
-    <site-plugin.version>3.3</site-plugin.version>
+    <site-plugin.version>3.4</site-plugin.version>
     <project-info-plugin.version>2.7</project-info-plugin.version>
     <taglist-plugin.version>2.4</taglist-plugin.version>
     <surefire-report-plugin.version>2.17</surefire-report-plugin.version>
-    <!-- <pmd-plugin.version>2.7.1</pmd-plugin.version> -->
     <pmd-plugin.version>3.1</pmd-plugin.version>
-    <findbugs-plugin.version>2.5.3</findbugs-plugin.version>
+    <findbugs-plugin.version>2.5.4</findbugs-plugin.version>
     <javancss-plugin.version>2.0</javancss-plugin.version>
     <javadoc-plugin.version>2.9.1</javadoc-plugin.version>
     <jxr-plugin.version>2.4</jxr-plugin.version>
@@ -864,7 +835,7 @@
     <checkstyle-plugin.version>2.12.1</checkstyle-plugin.version>
     <jdepend-plugin.version>2.0</jdepend-plugin.version>
     <versions-plugin.version>2.1</versions-plugin.version>
-    <changelog-plugin.version>2.2</changelog-plugin.version>
+    <changelog-plugin.version>2.3</changelog-plugin.version>
   </properties>
 
   <modules>

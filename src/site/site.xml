@@ -41,7 +41,7 @@
     <menu name="Links">
       <item name="BitBucket project" href="http://bitbucket.org/fracor/rdfpro" />
       <item name="Issue tracker" href="http://bitbucket.org/fracor/rdfpro/issues" />
-      <item name="Contact author" href="mailto:francesco DOT corcoglioniti AT gmail DOT com" />
+      <item name="Contact authors" href="mailto:corcoglioATfbkDOTeu" />
     </menu>
   </body>
 
@@ -116,6 +116,9 @@
         <taglist>
           <html5Anchor>false</html5Anchor>
         </taglist>
+        <license>
+          <highlightJs>false</highlightJs>
+        </license>
       </pages>
     </reflowSkin>
   </custom>

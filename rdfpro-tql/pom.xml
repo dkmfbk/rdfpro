@@ -9,7 +9,7 @@
   <parent>
     <groupId>eu.fbk.rdfpro</groupId>
     <artifactId>rdfpro</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -23,16 +23,7 @@
     with the more permissive (and efficient!) Turtle encoding. TQL is used in
     DBpedia exports and is supported in input by the Virtuoso triple store.
   </description>
-  <url>http://www.fbk.eu</url>
-
-  <!--
-  <scm>
-    <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfpro/rdfp-tql</connection>
-    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-tql</developerConnection>
-    <tag>HEAD</tag>
-    <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-tql</url>
-  </scm>
-  -->
+  <url>http://fracor.bitbucket.org/rdfpro/tql.html</url>
 
   <distributionManagement>
     <site>
