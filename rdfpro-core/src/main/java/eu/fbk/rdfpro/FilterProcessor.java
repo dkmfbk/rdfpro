@@ -35,7 +35,7 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
-public class FilterProcessor extends RDFProcessor {
+final class FilterProcessor extends RDFProcessor {
 
     private static final String[] EMPTY = new String[0];
 

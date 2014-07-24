@@ -44,15 +44,15 @@
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-api</artifactId>
     </dependency>
-     <dependency>
+    <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-turtle</artifactId>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
      <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-trig</artifactId>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

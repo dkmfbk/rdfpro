@@ -26,14 +26,10 @@
   </description>
   <url>http://www.fbk.eu</url>
 
-  <!--
-  <scm>
-    <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</connection>
-    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</developerConnection>
-    <tag>HEAD</tag>
-    <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</url>
-  </scm>
-  -->
+  <!-- <scm> <connection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</connection> 
+    <developerConnection>scm:svn:https://newsreader.fbk.eu/svn/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</developerConnection> 
+    <tag>HEAD</tag> <url>https://newsreader.fbk.eu/trac/browser/newsreader/Code/BackgroundKnowledge/trunk/rdfp/rdfp-jsonld</url> 
+    </scm> -->
 
   <distributionManagement>
     <site>
@@ -54,6 +50,10 @@
     <dependency>
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-jsonld</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.semarglproject</groupId>
+      <artifactId>semargl-core</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

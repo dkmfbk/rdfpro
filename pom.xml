@@ -205,6 +205,11 @@
     </dependency>
     <dependency>
       <groupId>org.semarglproject</groupId>
+      <artifactId>semargl-core</artifactId>
+      <version>${semargl-jsonld.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.semarglproject</groupId>
       <artifactId>semargl-sesame</artifactId>
       <version>${semargl-jsonld.version}</version>
     </dependency>
@@ -217,6 +222,11 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>${logback.version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
@@ -309,6 +319,16 @@
               <artifactId>velocity</artifactId>
               <version>1.7</version>
             </dependency>
+            <dependency>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-module-markdown</artifactId>
+              <version>1.6</version>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-module-xhtml</artifactId>
+              <version>1.6</version>
+            </dependency>
           </dependencies>
         </plugin>
 
@@ -377,7 +397,11 @@
             </tags>
             <show>protected</show>
             <quiet>true</quiet>
-            <excludePackageNames>*.internal</excludePackageNames>
+            <sourceFileExcludes>
+              <sourceFileExclude>eu.fbk.rdfpro.Main</sourceFileExclude>
+              <sourceFileExclude>eu.fbk.rdfpro.GeonamesRDF</sourceFileExclude>
+              <sourceFileExclude>eu.fbk.rdfpro.Logging</sourceFileExclude>
+            </sourceFileExcludes>
           </configuration>
         </plugin>
       </plugins>

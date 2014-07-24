@@ -1,0 +1,11 @@
+@prefix dct: <http://purl.org/dc/terms/> .
+
+<graph:metadata> {
+    <graph:vocab> dct:source <source:vocab> .
+    <graph:freebase> dct:source <source:freebase> .
+    <graph:geoname> dct:source <source:geonames> .
+    <graph:dbp_en> dct:source <source:dbp_en> .
+    <graph:dbp_es> dct:source <source:dbp_es> .
+    <graph:dbp_it> dct:source <source:dbp_it> .
+    <graph:dbp_nl> dct:source <source:dbp_nl> .
+}

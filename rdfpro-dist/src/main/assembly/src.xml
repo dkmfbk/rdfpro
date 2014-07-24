@@ -4,7 +4,7 @@
     <format>tar.gz</format>
   </formats>
   <includeBaseDirectory>true</includeBaseDirectory>
-  <baseDirectory>rdfp</baseDirectory>
+  <baseDirectory>rdfpro</baseDirectory>
   <fileSets>
     <fileSet>
       <directory>..</directory>

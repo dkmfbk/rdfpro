@@ -2,9 +2,10 @@
   <id>bin</id>
   <formats>
     <format>tar.gz</format>
+    <format>zip</format>
   </formats>
   <includeBaseDirectory>true</includeBaseDirectory>
-  <baseDirectory>rdfp</baseDirectory>
+  <baseDirectory>rdfpro</baseDirectory>
   <fileSets>
     <fileSet>
       <directory>src/main/scripts</directory>
@@ -16,9 +17,9 @@
       <directory>..</directory>
       <outputDirectory>/</outputDirectory>
       <includes>
-        <include>README</include>
+        <include>README.md</include>
         <include>NOTICE</include>
-        <include>UNLICENSE</include>
+        <include>COPYING</include>
       </includes>
     </fileSet>
   </fileSets>

@@ -13,10 +13,10 @@ CMD ::=
 
 M ::=
   <none>  union of @p1 .. @pN outputs, keep duplicates (very fast)
-  u       union of @p1 .. @pN outputs, no duplicates (as with @union)
-  m       union of @p1 .. @pN outputs, no duplicates (as with @union -m)
-  i       intersection of @p1 .. @pN outputs, no duplicates (as with @union)
-  d       difference @p1 \ (union of @p2 .. @pN), no duplicates (as with @union)
+  u       union of @p1 .. @pN outputs, no duplicates (as with @unique)
+  m       union of @p1 .. @pN outputs, no duplicates (as with @unique -m)
+  i       intersection of @p1 .. @pN outputs, no duplicates
+  d       difference @p1 \ (union of @p2 .. @pN), no duplicates
 
 
 BUILTIN PROCESSORS:

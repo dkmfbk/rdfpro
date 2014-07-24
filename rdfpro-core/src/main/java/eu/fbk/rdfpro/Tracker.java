@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
-public final class Tracker {
+final class Tracker {
 
     private final Logger logger;
 
