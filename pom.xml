@@ -6,7 +6,7 @@
   <groupId>eu.fbk.rdfpro</groupId>
   <artifactId>rdfpro</artifactId>
   <packaging>pom</packaging>
-  <version>0.2</version>
+  <version>0.3-SNAPSHOT</version>
 
   <name>rdfpro</name>
   <description>RDFpro - an extensible tool for building stream-oriented RDF processing pipelines</description>
@@ -80,7 +80,7 @@
     <connection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</connection>
     <developerConnection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</developerConnection>
     <url>https://bitbucket.org/fracor/rdfpro.git</url>
-    <tag>rdfpro-0.2</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
