@@ -13,7 +13,9 @@
  */
 package eu.fbk.rdfpro;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,6 +97,23 @@ public abstract class RDFProcessor {
 
     public static RDFProcessor writer(final String... fileSpecs) {
         return new WriterProcessor(Util.checkNotNull(fileSpecs));
+    }
+
+    public static RDFProcessor unique(final boolean merge) {
+        return new ParallelProcessor(merge ? Merging.UNION_TRIPLES : Merging.UNION_QUADS, nop());
+    }
+
+    public static RDFProcessor download(final boolean rewriteBNodes, final String endpointURL,
+            final String query) {
+        return new DownloadProcessor(rewriteBNodes, endpointURL, query);
+    }
+
+    public static RDFProcessor upload(final int chunkSize, final String endpointURL) {
+        return new UploadProcessor(endpointURL, chunkSize);
+    }
+
+    public static RDFProcessor nop() {
+        return NOPProcessor.INSTANCE;
     }
 
     public static RDFProcessor parse(final String... args) {
@@ -236,11 +255,17 @@ public abstract class RDFProcessor {
             if ("w".equals(command) || "write".equals(command)) {
                 return newWriter(parseOptions(options, "", "", Integer.MAX_VALUE));
             }
+            if ("d".equals(command) || "download".equals(command)) {
+                return newDownload(parseOptions(options, "qf", "w", 1));
+            }
+            if ("l".equals(command) || "upload".equals(command)) {
+                return newUpload(parseOptions(options, "s", "", 1));
+            }
             if ("f".equals(command) || "filter".equals(command)) {
                 return newFilter(parseOptions(options, "r", "k", 1));
             }
             if ("s".equals(command) || "smush".equals(command)) {
-                return newSmusher(parseOptions(options, "S", "", Integer.MAX_VALUE));
+                return newSmusher(parseOptions(options, "s", "", Integer.MAX_VALUE));
             }
             if ("i".equals(command) || "infer".equals(command)) {
                 return newInferencer(parseOptions(options, "bcr", "Cdw", Integer.MAX_VALUE));
@@ -253,6 +278,9 @@ public abstract class RDFProcessor {
             }
             if ("p".equals(command) || "prefix".equals(command)) {
                 return newNamespaceEnhancer(parseOptions(options, "f", "", 0));
+            }
+            if ("u".equals(command) || "unique".equals(command)) {
+                return newUnique(parseOptions(options, "", "m", 0));
             }
             throw new IllegalArgumentException("Invalid command @" + command);
         }
@@ -337,6 +365,53 @@ public abstract class RDFProcessor {
             return writer(fileSpecs);
         }
 
+        private RDFProcessor newDownload(final Map<String, Object> args) {
+            final boolean rewriteBNodes = args.containsKey("w");
+            final String endpointURL = ((String[]) args.get(null))[0];
+            String query = (String) args.get("q");
+            if (query == null) {
+                final String source = (String) args.get("f");
+                try {
+                    final File file = new File(source);
+                    URL url;
+                    if (file.exists()) {
+                        url = file.toURI().toURL();
+                    } else {
+                        url = getClass().getClassLoader().getResource(source);
+                    }
+                    final BufferedReader reader = new BufferedReader(new InputStreamReader(
+                            url.openStream()));
+                    try {
+                        final StringBuilder builder = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            builder.append(line);
+                        }
+                        query = builder.toString();
+                    } finally {
+                        Util.closeQuietly(reader);
+                    }
+                } catch (final Throwable ex) {
+                    throw new IllegalArgumentException("Cannot load SPARQL query from " + source
+                            + ": " + ex.getMessage(), ex);
+                }
+            }
+            return download(rewriteBNodes, endpointURL, query);
+        }
+
+        private RDFProcessor newUpload(final Map<String, Object> args) {
+            int chunkSize = 1024;
+            if (args.containsKey("s")) {
+                try {
+                    chunkSize = (int) parseLong((String) args.get("s"));
+                } catch (final Throwable ex) {
+                    throw new IllegalArgumentException("Invalid buffer size: " + args.get("s"));
+                }
+            }
+            final String endpointURL = ((String[]) args.get(null))[0];
+            return upload(chunkSize, endpointURL);
+        }
+
         private RDFProcessor newFilter(final Map<String, Object> args) {
 
             final String[] specs = (String[]) args.get(null);
@@ -358,9 +433,9 @@ public abstract class RDFProcessor {
             }
 
             Long bufferSize = null;
-            if (args.containsKey("S")) {
+            if (args.containsKey("s")) {
                 try {
-                    bufferSize = parseLong((String) args.get("S"));
+                    bufferSize = parseLong((String) args.get("s"));
                 } catch (final Throwable ex) {
                     throw new IllegalArgumentException("Invalid buffer size: " + args.get("S"));
                 }
@@ -450,6 +525,11 @@ public abstract class RDFProcessor {
             }
 
             return namespaceEnhancer(nsToPrefixMap);
+        }
+
+        private RDFProcessor newUnique(final Map<String, Object> args) {
+            final boolean merge = args.containsKey("m");
+            return unique(merge);
         }
 
         private Merging mergingFor(final char ch) {

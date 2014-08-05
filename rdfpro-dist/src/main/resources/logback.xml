@@ -2,11 +2,11 @@
 
   <conversionRule
     conversionWord="bold"
-    converterClass="eu.fbk.rdfpro.Logging$BoldConverter" />
+    converterClass="eu.fbk.rdfpro.tool.Logging$BoldConverter" />
 
   <conversionRule
     conversionWord="normal"
-    converterClass="eu.fbk.rdfpro.Logging$NormalConverter" />
+    converterClass="eu.fbk.rdfpro.tool.Logging$NormalConverter" />
 
   <appender
     name="STDOUT"
@@ -22,7 +22,7 @@
 
   <appender
     name="STATUS"
-    class="eu.fbk.rdfpro.Logging$StatusAppender"
+    class="eu.fbk.rdfpro.tool.Logging$StatusAppender"
     withJansi="true">
     <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
       <pattern>%msg%n</pattern>

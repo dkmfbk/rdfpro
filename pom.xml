@@ -182,6 +182,16 @@
       <version>${sesame.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-http-client</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-queryresultio-sparqlxml</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-jsonld</artifactId>
       <version>${semargl-jsonld.version}</version>
@@ -204,6 +214,11 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
       <version>${slf4j.version}</version>
     </dependency>
     <dependency>

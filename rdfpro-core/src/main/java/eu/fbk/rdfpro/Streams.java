@@ -51,7 +51,7 @@ final class Streams {
     // 1M - 383701 tr/s
     // note: pipe buffer on linux is 64k
 
-    private static final int BUFFER_SIZE = Integer.parseInt(Util.settingFor("rdfp.buffer.size",
+    private static final int BUFFER_SIZE = Integer.parseInt(Util.settingFor("rdfpro.buffer.size",
             "" + 64 * 1024));
 
     // parallel read performances varying queue size on test TQL file, buffer = 64K
@@ -62,10 +62,10 @@ final class Streams {
     // 1024 * 64k (64M) - 625k tr/s
 
     private static final int BUFFER_NUM_READ = Integer.parseInt(Util.settingFor(
-            "rdfp.buffer.numr", "256"));
+            "rdfpro.buffer.numr", "256"));
 
     private static final int BUFFER_NUM_WRITE = Integer.parseInt(Util.settingFor(
-            "rdfp.buffer.numw", "16"));
+            "rdfpro.buffer.numw", "16"));
 
     public static InputStream read(@Nullable final File file) throws IOException {
 
@@ -76,13 +76,13 @@ final class Streams {
 
             String cmd = null;
             if (name.endsWith(".bz2")) {
-                cmd = Util.settingFor("rdfp.cmd.bzip2", "bzip2") + " -dck";
+                cmd = Util.settingFor("rdfpro.cmd.bzip2", "bzip2") + " -dck";
             } else if (name.endsWith(".gz")) {
-                cmd = Util.settingFor("rdfp.cmd.gzip", "gzip") + " -dc";
+                cmd = Util.settingFor("rdfpro.cmd.gzip", "gzip") + " -dc";
             } else if (name.endsWith(".xz")) {
-                cmd = Util.settingFor("rdfp.cmd.xz", "xz") + " -dc";
+                cmd = Util.settingFor("rdfpro.cmd.xz", "xz") + " -dc";
             } else if (name.endsWith(".7z")) {
-                cmd = Util.settingFor("rdfp.cmd.7za", "7za") + " -so e";
+                cmd = Util.settingFor("rdfpro.cmd.7za", "7za") + " -so e";
             }
 
             if (cmd == null) {
@@ -111,11 +111,11 @@ final class Streams {
 
             String cmd = null;
             if (name.endsWith(".bz2")) {
-                cmd = Util.settingFor("rdfp.cmd.bzip2", "bzip2") + " -c -9";
+                cmd = Util.settingFor("rdfpro.cmd.bzip2", "bzip2") + " -c -9";
             } else if (name.endsWith(".gz")) {
-                cmd = Util.settingFor("rdfp.cmd.gzip", "gzip") + " -c -9";
+                cmd = Util.settingFor("rdfpro.cmd.gzip", "gzip") + " -c -9";
             } else if (name.endsWith(".xz")) {
-                cmd = Util.settingFor("rdfp.cmd.xz", "xz") + " -c -9";
+                cmd = Util.settingFor("rdfpro.cmd.xz", "xz") + " -c -9";
             }
 
             if (cmd == null) {

@@ -81,7 +81,7 @@ abstract class Sorter implements Closeable {
 
         // Invoke sort
         final List<String> command = new ArrayList<String>(Arrays.asList(Util.settingFor(
-                "rdfp.cmd.sort", "sort").split("\\s+")));
+                "rdfpro.cmd.sort", "sort").split("\\s+")));
         command.add("-z"); // zero-terminated lines
         command.add("-u"); // remove duplicates
         final ProcessBuilder builder = new ProcessBuilder(command);

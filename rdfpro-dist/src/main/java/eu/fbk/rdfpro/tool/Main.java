@@ -37,13 +37,13 @@ public class Main {
     public static void main(final String... args) {
 
         try {
-            Class.forName("eu.fbk.rdfp.tql.TQL");
+            Class.forName("eu.fbk.rdfpro.tql.TQL");
         } catch (final Throwable ex) {
             // ignore - TQL will not be supported
         }
 
         try {
-            Class.forName("eu.fbk.rdfp.GeonamesRDF");
+            Class.forName("eu.fbk.rdfpro.tool.GeonamesRDF");
         } catch (final Throwable ex) {
             // ignore - Geonames format will not be supported
         }
@@ -73,7 +73,7 @@ public class Main {
         if (showVersion) {
             String version = "development version";
             final URL url = RDFProcessor.class.getClassLoader().getResource(
-                    "META-INF/maven/eu.fbk.rdfp/rdfp-dist/pom.properties");
+                    "META-INF/maven/eu.fbk.rdfpro/rdfpro-dist/pom.properties");
             if (url != null) {
                 try {
                     final InputStream stream = url.openStream();
@@ -90,7 +90,7 @@ public class Main {
                 }
             }
             System.out.println(String.format("RDF Processor Tool (RDFP) %s\nJava %s bit (%s) %s\n"
-                    + "This is free and unencumbered software released into the public domain",
+                    + "This is free software released into the public domain",
                     version, System.getProperty("sun.arch.data.model"),
                     System.getProperty("java.vendor"), System.getProperty("java.version")));
             System.exit(0);
