@@ -6,7 +6,7 @@
   <groupId>eu.fbk.rdfpro</groupId>
   <artifactId>rdfpro</artifactId>
   <packaging>pom</packaging>
-  <version>0.1</version>
+  <version>0.2-SNAPSHOT</version>
 
   <name>rdfpro</name>
   <description>RDFpro - an extensible tool for building stream-oriented RDF processing pipelines</description>
@@ -266,6 +266,11 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>${release-plugin.version}</version>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -827,6 +832,7 @@
     <semargl-jsonld.version>0.6.1</semargl-jsonld.version>
 
     <!-- Build plugin versions -->
+    <release-plugin.version>2.5</release-plugin.version>
     <compiler-plugin.version>3.1</compiler-plugin.version>
     <assembly-plugin.version>2.4</assembly-plugin.version>
     <eclipse-plugin.version>2.9</eclipse-plugin.version>
