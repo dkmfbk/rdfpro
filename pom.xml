@@ -188,7 +188,32 @@
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-http-protocol</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-repository-api</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-query</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-queryresultio-api</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-queryresultio-sparqlxml</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrdf.sesame</groupId>
+      <artifactId>sesame-util</artifactId>
       <version>${sesame.version}</version>
     </dependency>
     <dependency>
@@ -205,6 +230,11 @@
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-sesame</artifactId>
       <version>${semargl-jsonld.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-httpclient</groupId>
+      <artifactId>commons-httpclient</artifactId>
+      <version>${httpclient.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
@@ -830,6 +860,7 @@
     <sesame.version>2.7.12</sesame.version>
     <jsonld-java.version>0.2</jsonld-java.version>
     <semargl-jsonld.version>0.6.1</semargl-jsonld.version>
+    <httpclient.version>3.1</httpclient.version>
 
     <!-- Build plugin versions -->
     <release-plugin.version>2.5</release-plugin.version>
