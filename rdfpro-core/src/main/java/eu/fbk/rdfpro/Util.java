@@ -13,25 +13,6 @@
  */
 package eu.fbk.rdfpro;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.annotation.Nullable;
-
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
@@ -45,6 +26,8 @@ import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.ParserConfig;
 import org.openrdf.rio.RDFFormat;
+import org.openrdf.rio.RDFHandler;
+import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.RDFWriter;
 import org.openrdf.rio.Rio;
@@ -60,6 +43,26 @@ import org.openrdf.rio.turtle.TurtleUtil;
 import org.openrdf.rio.turtle.TurtleWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 final class Util {
 
@@ -549,6 +552,56 @@ final class Util {
         return objects;
     }
 
+    public static Set<String> createHashSet(String pattern, File file) {
+        final boolean matchSub = pattern.contains("s");
+        final boolean matchPre = pattern.contains("p");
+        final boolean matchObj = pattern.contains("o");
+        final boolean matchCtx = pattern.contains("c");
+        final Set<String> hashes = new TreeSet<>();
+        final RDFParser parser = Rio.createParser(Rio.getParserFormatForFileName(file.getName()));
+        parser.setRDFHandler(new RDFHandler() {
+            @Override
+            public void startRDF() throws RDFHandlerException {
+            }
+
+            @Override
+            public void endRDF() throws RDFHandlerException {
+            }
+
+            @Override
+            public void handleNamespace(String s, String s2) throws RDFHandlerException {
+            }
+
+            @Override
+            public void handleStatement(Statement statement) throws RDFHandlerException {
+                if(matchSub) hashes.add(murmur3Str(statement.getSubject().stringValue()));
+                if(matchPre) hashes.add(murmur3Str(statement.getPredicate().stringValue()));
+                if(matchObj) hashes.add(murmur3Str(statement.getObject().stringValue()));
+                if(matchCtx) hashes.add(murmur3Str(statement.getContext().stringValue()));
+            }
+
+            @Override
+            public void handleComment(String s) throws RDFHandlerException {
+            }
+        });
+
+        try {
+            parser.parse(new FileReader(file), "");
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error while parsing pattern file.", e);
+        }
+        return hashes;
+    }
+
+    public static Set<String> parseFileFilterRule(String rule) {
+        final int lastSeparator = rule.lastIndexOf(']');
+        final String filename = rule.substring(2, lastSeparator);
+        final String pattern = rule.substring(lastSeparator + 1);
+        final File file = new File(filename);
+        if(!file.exists()) throw new IllegalArgumentException("Cannot find file " + file.getAbsolutePath());
+        return createHashSet(pattern, file);
+    }
+
     public static String join(final String delimiter, final Iterable<?> objects) {
         final StringBuilder builder = new StringBuilder();
         boolean first = true;
@@ -661,6 +714,10 @@ final class Util {
             }
         }
         return builder.toString();
+    }
+
+    public static String murmur3Str(String...in) {
+        return toString(murmur3(in));
     }
 
     private Util() {
