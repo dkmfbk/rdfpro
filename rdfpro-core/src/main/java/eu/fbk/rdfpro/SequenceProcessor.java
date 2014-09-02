@@ -15,12 +15,20 @@ package eu.fbk.rdfpro;
 
 import org.openrdf.rio.RDFHandler;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 final class SequenceProcessor extends RDFProcessor {
 
     private final RDFProcessor[] processors;
 
     SequenceProcessor(final RDFProcessor... processors) {
         this.processors = processors.clone();
+    }
+
+    public List<RDFProcessor> getProcessors() {
+        return Collections.unmodifiableList(Arrays.asList(processors));
     }
 
     @Override
