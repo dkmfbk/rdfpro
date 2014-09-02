@@ -13,18 +13,6 @@
  */
 package eu.fbk.rdfpro;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
-
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
@@ -34,6 +22,18 @@ import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class FilterProcessor extends RDFProcessor {
 
@@ -78,6 +78,7 @@ final class FilterProcessor extends RDFProcessor {
 
         final AtomicInteger numGroups = new AtomicInteger(0);
 
+        // Match decisor.
         final Map<Character, Map<Character, StringMatcher>> m;
         m = new HashMap<Character, Map<Character, StringMatcher>>();
         if (matchSpec != null) {
@@ -104,6 +105,7 @@ final class FilterProcessor extends RDFProcessor {
         this.contextDecisor = !m.containsKey('c') ? null : new ValueMatcher(m.get('c'));
         this.typeDecisor = !m.containsKey('t') ? null : new ValueMatcher(m.get('t'));
 
+        // Match replacer.
         final Map<Character, Map<Character, StringReplacer>> r;
         r = new HashMap<Character, Map<Character, StringReplacer>>();
         if (replaceSpec != null) {
@@ -387,9 +389,9 @@ final class FilterProcessor extends RDFProcessor {
 
         StringMatcher(final List<String> rules, final AtomicInteger groupCount) {
 
-            final List<Rule> list = new ArrayList<Rule>();
+            final List<Rule> list = new ArrayList<>();
             for (final String rule : rules) {
-                final boolean result = rule.charAt(0) == '+';
+                final boolean polarity = rule.charAt(0) == '+';
                 String constant = null;
                 Pattern pattern = null;
                 if (rule.charAt(1) == '\'' || rule.charAt(1) == '\"' || rule.charAt(1) == '<') {
@@ -398,6 +400,9 @@ final class FilterProcessor extends RDFProcessor {
                     pattern = Pattern.compile(rule.substring(2, rule.length() - 1));
                 } else if (rule.contains(":")) {
                     constant = Util.parseValue(rule.substring(1)).stringValue();
+                } else if(rule.charAt(1) == '[') {
+                    list.add(new HashMatcherRule(Util.parseFileFilterRule(rule),polarity));
+                    continue;
                 } else if (rule.length() != 2 || rule.charAt(1) != '*') {
                     final String prefix = rule.substring(1);
                     final String namespace = Util.PREFIX_TO_NS_MAP.get(prefix);
@@ -410,7 +415,7 @@ final class FilterProcessor extends RDFProcessor {
                 if (pattern != null) {
                     numGroups = pattern.matcher("").groupCount();
                 }
-                list.add(new Rule(constant, pattern, result, groupCount.get()));
+                list.add(new ConstPatternRule(constant, pattern, polarity, groupCount.get()));
                 groupCount.addAndGet(numGroups);
             }
 
@@ -418,29 +423,21 @@ final class FilterProcessor extends RDFProcessor {
         }
 
         boolean match(final String string, final String[] groups) {
-
             for (final Rule rule : this.rules) {
-                boolean match = true;
-                if (rule.constant != null) {
-                    match = rule.constant.equals(string);
-                } else if (rule.pattern != null) {
-                    final Matcher matcher = rule.pattern.matcher(string);
-                    match = matcher.matches();
-                    if (match) {
-                        final int numGroups = matcher.groupCount();
-                        for (int i = 0; i < numGroups; ++i) {
-                            groups[rule.group + i] = matcher.group(i + 1);
-                        }
-                    }
-                }
+                boolean match = rule.match(string, groups);
                 if (match) {
-                    return rule.result;
+                    return rule.getPolarity();
                 }
             }
             return true;
         }
 
-        private static class Rule {
+        private interface Rule {
+            boolean match(final String string, final String[] groups);
+            boolean getPolarity();
+        }
+
+        private static class ConstPatternRule implements Rule {
 
             @Nullable
             final String constant;
@@ -448,18 +445,61 @@ final class FilterProcessor extends RDFProcessor {
             @Nullable
             final Pattern pattern;
 
-            final boolean result;
+            final boolean polarity;
 
             final int group;
 
-            Rule(final String constant, final Pattern pattern, final boolean result,
+            ConstPatternRule(final String constant, final Pattern pattern, final boolean polarity,
                     final int group) {
                 this.constant = constant;
                 this.pattern = pattern;
-                this.result = result;
+                this.polarity = polarity;
                 this.group = group;
             }
 
+            @Override
+            public boolean match(String string, String[] groups) {
+                if (constant != null) {
+                    return constant.equals(string);
+                } else if (pattern != null) {
+                    final Matcher matcher = pattern.matcher(string);
+                    final boolean match = matcher.matches();
+                    if (match) {
+                        final int numGroups = matcher.groupCount();
+                        for (int i = 0; i < numGroups; ++i) {
+                            groups[group + i] = matcher.group(i + 1);
+                        }
+                        return true;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean getPolarity() {
+                return polarity;
+            }
+        }
+
+        private static class HashMatcherRule implements Rule {
+
+            private final Set<String> hashes;
+            private final boolean polarity;
+
+            private HashMatcherRule(Set<String> hashes, boolean polarity) {
+                this.hashes = hashes;
+                this.polarity = polarity;
+            }
+
+            @Override
+            public boolean match(String string, String[] groups) {
+                return hashes.contains(Util.murmur3Str(string));
+            }
+
+            @Override
+            public boolean getPolarity() {
+                return polarity;
+            }
         }
 
     }
