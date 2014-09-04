@@ -13,16 +13,9 @@
  */
 package eu.fbk.rdfpro;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.UUID;
-
-import javax.annotation.Nullable;
-
+import groovy.lang.MissingMethodException;
+import groovy.lang.Script;
+import groovy.util.GroovyScriptEngine;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
@@ -39,9 +32,16 @@ import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import groovy.lang.MissingMethodException;
-import groovy.lang.Script;
-import groovy.util.GroovyScriptEngine;
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.UUID;
 
 final class GroovyFilterProcessor extends RDFProcessor {
 
@@ -90,6 +90,24 @@ final class GroovyFilterProcessor extends RDFProcessor {
         this.scriptArgs = scriptArgs.clone();
     }
 
+    public Object setProperty(final RDFHandler handler, final String name, final Object value) {
+        if (!(handler instanceof Handler)) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        final Object oldValue = h.getScript().getProperty(name);
+        h.getScript().setProperty(name, value);
+        return oldValue;
+    }
+
+    public Object getProperty(final RDFHandler handler, final String name) {
+        if (!(handler instanceof Handler)) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        return h.getScript().getProperty(name);
+    }
+
     @Override
     public int getExtraPasses() {
         return 0;
@@ -115,6 +133,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
         Handler(final RDFHandler handler, final HandlerScript script) {
             this.handler = Util.checkNotNull(handler);
             this.script = script;
+        }
+
+        public HandlerScript getScript() {
+            return this.script;
         }
 
         @Override
@@ -505,10 +527,16 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         // TODO [Francesco]: add remaining SPARQL functions
 
+        // TODO consider caching of loaded file components (very optional)
         protected final ValueSet loadSet(final Object file, final Object components) {
-            // TODO [Michele] load the specified "spoc" components from file
-            // TODO consider caching of loaded file components (very optional)
-            return null;
+            final File inputFile;
+            if (file instanceof File) {
+                inputFile = (File) file;
+            } else {
+                inputFile = new File(file.toString());
+            }
+            final String pattern = components.toString();
+            return new ValueSet( Util.createHashSet(pattern, inputFile) );
         }
 
         // UTILITY FUNCTIONS
@@ -744,15 +772,43 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     public static final class ValueSet {
 
-        // TODO [Michele]
+        private final Set<String> hashSet;
+
+        ValueSet(Set<String> hashSet) {
+            this.hashSet = hashSet;
+        }
 
         public boolean match(final Object value) {
-            // TODO value should be converted to a Sesame Value using method toRDF() (see above)
-            return false;
+            if(value == null) {
+                throw new IllegalArgumentException("value cannot be null.");
+            }
+            final Value target = value instanceof Value ? (Value) value : toRDF(value, true);
+            return hashSet.contains( Util.valueToHash(target) );
         }
 
         public boolean match(final Statement statement, final Object components) {
-            // TODO components should be converted to a string (e.g. "so")
+            final String parts = components.toString();
+            if(parts.contains("s")) {
+                if( hashSet.contains(Util.valueToHash(statement.getSubject()))) {
+                    return true;
+                }
+            }
+            if(parts.contains("p")) {
+                if( hashSet.contains(Util.valueToHash(statement.getPredicate()))) {
+                    return true;
+                }
+            }
+            if(parts.contains("o")) {
+                if( hashSet.contains(Util.valueToHash(statement.getObject()))) {
+                    return true;
+                }
+            }
+            if(parts.contains("c")) {
+                final Value context = statement.getContext();
+                if( context != null && hashSet.contains(Util.valueToHash(context))) {
+                    return true;
+                }
+            }
             return false;
         }
 

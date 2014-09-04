@@ -1,7 +1,6 @@
 package eu.fbk.rdfpro;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.junit.Assert;
 import org.junit.Test;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
@@ -10,10 +9,12 @@ import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class GroovyFilterProcessorTest {
 
     @Test
-    public void test() throws Throwable {
+    public void testPerformances() throws Throwable {
 
         final String script = "" //
                 + "def init(args) { println args[0]; println args[1]; _a = iri('ex:a'); _b = iri('ex:b'); _p = iri('ex:p') }; " //
@@ -44,6 +45,37 @@ public class GroovyFilterProcessorTest {
         handler.endRDF();
         System.out.println(1000L * c / (System.currentTimeMillis() - ts));
         System.out.println(n);
+    }
+
+    @Test
+    public void testValueSet() throws RDFHandlerException {
+        final String script =
+                  "def init(args) { valMatchCount = 0; statMatchCount = 0; valueset = loadSet('./file.nt', 'spo'); };" +
+                  "def end(x) { log('# Matched statements: ' + statMatchCount + ' Matched values: ' + valMatchCount); };" +
+                  "if( valueset.match(q, 'spo') ) statMatchCount++;" +
+                  "if( valueset.match(s) ) valMatchCount++;";
+
+        final RDFProcessor processor = RDFProcessor.parse("@groovy \"" + script + "\" arg1 arg2");
+        final RDFHandler handler = processor.getHandler();
+        final int c = 500000;
+        final long ts = System.currentTimeMillis();
+        handler.startRDF();
+        for (int i = 0; i < c; ++i) {
+            handler.handleStatement(newStatement("ex:s", "ex:p", "ex:o" + i, "ex:c"));
+        }
+        handler.handleStatement(newStatement("http://s11", "http://PP", "http://OO", "ex:c"));
+        handler.handleStatement(newStatement("http://SS", "http://sy", "http://OO", "ex:c"));
+        handler.handleStatement(newStatement("http://SS", "http://PP", "http://o33", "ex:c"));
+        for (int i = c; i < c + c; ++i) {
+            handler.handleStatement(newStatement("ex:s", "ex:p", "ex:o" + i, "ex:c"));
+        }
+        handler.endRDF();
+        System.out.println("Statements per sec: " + 1000L * c / (System.currentTimeMillis() - ts));
+
+        GroovyFilterProcessor groovyFilterProcessor =
+                (GroovyFilterProcessor) ((SequenceProcessor) processor).getProcessors().get(0);
+        Assert.assertEquals(3, groovyFilterProcessor.getProperty(handler, "statMatchCount"));
+        Assert.assertEquals(1, groovyFilterProcessor.getProperty(handler, "valMatchCount"));
     }
 
     private Statement newStatement(final String s, final String p, final String o, final String c) {
