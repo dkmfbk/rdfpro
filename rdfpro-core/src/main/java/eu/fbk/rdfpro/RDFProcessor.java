@@ -55,6 +55,13 @@ public abstract class RDFProcessor {
         return new SequenceProcessor(Util.checkNotNull(processors));
     }
 
+    // TODO: should add a filter taking a Guava predicate or equivalent for programmatic use
+
+    public static RDFProcessor filter(@Nullable final String groovyExpressionOrFile,
+            final String... groovyArgs) {
+        return new GroovyFilterProcessor(groovyExpressionOrFile, groovyArgs);
+    }
+
     public static RDFProcessor filter(@Nullable final String matchSpec,
             @Nullable final String replaceSpec, final boolean keep) {
         return new FilterProcessor(matchSpec, replaceSpec, keep);
@@ -145,9 +152,12 @@ public abstract class RDFProcessor {
                         }
                     }
                 } else {
-                    if (escaped || quoted && ch != spec.charAt(start) || !quoted && !ws) {
+                    final boolean tokenChar = escaped || quoted && ch != spec.charAt(start)
+                            || !quoted && !ws;
+                    if (tokenChar) {
                         builder.append(ch);
-                    } else {
+                    }
+                    if (!tokenChar || i == spec.length() - 1) {
                         tokens.add(builder.toString());
                         start = -1;
                         quoted = false;
@@ -260,6 +270,9 @@ public abstract class RDFProcessor {
             }
             if ("l".equals(command) || "upload".equals(command)) {
                 return newUpload(parseOptions(options, "s", "", 1));
+            }
+            if ("g".equals(command) || "groovy".equals(command)) {
+                return newFilter(options); // TODO: should use f/filter later
             }
             if ("f".equals(command) || "filter".equals(command)) {
                 return newFilter(parseOptions(options, "r", "k", 1));
@@ -423,6 +436,20 @@ public abstract class RDFProcessor {
             final boolean keep = args.containsKey("k");
 
             return filter(matchSpec, replaceSpec, keep);
+        }
+
+        private RDFProcessor newFilter(final List<String> args) {
+
+            if (args.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Missing filter script expression or file reference");
+            }
+
+            final String groovyExpressionOrFile = args.get(0);
+            final String[] groovyArgs = args.subList(1, args.size()).toArray(
+                    new String[args.size() - 1]);
+
+            return filter(groovyExpressionOrFile, groovyArgs);
         }
 
         private RDFProcessor newSmusher(final Map<String, Object> args) {

@@ -37,4 +37,5 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### News
 
+- 2014-08-04 Version 0.2 has been released
 - 2014-07-24 Version 0.1 has been released

@@ -277,6 +277,11 @@
       <artifactId>junit</artifactId>
       <version>${junit.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+      <version>${groovy.version}</version>
+    </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -862,6 +867,7 @@
     <jsonld-java.version>0.2</jsonld-java.version>
     <semargl-jsonld.version>0.6.1</semargl-jsonld.version>
     <httpclient.version>3.1</httpclient.version>
+    <groovy.version>2.4.0-beta-2</groovy.version>
 
     <!-- Build plugin versions -->
     <release-plugin.version>2.5</release-plugin.version>
