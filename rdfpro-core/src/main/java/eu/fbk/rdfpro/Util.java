@@ -552,6 +552,24 @@ final class Util {
         return objects;
     }
 
+    public static String valueToHash(Value v) {
+        StringBuilder sb = new StringBuilder();
+        if(v instanceof URI) {
+            sb.append('u');
+            sb.append('#');
+            sb.append(v.stringValue());
+        } else if(v instanceof BNode) {
+            sb.append('b');
+            sb.append('#');
+            sb.append(v.stringValue());
+        } else if(v instanceof Literal) {
+            sb.append('l');
+            sb.append('#');
+            sb.append(murmur3Str(v.stringValue()));
+        }
+        return murmur3Str(sb.toString());
+    }
+
     public static Set<String> createHashSet(String pattern, File file) {
         final boolean matchSub = pattern.contains("s");
         final boolean matchPre = pattern.contains("p");
@@ -574,10 +592,10 @@ final class Util {
 
             @Override
             public void handleStatement(Statement statement) throws RDFHandlerException {
-                if(matchSub) hashes.add(murmur3Str(statement.getSubject().stringValue()));
-                if(matchPre) hashes.add(murmur3Str(statement.getPredicate().stringValue()));
-                if(matchObj) hashes.add(murmur3Str(statement.getObject().stringValue()));
-                if(matchCtx) hashes.add(murmur3Str(statement.getContext().stringValue()));
+                if(matchSub) hashes.add(valueToHash(statement.getSubject()));
+                if(matchPre) hashes.add(valueToHash(statement.getPredicate()));
+                if(matchObj) hashes.add(valueToHash(statement.getObject()));
+                if(matchCtx) hashes.add(valueToHash(statement.getContext()));
             }
 
             @Override
