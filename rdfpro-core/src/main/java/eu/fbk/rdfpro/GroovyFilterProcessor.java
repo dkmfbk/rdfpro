@@ -29,6 +29,9 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.impl.BNodeImpl;
+import org.openrdf.model.impl.LiteralImpl;
+import org.openrdf.model.impl.URIImpl;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
@@ -140,26 +143,6 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     }
 
-    public static class Quad {
-
-        public Resource s;
-
-        public URI p;
-
-        public Value o;
-
-        @Nullable
-        public Resource c;
-
-        public Quad(final Resource s, final URI p, final Value o, @Nullable final Resource c) {
-            this.s = s;
-            this.p = p;
-            this.o = o;
-            this.c = c;
-        }
-
-    }
-
     public static abstract class HandlerScript extends Script {
 
         private RDFHandler handler;
@@ -172,11 +155,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         private boolean insideRun;
 
-        private boolean statementEmitted;
-
-        private Statement statement;
-
-        private Quad quad;
+        private GroovyStatement statement;
 
         private int pass;
 
@@ -192,23 +171,23 @@ final class GroovyFilterProcessor extends RDFProcessor {
             // Directly matching variables this way is faster than storing them in binding object
             if (this.insideRun && property.length() == 1) {
                 if ("q".equals(property)) {
-                    return this.quad;
+                    return this.statement;
                 } else if ("s".equals(property)) {
-                    return this.quad.s;
+                    return this.statement.s;
                 } else if ("p".equals(property)) {
-                    return this.quad.p;
+                    return this.statement.p;
                 } else if ("o".equals(property)) {
-                    return this.quad.o;
+                    return this.statement.o;
                 } else if ("c".equals(property)) {
-                    return this.quad.c;
+                    return this.statement.c;
                 } else if ("t".equals(property)) {
-                    return this.quad.p.equals(RDF.TYPE) ? this.quad.o : null;
+                    return this.statement.p.equals(RDF.TYPE) ? this.statement.o : null;
                 } else if ("l".equals(property)) {
-                    return this.quad.o instanceof Literal ? ((Literal) this.quad.o).getLanguage()
-                            : null;
+                    return this.statement.o instanceof Literal ? ((Literal) this.statement.o)
+                            .getLanguage() : null;
                 } else if ("d".equals(property)) {
-                    return this.quad.o instanceof Literal ? ((Literal) this.quad.o).getDatatype()
-                            : null;
+                    return this.statement.o instanceof Literal ? ((Literal) this.statement.o)
+                            .getDatatype() : null;
                 }
             }
             if ("__rdfpro__".equals(property)) {
@@ -222,16 +201,16 @@ final class GroovyFilterProcessor extends RDFProcessor {
             // Directly matching variables this way is faster than storing them in binding object
             if (this.insideRun && property.length() == 1) {
                 if ("q".equals(property)) {
-                    this.quad = (Quad) value;
+                    this.statement = normalize((Statement) value);
                 } else if ("s".equals(property)) {
-                    this.quad.s = (Resource) toRDFValue(value, false);
+                    this.statement.s = (Resource) toRDF(value, false);
                 } else if ("p".equals(property)) {
-                    this.quad.p = (URI) toRDFValue(value, false);
+                    this.statement.p = (URI) toRDF(value, false);
                 } else if ("c".equals(property)) {
-                    this.quad.c = (Resource) toRDFValue(value, false);
+                    this.statement.c = (Resource) toRDF(value, false);
                 } else if ("t".equals(property)) {
-                    this.quad.o = toRDFValue(value, false);
-                    this.quad.p = RDF.TYPE;
+                    this.statement.o = toRDF(value, false);
+                    this.statement.p = RDF.TYPE;
                 } else {
                     // Following code serves to asseble literals starting from label, lang, dt
                     boolean setLiteral = false;
@@ -240,7 +219,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
                     URI newDatatype = null;
                     if ("o".equals(property)) {
                         if (value instanceof Value) {
-                            this.quad.o = (Value) value;
+                            this.statement.o = (Value) value;
                         } else {
                             newLabel = value.toString();
                             setLiteral = true;
@@ -249,17 +228,17 @@ final class GroovyFilterProcessor extends RDFProcessor {
                         newLang = value == null ? null : value.toString();
                         setLiteral = true;
                     } else if ("d".equals(property)) {
-                        newDatatype = value == null ? null : (URI) toRDFValue(value, false);
+                        newDatatype = value == null ? null : (URI) toRDF(value, false);
                         setLiteral = true;
                     }
                     if (setLiteral) {
-                        if (this.quad.o instanceof Literal) {
-                            final Literal l = (Literal) this.quad.o;
+                        if (this.statement.o instanceof Literal) {
+                            final Literal l = (Literal) this.statement.o;
                             newLabel = newLabel != null ? newLabel : l.getLabel();
                             newLang = newLang != null ? newLang : l.getLanguage();
                             newDatatype = newDatatype != null ? newDatatype : l.getDatatype();
                         }
-                        this.quad.o = newLang != null ? Util.FACTORY.createLiteral(newLabel,
+                        this.statement.o = newLang != null ? Util.FACTORY.createLiteral(newLabel,
                                 newLang) : newDatatype != null ? Util.FACTORY.createLiteral(
                                 newLabel, newDatatype) : Util.FACTORY.createLiteral(newLabel);
                     }
@@ -282,12 +261,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         final void doHandle(final Statement statement) throws RDFHandlerException {
 
-            this.statement = statement;
-            this.quad = new Quad(statement.getSubject(), statement.getPredicate(),
-                    statement.getObject(), statement.getContext());
+            this.statement = normalize(statement);
 
             if (this.handleEnabled) {
-                if (tryInvokeMethod("handle", this.quad)) {
+                if (tryInvokeMethod("handle", this.statement)) {
                     return;
                 }
                 this.handleEnabled = false;
@@ -311,39 +288,32 @@ final class GroovyFilterProcessor extends RDFProcessor {
             ++this.pass;
         }
 
-        protected final boolean emit() throws RDFHandlerException {
-            if (this.quad.s != this.statement.getSubject()
-                    || this.quad.p != this.statement.getPredicate()
-                    || this.quad.o != this.statement.getObject()
-                    || this.quad.c != this.statement.getContext()) {
-                this.statementEmitted = false;
-                this.statement = this.quad.c == null ? Util.FACTORY.createStatement(this.quad.s,
-                        this.quad.p, this.quad.o) : Util.FACTORY.createStatement(this.quad.s,
-                        this.quad.p, this.quad.o, this.quad.c);
-            }
-            if (this.statementEmitted) {
-                return false;
-            }
+        protected final void emit() throws RDFHandlerException {
             this.handler.handleStatement(this.statement);
-            this.statementEmitted = true;
-            return true;
         }
 
         protected final boolean emitIf(@Nullable final Object condition)
                 throws RDFHandlerException {
-            return condition == Boolean.TRUE && emit();
+            if (condition == Boolean.TRUE) {
+                emit();
+                return true;
+            }
+            return false;
         }
 
         protected final boolean emitIfNot(@Nullable final Object condition)
                 throws RDFHandlerException {
-            return condition == Boolean.FALSE && emit();
+            if (condition == Boolean.FALSE) {
+                emit();
+                return true;
+            }
+            return false;
         }
 
-        protected final boolean emit(@Nullable final Quad quad) throws RDFHandlerException {
-            if (quad != null && quad.s != null && quad.p != null && quad.o != null) {
-                this.handler.handleStatement(quad.c != null ? Util.FACTORY.createStatement(quad.s,
-                        quad.p, quad.o, quad.c) : Util.FACTORY.createStatement(quad.s, quad.p,
-                        quad.o));
+        protected final boolean emit(@Nullable final Statement statement)
+                throws RDFHandlerException {
+            if (!(statement instanceof GroovyStatement) || ((GroovyStatement) statement).isValid()) {
+                this.handler.handleStatement(statement);
                 return true;
             }
             return false;
@@ -352,10 +322,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
         protected final boolean emit(@Nullable final Object s, @Nullable final Object p,
                 @Nullable final Object o, @Nullable final Object c) throws RDFHandlerException {
 
-            final Value sv = toRDFValue(s, false);
-            final Value pv = toRDFValue(p, false);
-            final Value ov = toRDFValue(o, true);
-            final Value cv = toRDFValue(c, false);
+            final Value sv = toRDF(s, false);
+            final Value pv = toRDF(p, false);
+            final Value ov = toRDF(o, true);
+            final Value cv = toRDF(c, false);
 
             if (sv instanceof Resource && pv instanceof URI && ov != null) {
                 if (cv == null) {
@@ -374,12 +344,13 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         // QUAD CREATION
 
-        protected final Quad quad(final Object s, final Object p, final Object o, final Object c) {
-            final Resource sv = (Resource) toRDFValue(s, false);
-            final URI pv = (URI) toRDFValue(p, false);
-            final Value ov = toRDFValue(o, true);
-            final Resource cv = (Resource) toRDFValue(c, false);
-            return new Quad(sv, pv, ov, cv);
+        protected final Statement quad(final Object s, final Object p, final Object o,
+                final Object c) {
+            final Resource sv = (Resource) toRDF(s, false);
+            final URI pv = (URI) toRDF(p, false);
+            final Value ov = toRDF(o, true);
+            final Resource cv = (Resource) toRDF(c, false);
+            return new GroovyStatement(sv, pv, ov, cv);
         }
 
         // SPARQL FUNCTIONS
@@ -433,14 +404,22 @@ final class GroovyFilterProcessor extends RDFProcessor {
             return null;
         }
 
-        @Nullable
-        protected final URI iri(@Nullable final Object arg) {
-            if (arg instanceof URI) {
-                return (URI) arg;
-            } else if (arg != null) {
-                return Util.FACTORY.createURI(arg.toString());
+        protected final boolean match(final URI uri, final Object arg) {
+            URI uri2;
+            if (arg == null || arg instanceof URI) {
+                uri2 = (URI) arg;
+            } else {
+                uri2 = Util.FACTORY.createURI(arg.toString());
             }
-            return null;
+            return uri.equals(uri2);
+        }
+
+        @Nullable
+        protected final URI iri(@Nullable final Object arg) { // TODO
+            if (arg == null || arg instanceof URI) {
+                return (URI) arg;
+            }
+            return Util.FACTORY.createURI(arg.toString());
         }
 
         protected final BNode bnode() {
@@ -507,17 +486,218 @@ final class GroovyFilterProcessor extends RDFProcessor {
             }
         }
 
-        @Nullable
-        private Value toRDFValue(final Object object, final boolean mayBeLiteral) {
-            if (object instanceof Value) {
-                return (Value) object;
-            } else if (object == null) {
-                return null;
-            } else if (mayBeLiteral) {
-                return Util.FACTORY.createLiteral(object.toString());
-            } else {
-                return Util.FACTORY.createURI(object.toString());
+    }
+
+    @Nullable
+    private static Value toRDF(final Object object, final boolean mayBeLiteral) {
+        if (object instanceof Value) {
+            return normalize((Value) object);
+        } else if (object == null) {
+            return null;
+        } else if (mayBeLiteral) {
+            return new GroovyLiteral(object.toString());
+        } else {
+            return new GroovyURI(object.toString());
+        }
+    }
+
+    @Nullable
+    private static GroovyStatement normalize(@Nullable final Statement s) {
+        if (s instanceof GroovyStatement) {
+            return (GroovyStatement) s;
+        } else if (s != null) {
+            return new GroovyStatement((Resource) normalize(s.getSubject()),
+                    (URI) normalize(s.getPredicate()), normalize(s.getObject()),
+                    (Resource) normalize(s.getContext()));
+        }
+        return null;
+    }
+
+    @Nullable
+    private static Value normalize(@Nullable final Value v) {
+        if (v instanceof URI) {
+            return v instanceof GroovyURI ? v : new GroovyURI(v.stringValue());
+        } else if (v instanceof BNode) {
+            return v instanceof GroovyBNode ? v : new GroovyBNode(v.stringValue());
+        } else if (v instanceof Literal) {
+            if (v instanceof GroovyLiteral) {
+                return v;
             }
+            final Literal l = (Literal) v;
+            if (l.getLanguage() != null) {
+                return new GroovyLiteral(l.getLabel(), l.getLanguage());
+            } else if (l.getDatatype() != null) {
+                return new GroovyLiteral(l.getLabel(), l.getDatatype());
+            } else {
+                return new GroovyLiteral(l.getLabel());
+            }
+        }
+        return null;
+    }
+
+    public static class GroovyStatement implements Statement {
+
+        private static final long serialVersionUID = 1L;
+
+        @Nullable
+        public Resource s;
+
+        @Nullable
+        public URI p;
+
+        @Nullable
+        public Value o;
+
+        @Nullable
+        public Resource c;
+
+        public GroovyStatement(final Resource s, final URI p, final Value o,
+                @Nullable final Resource c) {
+            this.s = s;
+            this.p = p;
+            this.o = o;
+            this.c = c;
+        }
+
+        public boolean isValid() {
+            return this.s != null && this.p != null && this.o != null;
+        }
+
+        @Override
+        public Resource getSubject() {
+            return this.s;
+        }
+
+        @Override
+        public URI getPredicate() {
+            return this.p;
+        }
+
+        @Override
+        public Value getObject() {
+            return this.o;
+        }
+
+        @Override
+        public Resource getContext() {
+            return this.c;
+        }
+
+        @Override
+        public boolean equals(final Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (object instanceof Statement) {
+                final Statement other = (Statement) object;
+                return this.o.equals(other.getObject()) && this.s.equals(other.getSubject())
+                        && this.p.equals(other.getPredicate());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return 961 * this.s.hashCode() + 31 * this.p.hashCode() + this.o.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            final StringBuilder builder = new StringBuilder(256);
+            builder.append('(');
+            builder.append(this.s);
+            builder.append(", ");
+            builder.append(this.p);
+            builder.append(", ");
+            builder.append(this.o);
+            if (this.c != null) {
+                builder.append(" [");
+                builder.append(this.c);
+                builder.append("]");
+            }
+            return builder.toString();
+        }
+
+    }
+
+    public static final class GroovyURI extends URIImpl implements Comparable<Value> {
+
+        private static final long serialVersionUID = 1L;
+
+        public GroovyURI(final String uriString) {
+            super(uriString);
+        }
+
+        @Override
+        public int compareTo(final Value other) {
+            if (other instanceof URI) {
+                return stringValue().compareTo(other.stringValue());
+            }
+            return -1;
+        }
+
+    }
+
+    public static final class GroovyBNode extends BNodeImpl implements Comparable<Value> {
+
+        private static final long serialVersionUID = 1L;
+
+        public GroovyBNode(final String id) {
+            super(id);
+        }
+
+        @Override
+        public int compareTo(final Value other) {
+            if (other instanceof BNode) {
+                return stringValue().compareTo(other.stringValue());
+            } else if (other instanceof URI) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+
+    }
+
+    public static final class GroovyLiteral extends LiteralImpl implements Comparable<Value> {
+
+        private static final long serialVersionUID = 1L;
+
+        GroovyLiteral(final String label, @Nullable final URI datatype) {
+            super(label, datatype);
+        }
+
+        GroovyLiteral(final String label, @Nullable final String language) {
+            super(label, language);
+        }
+
+        GroovyLiteral(final String label) {
+            super(label);
+        }
+
+        @Override
+        public int compareTo(final Value other) {
+            if (other instanceof Literal) {
+                int result = 0;
+                if (other != this) {
+                    final Literal l = (Literal) other;
+                    result = getLabel().compareTo(l.getLabel());
+                    if (result == 0) {
+                        final String lang1 = getLanguage();
+                        final String lang2 = l.getLanguage();
+                        result = lang1 != null ? lang2 != null ? lang1.compareTo(lang2) : 1
+                                : lang2 != null ? -1 : 0;
+                        if (result == 0) {
+                            final URI dt1 = getDatatype();
+                            final URI dt2 = l.getDatatype();
+                            result = dt1 != null ? dt2 != null ? dt1.stringValue().compareTo(
+                                    dt2.stringValue()) : 1 : dt2 != null ? -1 : 0;
+                        }
+                    }
+                }
+                return result;
+            }
+            return 1;
         }
 
     }
