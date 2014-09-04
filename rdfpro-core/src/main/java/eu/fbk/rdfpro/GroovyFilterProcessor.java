@@ -36,12 +36,22 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import groovy.lang.MissingMethodException;
 import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
 
 final class GroovyFilterProcessor extends RDFProcessor {
+
+    // TODO: optionally, we can provide for two execution modalities, one failing at first error
+    // and the other continuing
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyFilterProcessor.class);
+
+    private static final Logger SCRIPT_LOGGER = LoggerFactory
+            .getLogger(GroovyFilterProcessor.class.getName() + ".script"); // can be improved
 
     private static final GroovyScriptEngine ENGINE;
 
@@ -415,7 +425,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
         }
 
         @Nullable
-        protected final URI iri(@Nullable final Object arg) { // TODO
+        protected final URI iri(@Nullable final Object arg) {
             if (arg == null || arg instanceof URI) {
                 return (URI) arg;
             }
@@ -469,7 +479,37 @@ final class GroovyFilterProcessor extends RDFProcessor {
             return Util.FACTORY.createLiteral(UUID.randomUUID().toString());
         }
 
-        // TODO: add remaining SPARQL functions
+        protected final void error(@Nullable final Object message) throws RDFHandlerException {
+            final String string = message == null ? "ERROR" : message.toString();
+            SCRIPT_LOGGER.error(string);
+            throw new RDFHandlerException(string);
+        }
+
+        protected final void error(@Nullable final Object message, @Nullable final Throwable ex)
+                throws RDFHandlerException {
+            final String string = message == null ? "ERROR" : message.toString();
+            if (ex != null) {
+                SCRIPT_LOGGER.error(string, ex);
+                throw new RDFHandlerException(string, ex);
+            } else {
+                SCRIPT_LOGGER.error(string);
+                throw new RDFHandlerException(string);
+            }
+        }
+
+        protected final void log(final Object message) {
+            if (message != null) {
+                SCRIPT_LOGGER.info(message.toString());
+            }
+        }
+
+        // TODO [Francesco]: add remaining SPARQL functions
+
+        protected final ValueSet loadSet(final Object file, final Object components) {
+            // TODO [Michele] load the specified "spoc" components from file
+            // TODO consider caching of loaded file components (very optional)
+            return null;
+        }
 
         // UTILITY FUNCTIONS
 
@@ -698,6 +738,22 @@ final class GroovyFilterProcessor extends RDFProcessor {
                 return result;
             }
             return 1;
+        }
+
+    }
+
+    public static final class ValueSet {
+
+        // TODO [Michele]
+
+        public boolean match(final Object value) {
+            // TODO value should be converted to a Sesame Value using method toRDF() (see above)
+            return false;
+        }
+
+        public boolean match(final Statement statement, final Object components) {
+            // TODO components should be converted to a string (e.g. "so")
+            return false;
         }
 
     }
