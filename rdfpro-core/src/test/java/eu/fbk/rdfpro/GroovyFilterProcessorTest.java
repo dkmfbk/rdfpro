@@ -2,6 +2,7 @@ package eu.fbk.rdfpro;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.junit.Test;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
@@ -16,12 +17,13 @@ public class GroovyFilterProcessorTest {
     public void test() throws Throwable {
 
         final String script = "" //
-                + "def init(args) { println args[0]; println args[1]; _a = iri('ex:a'); _b = iri('ex:b'); _p = iri('ex:p') }; " //
+                + "def init(args) { println args[0]; println args[1]; }; " //
                 + "def start(x) { println 'start ' + x; i = 0 }; " //
                 + "def end(x) { println 'end ' + x + ' ' + i }; " //
-                + "emitIf(p == iri('ex:a') || p == iri('ex:b') || p == iri('ex:p'))";
+                + "emitIf(p == <ex:a> || p == <ex:b> || p == <ex:p>)";
 
-        final RDFProcessor processor = RDFProcessor.parse("@groovy \"" + script + "\" arg1 arg2");
+        final RDFProcessor processor = RDFProcessor.parse("@transform \"" + script
+                + "\" arg1 arg2");
 
         final AtomicInteger n = new AtomicInteger(0);
         final RDFHandler sink = new RDFHandlerBase() {

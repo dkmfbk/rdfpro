@@ -57,7 +57,7 @@ public abstract class RDFProcessor {
 
     // TODO: should add a filter taking a Guava predicate or equivalent for programmatic use
 
-    public static RDFProcessor filter(@Nullable final String groovyExpressionOrFile,
+    public static RDFProcessor transform(@Nullable final String groovyExpressionOrFile,
             final String... groovyArgs) {
         return new GroovyFilterProcessor(groovyExpressionOrFile, groovyArgs);
     }
@@ -271,8 +271,8 @@ public abstract class RDFProcessor {
             if ("l".equals(command) || "upload".equals(command)) {
                 return newUpload(parseOptions(options, "s", "", 1));
             }
-            if ("g".equals(command) || "groovy".equals(command)) {
-                return newFilter(options); // TODO: should use f/filter later
+            if ("r".equals(command) || "transform".equals(command)) {
+                return newTransform(options);
             }
             if ("f".equals(command) || "filter".equals(command)) {
                 return newFilter(parseOptions(options, "r", "k", 1));
@@ -438,7 +438,7 @@ public abstract class RDFProcessor {
             return filter(matchSpec, replaceSpec, keep);
         }
 
-        private RDFProcessor newFilter(final List<String> args) {
+        private RDFProcessor newTransform(final List<String> args) {
 
             if (args.isEmpty()) {
                 throw new IllegalArgumentException(
@@ -449,7 +449,7 @@ public abstract class RDFProcessor {
             final String[] groovyArgs = args.subList(1, args.size()).toArray(
                     new String[args.size() - 1]);
 
-            return filter(groovyExpressionOrFile, groovyArgs);
+            return transform(groovyExpressionOrFile, groovyArgs);
         }
 
         private RDFProcessor newSmusher(final Map<String, Object> args) {

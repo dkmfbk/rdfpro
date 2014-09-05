@@ -13,13 +13,26 @@
  */
 package eu.fbk.rdfpro;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
@@ -36,12 +49,15 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+import org.openrdf.rio.turtle.TurtleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import groovy.lang.MissingMethodException;
 import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
+import groovy.util.ResourceConnector;
+import groovy.util.ResourceException;
 
 final class GroovyFilterProcessor extends RDFProcessor {
 
@@ -61,8 +77,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     static {
         try {
-            final String[] roots = Util.settingFor("rdfpro.groovy.classpath", "").split("[;:]");
-            ENGINE = new GroovyScriptEngine(roots);
+            // final String[] roots = Util.settingFor("rdfpro.groovy.classpath",
+            // "").split("[;:]");
+            final String classpath = Util.settingFor("rdfpro.groovy.classpath", "");
+            ENGINE = new GroovyScriptEngine(new Loader(classpath));
             ENGINE.getConfig().setScriptBaseClass(HandlerScript.class.getName());
         } catch (final Throwable ex) {
             throw new Error("Could not initialize Groovy: " + ex.getMessage(), ex);
@@ -106,7 +124,272 @@ final class GroovyFilterProcessor extends RDFProcessor {
         }
     }
 
-    private final class Handler implements RDFHandler, Closeable {
+    private static final class Loader implements ResourceConnector {
+
+        private static URL[] roots;
+
+        public Loader(final String classpath) {
+            try {
+                final String[] paths = classpath.split("[;:]");
+                Loader.roots = new URL[paths.length];
+                for (int i = 0; i < paths.length; ++i) {
+                    final String path = paths[i];
+                    if (path.indexOf("://") != -1) {
+                        roots[i] = new URL(path);
+                    } else {
+                        roots[i] = new File(path).toURI().toURL();
+                    }
+                }
+            } catch (final MalformedURLException ex) {
+                throw new IllegalArgumentException(ex);
+            }
+        }
+
+        @Override
+        public URLConnection getResourceConnection(final String name) throws ResourceException {
+
+            URLConnection connection = null;
+            ResourceException exception = null;
+
+            for (final URL root : roots) {
+                URL scriptURL = null;
+                try {
+                    scriptURL = new URL(root, name);
+                    connection = new Connection(scriptURL);
+                    connection.connect();
+                    connection.getInputStream(); // open connection in advance
+                    break;
+
+                } catch (final MalformedURLException ex) {
+                    final String message = "Malformed URL: " + root + ", " + name;
+                    exception = exception == null ? new ResourceException(message)
+                            : new ResourceException(message, exception);
+
+                } catch (final IOException ex) {
+                    connection = null;
+                    final String message = "Cannot open URL: " + root + name;
+                    exception = exception == null ? new ResourceException(message)
+                            : new ResourceException(message, exception);
+                }
+            }
+
+            if (connection == null) {
+                if (exception == null) {
+                    exception = new ResourceException("No resource for " + name + " was found");
+                }
+                throw exception;
+            }
+
+            return connection;
+        }
+
+        private static String filter(final AtomicInteger counter, final String string) {
+
+            final StringBuilder builder = new StringBuilder();
+            final int length = string.length();
+            int i = 0;
+
+            try {
+                while (i < length) {
+                    char c = string.charAt(i);
+                    if (c == '<') {
+                        final int end = parseURI(string, i);
+                        if (end >= 0) {
+                            final URI u = (URI) Util.parseValue(string.substring(i, end));
+                            builder.append("__iri(").append(counter.getAndIncrement())
+                                    .append(", \"").append(u.stringValue()).append("\")");
+                            i = end;
+                        } else {
+                            builder.append(c);
+                            ++i;
+                        }
+
+                    } else if (TurtleUtil.isPN_CHARS_BASE(c)) {
+                        final int end = parseQName(string, i);
+                        if (end >= 0) {
+                            final URI u = (URI) Util.parseValue(string.substring(i, end));
+                            builder.append("iri(\"").append(u.stringValue()).append("\")");
+                            i = end;
+                        } else {
+                            do {
+                                builder.append(c);
+                                c = string.charAt(++i);
+                            } while (Character.isLetterOrDigit(c));
+                        }
+
+                    } else if (c == '\'' || c == '\"') {
+                        final char d = c; // delimiter
+                        builder.append(d);
+                        do {
+                            c = string.charAt(++i);
+                            builder.append(c);
+                        } while (c != d || string.charAt(i - 1) == '\\');
+                        ++i;
+
+                    } else {
+                        builder.append(c);
+                        ++i;
+                    }
+                }
+            } catch (final Exception ex) {
+                throw new IllegalArgumentException("Illegal URI escaping near offset " + i, ex);
+            }
+
+            return builder.toString();
+        }
+
+        private static int parseURI(final String string, int i) {
+
+            final int len = string.length();
+
+            if (string.charAt(i) != '<') {
+                return -1;
+            }
+
+            for (++i; i < len; ++i) {
+                final char c = string.charAt(i);
+                if (c == '<' || c == '\"' || c == '{' || c == '}' || c == '|' || c == '^'
+                        || c == '`' || c == '\\' || c == ' ') {
+                    return -1;
+                }
+                if (c == '>') {
+                    return i + 1;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int parseQName(final String string, int i) {
+
+            final int len = string.length();
+            char c;
+
+            if (!TurtleUtil.isPN_CHARS_BASE(string.charAt(i))) {
+                return -1;
+            }
+
+            for (; i < len; ++i) {
+                c = string.charAt(i);
+                if (!TurtleUtil.isPN_CHARS(c) && c != '.') {
+                    break;
+                }
+            }
+
+            if (string.charAt(i - 1) == '.' || string.charAt(i) != ':' || i == len - 1) {
+                return -1;
+            }
+
+            c = string.charAt(++i);
+            if (!TurtleUtil.isPN_CHARS_U(c) && c != ':' && c != '%' && !Character.isDigit(c)) {
+                return -1;
+            }
+
+            for (; i < len; ++i) {
+                c = string.charAt(i);
+                if (!TurtleUtil.isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
+                    break;
+                }
+            }
+
+            if (string.charAt(i - 1) == '.') {
+                return -1;
+            }
+
+            return i;
+        }
+
+        private class Connection extends URLConnection {
+
+            private Map<String, List<String>> headers;
+
+            private byte[] bytes;
+
+            Connection(final URL url) {
+                super(url);
+            }
+
+            @Override
+            public void connect() throws IOException {
+
+                final URLConnection conn = this.url.openConnection();
+                conn.setAllowUserInteraction(getAllowUserInteraction());
+                conn.setConnectTimeout(getConnectTimeout());
+                conn.setDefaultUseCaches(getDefaultUseCaches());
+                conn.setDoInput(getDoInput());
+                conn.setDoOutput(getDoOutput());
+                conn.setIfModifiedSince(getIfModifiedSince());
+                conn.setReadTimeout(getReadTimeout());
+                conn.setUseCaches(getUseCaches());
+                for (final Map.Entry<String, List<String>> entry : getRequestProperties()
+                        .entrySet()) {
+                    final String key = entry.getKey();
+                    for (final String value : entry.getValue()) {
+                        conn.setRequestProperty(key, value);
+                    }
+                }
+                conn.connect();
+
+                final String encoding = conn.getContentEncoding();
+                final Charset charset = Charset.forName(encoding != null ? encoding : "UTF-8");
+
+                final StringBuilder builder = new StringBuilder();
+                final InputStream stream = conn.getInputStream();
+                final BufferedReader reader = new BufferedReader(new InputStreamReader(stream,
+                        charset));
+                try {
+                    String line;
+                    final AtomicInteger counter = new AtomicInteger();
+                    while ((line = reader.readLine()) != null) {
+                        builder.append(filter(counter, line));
+                    }
+                } finally {
+                    reader.close();
+                }
+
+                this.bytes = builder.toString().getBytes(charset);
+                this.connected = true;
+
+                this.headers = new HashMap<String, List<String>>(conn.getHeaderFields());
+            }
+
+            @Override
+            public Map<String, List<String>> getHeaderFields() {
+                return this.headers;
+            }
+
+            @Override
+            public String getHeaderField(final String name) {
+                final List<String> list = this.headers == null ? null : this.headers.get(name);
+                return list == null ? null : list.get(list.size() - 1);
+            }
+
+            @Override
+            public String getHeaderFieldKey(final int n) {
+                final Iterator<String> iterator = this.headers.keySet().iterator();
+                for (int i = 0; i < n; ++i) {
+                    if (iterator.hasNext()) {
+                        iterator.next();
+                    }
+                }
+                return iterator.hasNext() ? iterator.next() : null;
+            }
+
+            @Override
+            public String getHeaderField(final int n) {
+                return getHeaderField(getHeaderFieldKey(n));
+            }
+
+            @Override
+            public InputStream getInputStream() throws IOException {
+                return new ByteArrayInputStream(this.bytes);
+            }
+
+        }
+
+    }
+
+    private static final class Handler implements RDFHandler, Closeable {
 
         private final RDFHandler handler;
 
@@ -151,6 +434,28 @@ final class GroovyFilterProcessor extends RDFProcessor {
             Util.closeQuietly(this.handler);
         }
 
+        public HandlerScript getScript() {
+            return this.script;
+        }
+
+    }
+
+    public Object setProperty(final RDFHandler handler, final String name, final Object value) {
+        if (handler instanceof Handler) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        final Object oldValue = h.getScript().getProperty(name);
+        h.getScript().setProperty(name, value);
+        return oldValue;
+    }
+
+    public Object getProperty(final RDFHandler handler, final String name) {
+        if (handler instanceof Handler) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        return h.getScript().getProperty(name);
     }
 
     public static abstract class HandlerScript extends Script {
@@ -169,11 +474,14 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         private int pass;
 
+        private URI[] uriConsts;
+
         protected HandlerScript() {
             this.startEnabled = true;
             this.handleEnabled = true;
             this.endEnabled = true;
             this.pass = 0;
+            this.uriConsts = new URI[0];
         }
 
         @Override
@@ -422,6 +730,18 @@ final class GroovyFilterProcessor extends RDFProcessor {
                 uri2 = Util.FACTORY.createURI(arg.toString());
             }
             return uri.equals(uri2);
+        }
+
+        protected final URI __iri(final int index, final Object arg) {
+            if (index >= this.uriConsts.length) {
+                this.uriConsts = Arrays.copyOf(this.uriConsts, index + 1);
+            }
+            URI uri = this.uriConsts[index];
+            if (uri == null) {
+                uri = iri(arg);
+                this.uriConsts[index] = uri;
+            }
+            return uri;
         }
 
         @Nullable
