@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Script environment:
+#   JAVA_HOME: the defined Java runtime
+#   JAVA_OPTS: JVM options
+#   $RDFPRO_GROOVY_CLASSPATH: the classpath for Groovy scripts
+
 # resolve program name in case it is a symbolic link
 PRG="$0"
 while [ -h "$PRG" ]; do
