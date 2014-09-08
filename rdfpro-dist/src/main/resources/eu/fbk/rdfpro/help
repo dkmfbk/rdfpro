@@ -44,6 +44,10 @@ BUILTIN PROCESSORS:
   [-k]          keep also unselected quads (default: drop them)
   [-r EXP]      use replacement expression EXP to rewrite selected quads
 
+@transform|@t   Transform the stream using a user-supplied Groovy script
+  [SCRIPT]      either the script expression or the name of the script file
+  [ARG...]      optional arguments to be passed to the script
+ 
 @infer|@i       Emits the RDFS closure of input quads
   [-r RULES]    use only comma-separated list of RULES (default: all rules)
   [-d]          decompose OWL axioms to RDFS (e.g. equivalentClass -> subClass)

@@ -66,7 +66,7 @@ public class Main {
         showHelp |= index == args.length;
 
         if (verbose) {
-            ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("eu.fbk.rdfp"))
+            ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("eu.fbk.rdfpro"))
                     .setLevel(Level.DEBUG);
         }
 

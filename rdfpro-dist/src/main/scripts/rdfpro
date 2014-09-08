@@ -32,5 +32,12 @@ for _JAR in `ls $_LIB/*.jar` ; do
         _CLASSPATH=$_CLASSPATH:$_JAR;
 done
 
+# Build groovy classpath.
+OLD_CLASSPATH=$RDFPRO_GROOVY_CLASSPATH
+RDFPRO_GROOVY_CLASSPATH=$BASEDIR/groovy
+if [ -n "$OLD_CLASSPATH" ] ; then
+    export RDFPRO_GROOVY_CLASSPATH=$RDFPRO_GROOVY_CLASSPATH:$OLD_CLASSPATH
+fi
+
 # Execute the program
 $_JAVA $JAVA_OPTS -classpath $_CLASSPATH eu.fbk.rdfpro.tool.Main "$@"

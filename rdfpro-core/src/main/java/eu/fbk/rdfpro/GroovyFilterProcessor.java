@@ -27,21 +27,28 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
 
+import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.datatypes.XMLDatatypeUtil;
 import org.openrdf.model.impl.BNodeImpl;
 import org.openrdf.model.impl.LiteralImpl;
 import org.openrdf.model.impl.URIImpl;
@@ -71,41 +78,68 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     private static final GroovyScriptEngine ENGINE;
 
+    private static final DatatypeFactory DATATYPE_FACTORY;
+
     private final Class<?> scriptClass;
 
     private final String[] scriptArgs;
 
     static {
         try {
-            // final String[] roots = Util.settingFor("rdfpro.groovy.classpath",
-            // "").split("[;:]");
+            final ImportCustomizer customizer = new ImportCustomizer();
+            customizer.addStaticStars("eu.fbk.rdfpro.SparqlFunctions");
             final String classpath = Util.settingFor("rdfpro.groovy.classpath", "");
             ENGINE = new GroovyScriptEngine(new Loader(classpath));
             ENGINE.getConfig().setScriptBaseClass(HandlerScript.class.getName());
+            ENGINE.getConfig().addCompilationCustomizers(customizer);
+            LOGGER.debug("Groovy classpath: " + classpath);
         } catch (final Throwable ex) {
             throw new Error("Could not initialize Groovy: " + ex.getMessage(), ex);
         }
+        try {
+            DATATYPE_FACTORY = DatatypeFactory.newInstance();
+        } catch (final DatatypeConfigurationException ex) {
+            throw new Error("Could not instantiate javax.xml.datatype.DatatypeFactory", ex);
+        }
     }
 
-    GroovyFilterProcessor(final String scriptExprOrFile, final String... scriptArgs) {
+    public GroovyFilterProcessor(final String scriptExprOrFile, final String... scriptArgs) {
 
         Util.checkNotNull(scriptExprOrFile);
 
         Class<?> scriptClass = null;
         try {
-            scriptClass = ENGINE.loadScriptByName(scriptExprOrFile);
-        } catch (final Throwable ex) {
             try {
+                scriptClass = ENGINE.loadScriptByName(scriptExprOrFile);
+            } catch (final ResourceException ex) {
                 final Path path = Files.createTempFile("rdfpro-filter-", ".groovy");
                 Files.write(path, scriptExprOrFile.getBytes(Charset.forName("UTF-8")));
                 scriptClass = ENGINE.loadScriptByName(path.toUri().toString());
-            } catch (final Throwable ex2) {
-                throw new Error("Could not compile Groovy script", ex2);
             }
+        } catch (final Throwable ex) {
+            throw new Error("Could not compile Groovy script", ex);
         }
 
         this.scriptClass = scriptClass;
         this.scriptArgs = scriptArgs.clone();
+    }
+
+    public Object getProperty(final RDFHandler handler, final String name) {
+        if (!(handler instanceof Handler)) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        return h.getScript().getProperty(name);
+    }
+
+    public Object setProperty(final RDFHandler handler, final String name, final Object value) {
+        if (!(handler instanceof Handler)) {
+            return null;
+        }
+        final Handler h = (Handler) handler;
+        final Object oldValue = h.getScript().getProperty(name);
+        h.getScript().setProperty(name, value);
+        return oldValue;
     }
 
     @Override
@@ -126,20 +160,27 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     private static final class Loader implements ResourceConnector {
 
-        private static URL[] roots;
+        private URL[] roots;
+
+        // We cache connections as the Groovy engines access each file multiple times (3 times)
+        // for checking its existence and modification time. As we rewrite file content each time
+        // we cache the rewritten byte array for performance reasons
+        private Map<URL, URLConnection> connections;
 
         public Loader(final String classpath) {
             try {
                 final String[] paths = classpath.split("[;:]");
-                Loader.roots = new URL[paths.length];
+                this.roots = new URL[paths.length];
                 for (int i = 0; i < paths.length; ++i) {
                     final String path = paths[i];
                     if (path.indexOf("://") != -1) {
-                        roots[i] = new URL(path);
+                        this.roots[i] = new URL(path);
                     } else {
-                        roots[i] = new File(path).toURI().toURL();
+                        this.roots[i] = new File(path).toURI().toURL();
                     }
                 }
+                this.connections = new HashMap<URL, URLConnection>();
+
             } catch (final MalformedURLException ex) {
                 throw new IllegalArgumentException(ex);
             }
@@ -151,14 +192,19 @@ final class GroovyFilterProcessor extends RDFProcessor {
             URLConnection connection = null;
             ResourceException exception = null;
 
-            for (final URL root : roots) {
+            for (final URL root : this.roots) {
                 URL scriptURL = null;
                 try {
                     scriptURL = new URL(root, name);
-                    connection = new Connection(scriptURL);
-                    connection.connect();
-                    connection.getInputStream(); // open connection in advance
-                    break;
+                    connection = this.connections.get(scriptURL);
+                    if (connection == null) {
+                        connection = new Connection(scriptURL);
+                        connection.connect(); // load resource in advance
+                        this.connections.put(scriptURL, connection);
+                    }
+                    if (connection != null) {
+                        break;
+                    }
 
                 } catch (final MalformedURLException ex) {
                     final String message = "Malformed URL: " + root + ", " + name;
@@ -208,7 +254,8 @@ final class GroovyFilterProcessor extends RDFProcessor {
                         final int end = parseQName(string, i);
                         if (end >= 0) {
                             final URI u = (URI) Util.parseValue(string.substring(i, end));
-                            builder.append("iri(\"").append(u.stringValue()).append("\")");
+                            builder.append("__iri(").append(counter.getAndIncrement())
+                                    .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
                         } else {
                             do {
@@ -312,6 +359,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
             @Override
             public void connect() throws IOException {
 
+                if (this.connected) {
+                    return;
+                }
+
                 final URLConnection conn = this.url.openConnection();
                 conn.setAllowUserInteraction(getAllowUserInteraction());
                 conn.setConnectTimeout(getConnectTimeout());
@@ -341,7 +392,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
                     String line;
                     final AtomicInteger counter = new AtomicInteger();
                     while ((line = reader.readLine()) != null) {
-                        builder.append(filter(counter, line));
+                        builder.append(filter(counter, line)).append("\n");
                     }
                 } finally {
                     reader.close();
@@ -351,6 +402,8 @@ final class GroovyFilterProcessor extends RDFProcessor {
                 this.connected = true;
 
                 this.headers = new HashMap<String, List<String>>(conn.getHeaderFields());
+
+                LOGGER.debug("Loaded {}", getURL());
             }
 
             @Override
@@ -400,6 +453,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
             this.script = script;
         }
 
+        public HandlerScript getScript() {
+            return this.script;
+        }
+
         @Override
         public synchronized void startRDF() throws RDFHandlerException {
             this.handler.startRDF();
@@ -434,28 +491,6 @@ final class GroovyFilterProcessor extends RDFProcessor {
             Util.closeQuietly(this.handler);
         }
 
-        public HandlerScript getScript() {
-            return this.script;
-        }
-
-    }
-
-    public Object setProperty(final RDFHandler handler, final String name, final Object value) {
-        if (handler instanceof Handler) {
-            return null;
-        }
-        final Handler h = (Handler) handler;
-        final Object oldValue = h.getScript().getProperty(name);
-        h.getScript().setProperty(name, value);
-        return oldValue;
-    }
-
-    public Object getProperty(final RDFHandler handler, final String name) {
-        if (handler instanceof Handler) {
-            return null;
-        }
-        final Handler h = (Handler) handler;
-        return h.getScript().getProperty(name);
     }
 
     public static abstract class HandlerScript extends Script {
@@ -568,12 +603,18 @@ final class GroovyFilterProcessor extends RDFProcessor {
         final void doInit(final RDFHandler handler, final String[] args)
                 throws RDFHandlerException {
             this.handler = handler;
-            tryInvokeMethod("init", Arrays.asList(args));
+            final boolean called = tryInvokeMethod("init", Arrays.asList(args));
+            if (called && LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Called init() with " + Arrays.asList(args));
+            }
         }
 
         final void doStart() throws RDFHandlerException {
             if (this.startEnabled) {
                 this.startEnabled = tryInvokeMethod("start", this.pass);
+                if (this.startEnabled && LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Called start() for pass " + this.pass);
+                }
             }
         }
 
@@ -586,6 +627,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
                     return;
                 }
                 this.handleEnabled = false;
+                LOGGER.debug("Using script body (no handle() method)");
             }
 
             this.insideRun = true;
@@ -602,8 +644,36 @@ final class GroovyFilterProcessor extends RDFProcessor {
         final void doEnd() throws RDFHandlerException {
             if (this.endEnabled) {
                 this.endEnabled = tryInvokeMethod("end", this.pass);
+                if (this.endEnabled && LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Called end() for pass " + this.pass);
+                }
             }
             ++this.pass;
+        }
+
+        // INTERNAL FUNCTIONS
+
+        protected final URI __iri(final int index, final Object arg) {
+            if (index >= this.uriConsts.length) {
+                this.uriConsts = Arrays.copyOf(this.uriConsts, index + 1);
+            }
+            URI uri = this.uriConsts[index];
+            if (uri == null) {
+                uri = arg instanceof URI ? (URI) arg : Util.FACTORY.createURI(arg.toString());
+                this.uriConsts[index] = uri;
+            }
+            return uri;
+        }
+
+        // QUAD CREATION AND EMISSION FUNCTIONS
+
+        protected final Statement quad(final Object s, final Object p, final Object o,
+                final Object c) {
+            final Resource sv = (Resource) toRDF(s, false);
+            final URI pv = (URI) toRDF(p, false);
+            final Value ov = toRDF(o, true);
+            final Resource cv = (Resource) toRDF(c, false);
+            return new GroovyStatement(sv, pv, ov, cv);
         }
 
         protected final void emit() throws RDFHandlerException {
@@ -660,144 +730,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
             return false;
         }
 
-        // QUAD CREATION
-
-        protected final Statement quad(final Object s, final Object p, final Object o,
-                final Object c) {
-            final Resource sv = (Resource) toRDF(s, false);
-            final URI pv = (URI) toRDF(p, false);
-            final Value ov = toRDF(o, true);
-            final Resource cv = (Resource) toRDF(c, false);
-            return new GroovyStatement(sv, pv, ov, cv);
-        }
-
-        // SPARQL FUNCTIONS
-
-        protected final boolean isIRI(@Nullable final Object arg) {
-            return arg instanceof URI;
-        }
-
-        protected final boolean isBlank(@Nullable final Object arg) {
-            return arg instanceof BNode;
-        }
-
-        protected final boolean isLiteral(@Nullable final Object arg) {
-            return arg != null && !(arg instanceof Resource);
-        }
-
-        protected final boolean isNumeric(@Nullable final Object arg) {
-            if (arg instanceof Literal) {
-                try {
-                    ((Literal) arg).doubleValue();
-                    return true;
-                } catch (final Throwable ex) {
-                    // ignore
-                }
-            }
-            return false;
-        }
-
-        @Nullable
-        protected final String str(@Nullable final Object arg) {
-            return arg == null ? null : arg.toString();
-        }
-
-        @Nullable
-        protected final String lang(@Nullable final Object arg) {
-            if (arg instanceof Literal) {
-                final String lang = ((Literal) arg).getLanguage();
-                return lang != null ? lang : "";
-            }
-            return null;
-        }
-
-        @Nullable
-        protected final URI datatype(@Nullable final Object arg) {
-            if (arg instanceof Literal) {
-                final Literal l = (Literal) arg;
-                final URI dt = l.getDatatype();
-                return dt != null ? dt : l.getLanguage() != null ? RDF.LANGSTRING
-                        : XMLSchema.STRING;
-            }
-            return null;
-        }
-
-        protected final boolean match(final URI uri, final Object arg) {
-            URI uri2;
-            if (arg == null || arg instanceof URI) {
-                uri2 = (URI) arg;
-            } else {
-                uri2 = Util.FACTORY.createURI(arg.toString());
-            }
-            return uri.equals(uri2);
-        }
-
-        protected final URI __iri(final int index, final Object arg) {
-            if (index >= this.uriConsts.length) {
-                this.uriConsts = Arrays.copyOf(this.uriConsts, index + 1);
-            }
-            URI uri = this.uriConsts[index];
-            if (uri == null) {
-                uri = iri(arg);
-                this.uriConsts[index] = uri;
-            }
-            return uri;
-        }
-
-        @Nullable
-        protected final URI iri(@Nullable final Object arg) {
-            if (arg == null || arg instanceof URI) {
-                return (URI) arg;
-            }
-            return Util.FACTORY.createURI(arg.toString());
-        }
-
-        protected final BNode bnode() {
-            return Util.FACTORY.createBNode();
-        }
-
-        @Nullable
-        protected final BNode bnode(@Nullable final Object arg) {
-            if (arg instanceof BNode) {
-                return (BNode) arg;
-            } else if (arg != null) {
-                return Util.FACTORY.createBNode(Util.toString(Util.murmur3(arg.toString())));
-            }
-            return null;
-        }
-
-        @Nullable
-        protected final Literal strdt(@Nullable final Object value, @Nullable final Object datatype) {
-            if (value == null) {
-                return null;
-            } else if (datatype == null) {
-                return Util.FACTORY.createLiteral(value.toString());
-            } else if (datatype instanceof URI) {
-                return Util.FACTORY.createLiteral(value.toString(), (URI) datatype);
-            } else {
-                final URI dt = Util.FACTORY.createURI(datatype.toString());
-                return Util.FACTORY.createLiteral(value.toString(), dt);
-            }
-        }
-
-        @Nullable
-        protected final Literal strlang(@Nullable final Object value, @Nullable final Object lang) {
-            if (value == null) {
-                return null;
-            } else if (lang == null) {
-                return Util.FACTORY.createLiteral(value.toString());
-            } else {
-                return Util.FACTORY.createLiteral(value.toString(), lang.toString());
-            }
-        }
-
-        protected final URI uuid() {
-            return Util.FACTORY.createURI("urn:uuid:" + UUID.randomUUID().toString());
-        }
-
-        protected final Literal struuid() {
-            return Util.FACTORY.createLiteral(UUID.randomUUID().toString());
-        }
+        // ERROR REPORTING AND LOGGING FUNCTIONS
 
         protected final void error(@Nullable final Object message) throws RDFHandlerException {
             final String string = message == null ? "ERROR" : message.toString();
@@ -823,12 +756,16 @@ final class GroovyFilterProcessor extends RDFProcessor {
             }
         }
 
-        // TODO [Francesco]: add remaining SPARQL functions
-
+        // TODO consider caching of loaded file components (very optional)
         protected final ValueSet loadSet(final Object file, final Object components) {
-            // TODO [Michele] load the specified "spoc" components from file
-            // TODO consider caching of loaded file components (very optional)
-            return null;
+            final File inputFile;
+            if (file instanceof File) {
+                inputFile = (File) file;
+            } else {
+                inputFile = new File(file.toString());
+            }
+            final String pattern = components.toString();
+            return new ValueSet(Util.createHashSet(pattern, inputFile));
         }
 
         // UTILITY FUNCTIONS
@@ -852,13 +789,62 @@ final class GroovyFilterProcessor extends RDFProcessor {
     private static Value toRDF(final Object object, final boolean mayBeLiteral) {
         if (object instanceof Value) {
             return normalize((Value) object);
-        } else if (object == null) {
-            return null;
-        } else if (mayBeLiteral) {
-            return new GroovyLiteral(object.toString());
-        } else {
-            return new GroovyURI(object.toString());
         }
+        if (object == null) {
+            return null;
+        }
+        if (mayBeLiteral) {
+            if (object instanceof Long) {
+                return new GroovyLiteral(object.toString(), XMLSchema.LONG);
+            } else if (object instanceof Integer) {
+                return new GroovyLiteral(object.toString(), XMLSchema.INT);
+            } else if (object instanceof Short) {
+                return new GroovyLiteral(object.toString(), XMLSchema.SHORT);
+            } else if (object instanceof Byte) {
+                return new GroovyLiteral(object.toString(), XMLSchema.BYTE);
+            } else if (object instanceof Double) {
+                return new GroovyLiteral(object.toString(), XMLSchema.DOUBLE);
+            } else if (object instanceof Float) {
+                return new GroovyLiteral(object.toString(), XMLSchema.FLOAT);
+            } else if (object instanceof Boolean) {
+                return new GroovyLiteral(object.toString(), XMLSchema.BOOLEAN);
+            } else if (object instanceof XMLGregorianCalendar) {
+                final XMLGregorianCalendar c = (XMLGregorianCalendar) object;
+                return new GroovyLiteral(c.toXMLFormat(), XMLDatatypeUtil.qnameToURI(c
+                        .getXMLSchemaType()));
+            } else if (object instanceof Date) {
+                final GregorianCalendar c = new GregorianCalendar();
+                c.setTime((Date) object);
+                final XMLGregorianCalendar xc = DATATYPE_FACTORY.newXMLGregorianCalendar(c);
+                return new GroovyLiteral(xc.toXMLFormat(), XMLDatatypeUtil.qnameToURI(xc
+                        .getXMLSchemaType()));
+            } else if (object instanceof CharSequence) {
+                return new GroovyLiteral(object.toString(), XMLSchema.STRING);
+            } else {
+                return new GroovyLiteral(object.toString());
+            }
+        }
+        return new GroovyURI(object.toString());
+    }
+
+    @Nullable
+    private static Literal toLiteral(@Nullable final Object old, @Nullable final String label) {
+
+        if (label == null) {
+            return null;
+        }
+
+        String lang = null;
+        URI dt = null;
+
+        if (old instanceof Literal) {
+            final Literal l = (Literal) old;
+            lang = l.getLanguage();
+            dt = l.getDatatype();
+        }
+
+        return lang == null ? new GroovyLiteral(label, lang) : dt != null ? new GroovyLiteral(
+                label, dt) : new GroovyLiteral(label);
     }
 
     @Nullable
@@ -1064,15 +1050,43 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     public static final class ValueSet {
 
-        // TODO [Michele]
+        private final Set<String> hashSet;
+
+        ValueSet(final Set<String> hashSet) {
+            this.hashSet = hashSet;
+        }
 
         public boolean match(final Object value) {
-            // TODO value should be converted to a Sesame Value using method toRDF() (see above)
-            return false;
+            if (value == null) {
+                throw new IllegalArgumentException("value cannot be null.");
+            }
+            final Value target = value instanceof Value ? (Value) value : toRDF(value, true);
+            return this.hashSet.contains(Util.valueToHash(target));
         }
 
         public boolean match(final Statement statement, final Object components) {
-            // TODO components should be converted to a string (e.g. "so")
+            final String parts = components.toString();
+            if (parts.contains("s")) {
+                if (this.hashSet.contains(Util.valueToHash(statement.getSubject()))) {
+                    return true;
+                }
+            }
+            if (parts.contains("p")) {
+                if (this.hashSet.contains(Util.valueToHash(statement.getPredicate()))) {
+                    return true;
+                }
+            }
+            if (parts.contains("o")) {
+                if (this.hashSet.contains(Util.valueToHash(statement.getObject()))) {
+                    return true;
+                }
+            }
+            if (parts.contains("c")) {
+                final Value context = statement.getContext();
+                if (context != null && this.hashSet.contains(Util.valueToHash(context))) {
+                    return true;
+                }
+            }
             return false;
         }
 
