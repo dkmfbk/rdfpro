@@ -105,6 +105,7 @@ http://dev.w3.org/cvsweb/2000/quacken/vocab# quak
 http://dig.csail.mit.edu/TAMI/2007/amord/air# air
 http://diplomski.nelakolundzija.org/LTontology.rdf# lt
 http://dkm.fbk.eu/ontologies/knowledgestore# ks
+http://dkm.fbk.eu/ontologies/voidx# voidx
 http://doc.metalex.eu/id/ mds
 http://dsnotify.org/vocab/eventset/0.1/ evset
 http://ecb.270a.info/dataset/ ecb
