@@ -24,7 +24,7 @@ public class GroovyFilterProcessorTest {
                 + "def end(x) { println 'end ' + x + ' ' + i }; " //
                 + "emitIf(p == <ex:b> || p == <ex:p> || p == foaf:name) ";
 
-        final RDFProcessor processor = RDFProcessor.parse("@transform \"" + script
+        final RDFProcessor processor = RDFProcessor.parse("@transform -p \"" + script
                 + "\" arg1 arg2");
 
         final AtomicInteger n = new AtomicInteger(0);
@@ -39,7 +39,7 @@ public class GroovyFilterProcessorTest {
 
         // final RDFHandler handler = new Baseline(sink);
 
-        final int c = 10000000;
+        final int c = 20000000;
         final long ts = System.currentTimeMillis();
         handler.startRDF();
         for (int i = 0; i < c; ++i) {

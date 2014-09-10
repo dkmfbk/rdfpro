@@ -26,6 +26,7 @@ import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -80,6 +81,8 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     private static final DatatypeFactory DATATYPE_FACTORY;
 
+    private final boolean scriptPooling;
+
     private final Class<?> scriptClass;
 
     private final String[] scriptArgs;
@@ -92,7 +95,6 @@ final class GroovyFilterProcessor extends RDFProcessor {
             ENGINE = new GroovyScriptEngine(new Loader(classpath));
             ENGINE.getConfig().setScriptBaseClass(HandlerScript.class.getName());
             ENGINE.getConfig().addCompilationCustomizers(customizer);
-            LOGGER.debug("Groovy classpath: " + classpath);
         } catch (final Throwable ex) {
             throw new Error("Could not initialize Groovy: " + ex.getMessage(), ex);
         }
@@ -103,7 +105,8 @@ final class GroovyFilterProcessor extends RDFProcessor {
         }
     }
 
-    public GroovyFilterProcessor(final String scriptExprOrFile, final String... scriptArgs) {
+    public GroovyFilterProcessor(final boolean scriptPooling, final String scriptExprOrFile,
+            final String... scriptArgs) {
 
         Util.checkNotNull(scriptExprOrFile);
 
@@ -120,23 +123,26 @@ final class GroovyFilterProcessor extends RDFProcessor {
             throw new Error("Could not compile Groovy script", ex);
         }
 
+        this.scriptPooling = scriptPooling;
         this.scriptClass = scriptClass;
         this.scriptArgs = scriptArgs.clone();
     }
 
+    // Following two methods do not work in case pooling is enabled
+
     public Object getProperty(final RDFHandler handler, final String name) {
-        if (!(handler instanceof Handler)) {
+        if (!(handler instanceof SingletonHandler)) {
             return null;
         }
-        final Handler h = (Handler) handler;
+        final SingletonHandler h = (SingletonHandler) handler;
         return h.getScript().getProperty(name);
     }
 
     public Object setProperty(final RDFHandler handler, final String name, final Object value) {
-        if (!(handler instanceof Handler)) {
+        if (!(handler instanceof SingletonHandler)) {
             return null;
         }
-        final Handler h = (Handler) handler;
+        final SingletonHandler h = (SingletonHandler) handler;
         final Object oldValue = h.getScript().getProperty(name);
         h.getScript().setProperty(name, value);
         return oldValue;
@@ -147,12 +153,19 @@ final class GroovyFilterProcessor extends RDFProcessor {
         return 0;
     }
 
+    @SuppressWarnings("resource")
     @Override
     public RDFHandler getHandler(final RDFHandler handler) {
+        return this.scriptPooling ? Handlers.decouple(new PooledHandler(handler))
+                : new SingletonHandler(handler);
+    }
+
+    private HandlerScript newHandlerScript(final String name, final RDFHandler handler) {
         try {
-            final HandlerScript script = (HandlerScript) this.scriptClass.newInstance();
-            script.doInit(handler, this.scriptArgs);
-            return new Handler(handler, script);
+            final HandlerScript script = (HandlerScript) GroovyFilterProcessor.this.scriptClass
+                    .newInstance();
+            script.doInit(name, handler, GroovyFilterProcessor.this.scriptArgs);
+            return script;
         } catch (final Throwable ex) {
             throw new Error("Could not instantiate script class", ex);
         }
@@ -442,15 +455,92 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
     }
 
-    private static final class Handler implements RDFHandler, Closeable {
+    private final class PooledHandler implements RDFHandler, Closeable {
+
+        private final RDFHandler handler;
+
+        private List<HandlerScript> allScripts;
+
+        private ThreadLocal<HandlerScript> threadScript;
+
+        private int pass;
+
+        PooledHandler(final RDFHandler handler) {
+            this.handler = Util.checkNotNull(handler);
+            this.allScripts = new ArrayList<HandlerScript>();
+            this.threadScript = new ThreadLocal<HandlerScript>() {
+
+                @Override
+                protected HandlerScript initialValue() {
+                    synchronized (PooledHandler.this) {
+                        final HandlerScript script = newHandlerScript("script"
+                                + PooledHandler.this.allScripts.size(), handler);
+                        try {
+                            script.doStart(PooledHandler.this.pass);
+                        } catch (final Throwable ex) {
+                            Util.propagate(ex);
+                        }
+                        PooledHandler.this.allScripts.add(script);
+                        return script;
+                    }
+                }
+
+            };
+            this.pass = 0;
+        }
+
+        @Override
+        public void startRDF() throws RDFHandlerException {
+            this.handler.startRDF();
+            for (final HandlerScript script : this.allScripts) {
+                script.doStart(this.pass);
+            }
+        }
+
+        @Override
+        public void handleComment(final String comment) throws RDFHandlerException {
+            this.handler.handleComment(comment);
+        }
+
+        @Override
+        public void handleNamespace(final String prefix, final String uri)
+                throws RDFHandlerException {
+            this.handler.handleNamespace(prefix, uri);
+        }
+
+        @Override
+        public void handleStatement(final Statement statement) throws RDFHandlerException {
+            this.threadScript.get().doHandle(statement);
+        }
+
+        @Override
+        public void endRDF() throws RDFHandlerException {
+            for (final HandlerScript script : this.allScripts) {
+                script.doEnd(this.pass);
+            }
+            ++this.pass;
+            this.handler.endRDF();
+        }
+
+        @Override
+        public void close() throws IOException {
+            Util.closeQuietly(this.handler);
+        }
+
+    }
+
+    private final class SingletonHandler implements RDFHandler, Closeable {
 
         private final RDFHandler handler;
 
         private final HandlerScript script;
 
-        Handler(final RDFHandler handler, final HandlerScript script) {
+        private int pass;
+
+        SingletonHandler(final RDFHandler handler) {
             this.handler = Util.checkNotNull(handler);
-            this.script = script;
+            this.script = newHandlerScript("script", handler);
+            this.pass = 0;
         }
 
         public HandlerScript getScript() {
@@ -460,7 +550,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
         @Override
         public synchronized void startRDF() throws RDFHandlerException {
             this.handler.startRDF();
-            this.script.doStart();
+            this.script.doStart(this.pass);
         }
 
         @Override
@@ -482,7 +572,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         @Override
         public synchronized void endRDF() throws RDFHandlerException {
-            this.script.doEnd();
+            this.script.doEnd(this.pass++);
             this.handler.endRDF();
         }
 
@@ -494,6 +584,8 @@ final class GroovyFilterProcessor extends RDFProcessor {
     }
 
     public static abstract class HandlerScript extends Script {
+
+        private String name;
 
         private RDFHandler handler;
 
@@ -507,15 +599,12 @@ final class GroovyFilterProcessor extends RDFProcessor {
 
         private GroovyStatement statement;
 
-        private int pass;
-
         private URI[] uriConsts;
 
         protected HandlerScript() {
             this.startEnabled = true;
             this.handleEnabled = true;
             this.endEnabled = true;
-            this.pass = 0;
             this.uriConsts = new URI[0];
         }
 
@@ -600,20 +689,21 @@ final class GroovyFilterProcessor extends RDFProcessor {
             super.setProperty(property, value);
         }
 
-        final void doInit(final RDFHandler handler, final String[] args)
+        final void doInit(final String name, final RDFHandler handler, final String[] args)
                 throws RDFHandlerException {
+            this.name = name;
             this.handler = handler;
             final boolean called = tryInvokeMethod("init", Arrays.asList(args));
             if (called && LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Called init() with " + Arrays.asList(args));
+                LOGGER.debug("Called " + name + ".init() with " + Arrays.asList(args));
             }
         }
 
-        final void doStart() throws RDFHandlerException {
+        final void doStart(final int pass) throws RDFHandlerException {
             if (this.startEnabled) {
-                this.startEnabled = tryInvokeMethod("start", this.pass);
+                this.startEnabled = tryInvokeMethod("start", pass);
                 if (this.startEnabled && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Called start() for pass " + this.pass);
+                    LOGGER.debug("Called " + this.name + ".start() for pass " + pass);
                 }
             }
         }
@@ -627,7 +717,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
                     return;
                 }
                 this.handleEnabled = false;
-                LOGGER.debug("Using script body (no handle() method)");
+                LOGGER.debug("Using script body for " + this.name + " (no handle() method)");
             }
 
             this.insideRun = true;
@@ -641,14 +731,13 @@ final class GroovyFilterProcessor extends RDFProcessor {
             }
         }
 
-        final void doEnd() throws RDFHandlerException {
+        final void doEnd(final int pass) throws RDFHandlerException {
             if (this.endEnabled) {
-                this.endEnabled = tryInvokeMethod("end", this.pass);
+                this.endEnabled = tryInvokeMethod("end", pass);
                 if (this.endEnabled && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Called end() for pass " + this.pass);
+                    LOGGER.debug("Called " + this.name + ".end() for pass " + pass);
                 }
             }
-            ++this.pass;
         }
 
         // INTERNAL FUNCTIONS
