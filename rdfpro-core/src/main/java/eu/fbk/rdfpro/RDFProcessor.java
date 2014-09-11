@@ -57,9 +57,9 @@ public abstract class RDFProcessor {
 
     // TODO: should add a filter taking a Guava predicate or equivalent for programmatic use
 
-    public static RDFProcessor transform(@Nullable final String groovyExpressionOrFile,
-            final String... groovyArgs) {
-        return new GroovyFilterProcessor(groovyExpressionOrFile, groovyArgs);
+    public static RDFProcessor transform(final boolean scriptPooling,
+            @Nullable final String groovyExpressionOrFile, final String... groovyArgs) {
+        return new GroovyFilterProcessor(scriptPooling, groovyExpressionOrFile, groovyArgs);
     }
 
     public static RDFProcessor filter(@Nullable final String matchSpec,
@@ -82,8 +82,8 @@ public abstract class RDFProcessor {
 
     public static RDFProcessor statisticsExtractor(@Nullable final String outputNamespace,
             @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
-            final boolean processCooccurrences) {
-        return new StatisticsProcessor(outputNamespace, sourceProperty, sourceContext,
+            @Nullable final Long threshold, final boolean processCooccurrences) {
+        return new StatisticsProcessor(outputNamespace, sourceProperty, sourceContext, threshold,
                 processCooccurrences);
     }
 
@@ -287,7 +287,7 @@ public abstract class RDFProcessor {
                 return newTBoxExtractor(parseOptions(options, "", "", 0));
             }
             if ("x".equals(command) || "stats".equals(command)) {
-                return newStatisticsExtractor(parseOptions(options, "npc", "o", 0));
+                return newStatisticsExtractor(parseOptions(options, "npct", "o", 0));
             }
             if ("p".equals(command) || "prefix".equals(command)) {
                 return newNamespaceEnhancer(parseOptions(options, "f", "", 0));
@@ -440,16 +440,24 @@ public abstract class RDFProcessor {
 
         private RDFProcessor newTransform(final List<String> args) {
 
-            if (args.isEmpty()) {
+            int index = 0;
+
+            boolean pooling = false;
+            if (!args.isEmpty() && args.get(0).equals("-p")) {
+                pooling = true;
+                ++index;
+            }
+
+            if (index >= args.size()) {
                 throw new IllegalArgumentException(
                         "Missing filter script expression or file reference");
             }
 
-            final String groovyExpressionOrFile = args.get(0);
-            final String[] groovyArgs = args.subList(1, args.size()).toArray(
-                    new String[args.size() - 1]);
+            final String groovyExpressionOrFile = args.get(index);
+            final String[] groovyArgs = args.subList(index + 1, args.size()).toArray(
+                    new String[args.size() - index - 1]);
 
-            return transform(groovyExpressionOrFile, groovyArgs);
+            return transform(pooling, groovyExpressionOrFile, groovyArgs);
         }
 
         private RDFProcessor newSmusher(final Map<String, Object> args) {
@@ -520,9 +528,15 @@ public abstract class RDFProcessor {
                 context = parseURI((String) args.get("c"));
             }
 
+            Long threshold = null;
+            if (args.containsKey("t")) {
+                threshold = parseLong((String) args.get("t"));
+            }
+
             final boolean processCooccurrences = args.containsKey("o");
 
-            return statisticsExtractor(namespace, property, context, processCooccurrences);
+            return statisticsExtractor(namespace, property, context, threshold,
+                    processCooccurrences);
         }
 
         private RDFProcessor newTBoxExtractor(final Map<String, Object> args) {

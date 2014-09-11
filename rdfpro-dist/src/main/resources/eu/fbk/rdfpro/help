@@ -45,7 +45,8 @@ BUILTIN PROCESSORS:
   [-r EXP]      use replacement expression EXP to rewrite selected quads
 
 @transform|@t   Transform the stream using a user-supplied Groovy script
-  [SCRIPT]      either the script expression or the name of the script file
+  [-p]          use multiple script instances in parallel (script pooling)         
+  SCRIPT        either the script expression or the name of the script file
   [ARG...]      optional arguments to be passed to the script
  
 @infer|@i       Emits the RDFS closure of input quads
@@ -63,6 +64,8 @@ BUILTIN PROCESSORS:
   [-n NS]       use namespace NS to mint URIs for VOID dataset instances
   [-p URI]      create a dataset for graphs linked to a source via property URI
   [-c URI]      look for graph-to-source quads in graph URI
+  [-t NUM]      emits only VOID partitions with at least NUM entities or triples 
+  [-o]          enable computation of void:classes and void:properties (costly) 
 
 @tbox|@t        Emits only quads belonging to RDFS or OWL TBox axioms.
 

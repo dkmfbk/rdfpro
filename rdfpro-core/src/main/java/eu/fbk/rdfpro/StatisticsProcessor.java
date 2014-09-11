@@ -37,9 +37,9 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
 import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
@@ -60,13 +60,16 @@ final class StatisticsProcessor extends RDFProcessor {
 
     private final boolean processCooccurrences;
 
+    private final long threshold;
+
     StatisticsProcessor(@Nullable final String outputNamespace,
             @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
-            final boolean processCooccurrences) {
+            @Nullable final Long threshold, final boolean processCooccurrences) {
         this.outputNamespace = outputNamespace;
         this.sourceProperty = sourceProperty;
         this.sourceContext = sourceContext;
         this.processCooccurrences = processCooccurrences;
+        this.threshold = threshold != null ? threshold : 0;
     }
 
     @Override
@@ -560,75 +563,85 @@ final class StatisticsProcessor extends RDFProcessor {
 
         private void emitStatistics() throws RDFHandlerException {
 
-            final ValueFactory vf = Util.FACTORY;
-
             this.handler.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
             this.handler.handleNamespace(VOIDX.PREFIX, VOIDX.NAMESPACE);
 
             final Map<URI, URI> spURIs = new HashMap<URI, URI>();
             for (final SourceStats s : this.sourceList) {
                 final URI uri = mintURI(s.source != null ? s.source : VOID.DATASET);
+                final String label = Util.formatValue(uri).replace("<", "").replace(">", "")
+                        + " (" + s.entities + ", " + s.triples + ")";
                 spURIs.put(s.source, uri);
                 emit(uri, RDF.TYPE, VOID.DATASET);
+                emit(uri, VOIDX.LABEL, label);
                 emit(uri, VOIDX.SOURCE, s.source);
-                emit(uri, VOID.ENTITIES, vf.createLiteral(s.entities));
-                emit(uri, VOID.TRIPLES, vf.createLiteral(s.triples));
-                emit(uri, VOIDX.TBOX_TRIPLES, vf.createLiteral(s.tboxTriples));
-                emit(uri, VOIDX.ABOX_TRIPLES, vf.createLiteral(s.aboxTriples));
-                emit(uri, VOIDX.TYPE_TRIPLES, vf.createLiteral(s.typeTriples));
-                emit(uri, VOIDX.SAME_AS_TRIPLES, vf.createLiteral(s.sameAsTriples));
+                emit(uri, VOID.ENTITIES, s.entities);
+                emit(uri, VOID.TRIPLES, s.triples);
+                emit(uri, VOIDX.TBOX_TRIPLES, s.tboxTriples);
+                emit(uri, VOIDX.ABOX_TRIPLES, s.aboxTriples);
+                emit(uri, VOIDX.TYPE_TRIPLES, s.typeTriples);
+                emit(uri, VOIDX.SAME_AS_TRIPLES, s.sameAsTriples);
                 if (s.types != null) {
-                    emit(uri, VOID.CLASSES, vf.createLiteral(s.types.cardinality()));
+                    emit(uri, VOID.CLASSES, s.types.cardinality());
                 }
                 if (s.properties != null) {
-                    emit(uri, VOID.PROPERTIES, vf.createLiteral(s.properties.cardinality()));
+                    emit(uri, VOID.PROPERTIES, s.properties.cardinality());
                 }
             }
 
             for (final TypeStats ts : this.typeList) {
                 final TypeStats.Partition p0 = ts.partitions[0];
+                if (p0.entities < StatisticsProcessor.this.threshold) {
+                    continue;
+                }
                 final String label = Util.formatValue(ts.type).replace("<", "").replace(">", "")
                         + " (" + p0.entities + ")";
-                emit(ts.type, VOIDX.LABEL, vf.createLiteral(label));
+                emit(ts.type, VOIDX.LABEL, label);
                 if (ts.example != null) {
-                    emit(ts.type, VOIDX.EXAMPLE, vf.createLiteral(ts.example));
+                    emit(ts.type, VOIDX.EXAMPLE, ts.example);
                 }
                 for (int i = 0; i < ts.partitions.length; ++i) {
                     final TypeStats.Partition p = ts.partitions[i];
-                    if (p != null) {
+                    if (p != null && p.entities >= StatisticsProcessor.this.threshold) {
                         final URI source = this.sourceList.get(i).source;
                         final URI spURI = spURIs.get(source);
                         final URI tpURI = mintURI(source, ts.type);
+                        final String tpLabel = Util.formatValue(tpURI).replace("<", "") //
+                                .replace(">", "") + " (" + p.entities + ", C)";
+                        emit(ts.type, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, tpURI);
                         emit(spURI, VOID.CLASS_PARTITION, tpURI);
                         emit(tpURI, RDF.TYPE, VOID.DATASET);
+                        emit(tpURI, VOIDX.LABEL, tpLabel);
                         emit(tpURI, VOIDX.SOURCE, source);
                         emit(tpURI, VOID.CLASS, ts.type);
-                        emit(tpURI, VOID.ENTITIES, vf.createLiteral(p.entities));
-                        emit(tpURI, VOID.TRIPLES, vf.createLiteral(p.triples));
-                        emit(tpURI, VOIDX.TBOX_TRIPLES, vf.createLiteral(p.tboxTriples));
-                        emit(tpURI, VOIDX.ABOX_TRIPLES, vf.createLiteral(p.aboxTriples));
-                        emit(tpURI, VOIDX.TYPE_TRIPLES, vf.createLiteral(p.typeTriples));
-                        emit(tpURI, VOIDX.SAME_AS_TRIPLES, vf.createLiteral(p.sameAsTriples));
+                        emit(tpURI, VOID.ENTITIES, p.entities);
+                        emit(tpURI, VOID.TRIPLES, p.triples);
+                        emit(tpURI, VOIDX.TBOX_TRIPLES, p.tboxTriples);
+                        emit(tpURI, VOIDX.ABOX_TRIPLES, p.aboxTriples);
+                        emit(tpURI, VOIDX.TYPE_TRIPLES, p.typeTriples);
+                        emit(tpURI, VOIDX.SAME_AS_TRIPLES, p.sameAsTriples);
                         if (p.types != null) {
-                            emit(tpURI, VOID.CLASSES, vf.createLiteral(p.types.cardinality()));
+                            emit(tpURI, VOID.CLASSES, p.types.cardinality());
                         }
                         if (p.properties != null) {
-                            emit(tpURI, VOID.PROPERTIES,
-                                    vf.createLiteral(p.properties.cardinality()));
+                            emit(tpURI, VOID.PROPERTIES, p.properties.cardinality());
                         }
                         if (p.entities > 0) {
-                            emit(tpURI, VOIDX.AVERAGE_PROPERTIES,
-                                    vf.createLiteral((double) p.predicates / p.entities));
+                            emit(tpURI, VOIDX.AVERAGE_PROPERTIES, (double) p.predicates
+                                    / p.entities);
                         }
                     }
                 }
             }
 
             for (final PropertyStats ps : this.propertyList) {
+                final PropertyStats.Partition p0 = ps.partitions[0];
+                if (p0.triples < StatisticsProcessor.this.threshold) {
+                    continue;
+                }
                 final boolean isTBox = Util.TBOX_PROPERTIES.contains(ps.property);
                 final boolean isType = ps.property.equals(RDF.TYPE);
                 final boolean isSameAs = ps.property.equals(OWL.SAMEAS);
-                final PropertyStats.Partition p0 = ps.partitions[0];
                 final boolean fun = p0.triples > 0 && p0.triples == p0.distinctSubjects;
                 final boolean invfun = p0.triples > 0 && p0.triples == p0.distinctObjects;
                 final boolean data = OWL.DATATYPEPROPERTY.equals(ps.detectedType);
@@ -636,7 +649,7 @@ final class StatisticsProcessor extends RDFProcessor {
                 final String label = String.format("%s (%d, %s%s%s)", Util
                         .formatValue(ps.property).replace("<", "").replace(">", ""), p0.triples,
                         data ? "D" : object ? "O" : "P", fun ? "F" : "", invfun ? "I" : "");
-                emit(ps.property, VOIDX.LABEL, vf.createLiteral(label));
+                emit(ps.property, VOIDX.LABEL, label);
                 emit(ps.property, VOIDX.TYPE, ps.detectedType);
                 if (fun) {
                     emit(ps.property, VOIDX.TYPE, OWL.FUNCTIONALPROPERTY);
@@ -645,39 +658,70 @@ final class StatisticsProcessor extends RDFProcessor {
                     emit(ps.property, VOIDX.TYPE, OWL.INVERSEFUNCTIONALPROPERTY);
                 }
                 if (ps.example != null) {
-                    emit(ps.property, VOIDX.EXAMPLE, vf.createLiteral(ps.example));
+                    emit(ps.property, VOIDX.EXAMPLE, ps.example);
                 }
                 for (int i = 0; i < ps.partitions.length; ++i) {
                     final PropertyStats.Partition p = ps.partitions[i];
-                    if (p != null) {
+                    if (p != null && p.triples >= StatisticsProcessor.this.threshold) {
                         final URI source = this.sourceList.get(i).source;
                         final URI spURI = spURIs.get(source);
                         final URI ppURI = mintURI(source, ps.property);
+                        final boolean ppFun = p.triples > 0 && p.triples == p.distinctSubjects;
+                        final boolean ppInvfun = p.triples > 0 && p.triples == p.distinctObjects;
+                        final String ppLabel = String.format("%s (%d, %s%s%s)",
+                                Util.formatValue(ppURI).replace("<", "").replace(">", ""),
+                                p.triples, data ? "D" : object ? "O" : "P", ppFun ? "F" : "",
+                                ppInvfun ? "I" : "");
+                        emit(ps.property, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, ppURI);
                         emit(spURI, VOID.PROPERTY_PARTITION, ppURI);
                         emit(ppURI, RDF.TYPE, VOID.DATASET);
+                        emit(ppURI, VOIDX.LABEL, ppLabel);
                         emit(ppURI, VOIDX.SOURCE, source);
                         emit(ppURI, VOID.PROPERTY, ps.property);
-                        emit(ppURI, VOID.CLASSES, vf.createLiteral(0));
-                        emit(ppURI, VOID.PROPERTIES, vf.createLiteral(1));
-                        emit(ppURI, VOID.ENTITIES, vf.createLiteral(p.entities));
-                        emit(ppURI, VOID.TRIPLES, vf.createLiteral(p.triples));
-                        emit(ppURI, VOIDX.TBOX_TRIPLES, vf.createLiteral(isTBox ? p.triples : 0));
-                        emit(ppURI, VOIDX.ABOX_TRIPLES, vf.createLiteral(isTBox ? 0 : p.triples));
-                        emit(ppURI, VOIDX.TYPE_TRIPLES, vf.createLiteral(isType ? p.triples : 0));
-                        emit(ppURI, VOIDX.SAME_AS_TRIPLES,
-                                vf.createLiteral(isSameAs ? p.triples : 0));
-                        emit(ppURI, VOID.DISTINCT_SUBJECTS, vf.createLiteral(p.distinctSubjects));
-                        emit(ppURI, VOID.DISTINCT_OBJECTS, vf.createLiteral(p.distinctObjects));
+                        emit(ppURI, VOID.CLASSES, 0);
+                        emit(ppURI, VOID.PROPERTIES, 1);
+                        emit(ppURI, VOID.ENTITIES, p.entities);
+                        emit(ppURI, VOID.TRIPLES, p.triples);
+                        emit(ppURI, VOIDX.TBOX_TRIPLES, isTBox ? p.triples : 0);
+                        emit(ppURI, VOIDX.ABOX_TRIPLES, isTBox ? 0 : p.triples);
+                        emit(ppURI, VOIDX.TYPE_TRIPLES, isType ? p.triples : 0);
+                        emit(ppURI, VOIDX.SAME_AS_TRIPLES, isSameAs ? p.triples : 0);
+                        emit(ppURI, VOID.DISTINCT_SUBJECTS, p.distinctSubjects);
+                        emit(ppURI, VOID.DISTINCT_OBJECTS, p.distinctObjects);
                     }
                 }
+            }
+
+            for (final URI term : VOID.TERMS) {
+                emit(term, VOIDX.LABEL, Util.formatValue(term));
+            }
+            for (final URI term : VOIDX.TERMS) {
+                emit(term, VOIDX.LABEL, Util.formatValue(term));
             }
         }
 
         private void emit(@Nullable final Resource subject, @Nullable final URI predicate,
-                @Nullable final Value object) throws RDFHandlerException {
-            if (subject != null && predicate != null && object != null) {
+                @Nullable final Object object) throws RDFHandlerException {
+
+            Value value = null;
+
+            if (subject != null && predicate != null) {
+                if (object instanceof Value) {
+                    value = (Value) object;
+                } else if (object instanceof Integer && ((Integer) object).intValue() != 0) {
+                    value = Util.FACTORY.createLiteral((Integer) object);
+                } else if (object instanceof Long && ((Long) object).longValue() != 0L) {
+                    value = Util.FACTORY.createLiteral((Long) object);
+                } else if (object instanceof Double && ((Double) object).doubleValue() != 0.0) {
+                    value = Util.FACTORY.createLiteral((Double) object);
+                } else if (object instanceof String && !((String) object).isEmpty()) {
+                    value = Util.FACTORY.createLiteral((String) object, XMLSchema.STRING);
+                }
+            }
+
+            if (value != null) {
                 this.handler.handleStatement(Util.FACTORY.createStatement(subject, predicate,
-                        object));
+                        value));
             }
         }
 

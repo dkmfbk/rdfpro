@@ -13,6 +13,11 @@
  */
 package eu.fbk.rdfpro;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.openrdf.model.Namespace;
 import org.openrdf.model.URI;
 import org.openrdf.model.impl.NamespaceImpl;
@@ -48,6 +53,12 @@ final class VOIDX {
     /** Property voidx:source. */
     public static final URI SOURCE = createURI("source");
 
+    /** Property voidx:globalStats. */
+    public static final URI GLOBAL_STATS = createURI("globalStats");
+
+    /** Property voidx:sourceStats. */
+    public static final URI SOURCE_STATS = createURI("sourceStats");
+
     /** Property voidx:tboxTriples. */
     public static final URI TBOX_TRIPLES = createURI("tboxTriples");
 
@@ -62,6 +73,12 @@ final class VOIDX {
 
     /** Property voidx:averageProperties. */
     public static final URI AVERAGE_PROPERTIES = createURI("averageProperties");
+
+    // ALL TERMS
+
+    public static Set<URI> TERMS = Collections.unmodifiableSet(new HashSet<URI>(Arrays.asList(
+            LABEL, EXAMPLE, TYPE, SOURCE, GLOBAL_STATS, SOURCE_STATS, TBOX_TRIPLES, ABOX_TRIPLES,
+            TYPE_TRIPLES, SAME_AS_TRIPLES, AVERAGE_PROPERTIES)));
 
     // HELPER METHODS
 

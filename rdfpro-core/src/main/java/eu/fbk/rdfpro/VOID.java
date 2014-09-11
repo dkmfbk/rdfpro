@@ -13,6 +13,11 @@
  */
 package eu.fbk.rdfpro;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.openrdf.model.Namespace;
 import org.openrdf.model.URI;
 import org.openrdf.model.impl.NamespaceImpl;
@@ -85,49 +90,59 @@ final class VOID {
     public static final URI LINK_PREDICATE = createURI("linkPredicate");
 
     /** Property void:objectsTarget. */
-    public static final URI OBJECTS_TARGET = createURI("void:objectsTarget");
+    public static final URI OBJECTS_TARGET = createURI("objectsTarget");
 
     /** Property void:openSearchDescription. */
-    public static final URI OPEN_SEARCH_DESCRIPTION = createURI("void:openSearchDescription");
+    public static final URI OPEN_SEARCH_DESCRIPTION = createURI("openSearchDescription");
 
     /** Property void:properties. */
-    public static final URI PROPERTIES = createURI("void:properties");
+    public static final URI PROPERTIES = createURI("properties");
 
     /** Property void:property. */
-    public static final URI PROPERTY = createURI("void:property");
+    public static final URI PROPERTY = createURI("property");
 
     /** Property void:propertyPartition. */
-    public static final URI PROPERTY_PARTITION = createURI("void:propertyPartition");
+    public static final URI PROPERTY_PARTITION = createURI("propertyPartition");
 
     /** Property void:rootResource. */
-    public static final URI ROOT_RESOURCE = createURI("void:rootResource");
+    public static final URI ROOT_RESOURCE = createURI("rootResource");
 
     /** Property void:sparqlEndpoint. */
-    public static final URI SPARQL_ENDPOINT = createURI("void:sparqlEndpoint");
+    public static final URI SPARQL_ENDPOINT = createURI("sparqlEndpoint");
 
     /** Property void:subjectsTarget. */
-    public static final URI SUBJECTS_TARGET = createURI("void:subjectsTarget");
+    public static final URI SUBJECTS_TARGET = createURI("subjectsTarget");
 
     /** Property void:subset. */
-    public static final URI SUBSET = createURI("void:subset");
+    public static final URI SUBSET = createURI("subset");
 
     /** Property void:target. */
-    public static final URI TARGET = createURI("void:target");
+    public static final URI TARGET = createURI("target");
 
     /** Property void:triples. */
-    public static final URI TRIPLES = createURI("void:triples");
+    public static final URI TRIPLES = createURI("triples");
 
     /** Property void:uriLookupEndpoint. */
-    public static final URI URI_LOOKUP_ENDPOINT = createURI("void:uriLookupEndpoint");
+    public static final URI URI_LOOKUP_ENDPOINT = createURI("uriLookupEndpoint");
 
     /** Property void:uriRegexPattern. */
-    public static final URI URI_REGEX_PATTERN = createURI("void:uriRegexPattern");
+    public static final URI URI_REGEX_PATTERN = createURI("uriRegexPattern");
 
     /** Property void:uriSpace. */
-    public static final URI URI_SPACE = createURI("void:uriSpace");
+    public static final URI URI_SPACE = createURI("uriSpace");
 
     /** Property void:vocabulary. */
-    public static final URI VOCABULARY = createURI("void:vocabulary");
+    public static final URI VOCABULARY = createURI("vocabulary");
+
+    // ALL TERMS
+
+    public static Set<URI> TERMS = Collections.unmodifiableSet(new HashSet<URI>(Arrays.asList(
+            DATASET, DATASET_DESCRIPTION, LINKSET, TECHNICAL_FEATURE, CLASS, CLASSES,
+            CLASS_PARTITION, DATA_DUMP, DISTINCT_OBJECTS, DISTINCT_SUBJECTS, DOCUMENTS, ENTITIES,
+            EXAMPLE_RESOURCE, FEATURE, IN_DATASET, LINK_PREDICATE, OBJECTS_TARGET,
+            OPEN_SEARCH_DESCRIPTION, PROPERTIES, PROPERTY, PROPERTY_PARTITION, ROOT_RESOURCE,
+            SPARQL_ENDPOINT, SUBJECTS_TARGET, SUBSET, TARGET, TRIPLES, URI_LOOKUP_ENDPOINT,
+            URI_REGEX_PATTERN, URI_SPACE, VOCABULARY)));
 
     // HELPER METHODS
 
