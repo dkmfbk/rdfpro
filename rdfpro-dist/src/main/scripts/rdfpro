@@ -2,8 +2,15 @@
 
 # Script environment:
 #   JAVA_HOME: the defined Java runtime
-#   JAVA_OPTS: JVM options
-#   $RDFPRO_GROOVY_CLASSPATH: the classpath for Groovy scripts
+#   JAVA_OPTS: JVM options.
+#       Es: export JAVA_OPTS="-Xmx6G -Xms1G -server"
+#   RDFPRO_CMD_SORT: native command to process sorting.
+#       Es: RDFPRO_CMD_SORT="sort -S 8192M --batch-size=64 --compress-program=lz4 -T $SW_HOME/tmp"
+#   RDFPRO_CMD_GZIP: native command to process gzipped streams.
+#       Es: RDFPRO_CMD_GZIP="pigz -p 4 -b 4096"
+#   RDFPRO_CMD_BZIP2: native command to process bzip2 streams.
+#       Es: RDFPRO_CMD_BZIP2="pbzip2"
+#   RDFPRO_GROOVY_CLASSPATH: the classpath for Groovy scripts
 
 # resolve program name in case it is a symbolic link
 PRG="$0"
