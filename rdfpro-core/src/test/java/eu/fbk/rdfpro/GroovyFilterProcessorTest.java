@@ -1,9 +1,6 @@
 package eu.fbk.rdfpro;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
@@ -12,6 +9,10 @@ import org.openrdf.model.vocabulary.FOAF;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.helpers.RDFHandlerBase;
+
+import java.io.File;
+import java.net.URISyntaxException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GroovyFilterProcessorTest {
 
@@ -52,9 +53,9 @@ public class GroovyFilterProcessorTest {
     }
 
     @Test
-    @Ignore
-    public void testValueSet() throws RDFHandlerException {
-        final String script = "def init(args) { valMatchCount = 0; statMatchCount = 0; valueset = loadSet('./file.nt', 'spo'); };"
+    public void testValueSet() throws RDFHandlerException, URISyntaxException {
+        File target = new File( GroovyFilterProcessorTest.class.getResource("file.nt").toURI() );
+        final String script = "def init(args) { valMatchCount = 0; statMatchCount = 0; valueset = loadSet('" + target.getAbsolutePath() + "', 'spo'); };"
                 + "def end(x) { log('# Matched statements: ' + statMatchCount + ' Matched values: ' + valMatchCount); };"
                 + "if( valueset.match(q, 'spo') ) statMatchCount++;"
                 + "if( valueset.match(s) ) valMatchCount++;";
