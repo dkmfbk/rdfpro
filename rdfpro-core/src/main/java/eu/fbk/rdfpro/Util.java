@@ -48,7 +48,6 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -576,8 +575,7 @@ final class Util {
         final boolean matchObj = pattern.contains("o");
         final boolean matchCtx = pattern.contains("c");
         final Set<String> hashes = new TreeSet<>();
-        final RDFParser parser = Rio.createParser(Rio.getParserFormatForFileName(file.getName()));
-        parser.setRDFHandler(new RDFHandler() {
+        final RDFHandler handler = RDFProcessor.reader(false, null, file.getAbsolutePath()).getHandler(new RDFHandler() {
             @Override
             public void startRDF() throws RDFHandlerException {
             }
@@ -604,8 +602,9 @@ final class Util {
         });
 
         try {
-            parser.parse(new FileReader(file), "");
-        } catch (Exception e) {
+            handler.startRDF();
+            handler.endRDF();
+        } catch (RDFHandlerException e) {
             throw new IllegalArgumentException("Error while parsing pattern file.", e);
         }
         return hashes;
