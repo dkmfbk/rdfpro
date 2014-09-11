@@ -82,8 +82,8 @@ public abstract class RDFProcessor {
 
     public static RDFProcessor statisticsExtractor(@Nullable final String outputNamespace,
             @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
-            final boolean processCooccurrences) {
-        return new StatisticsProcessor(outputNamespace, sourceProperty, sourceContext,
+            @Nullable final Long threshold, final boolean processCooccurrences) {
+        return new StatisticsProcessor(outputNamespace, sourceProperty, sourceContext, threshold,
                 processCooccurrences);
     }
 
@@ -287,7 +287,7 @@ public abstract class RDFProcessor {
                 return newTBoxExtractor(parseOptions(options, "", "", 0));
             }
             if ("x".equals(command) || "stats".equals(command)) {
-                return newStatisticsExtractor(parseOptions(options, "npc", "o", 0));
+                return newStatisticsExtractor(parseOptions(options, "npct", "o", 0));
             }
             if ("p".equals(command) || "prefix".equals(command)) {
                 return newNamespaceEnhancer(parseOptions(options, "f", "", 0));
@@ -528,9 +528,15 @@ public abstract class RDFProcessor {
                 context = parseURI((String) args.get("c"));
             }
 
+            Long threshold = null;
+            if (args.containsKey("t")) {
+                threshold = parseLong((String) args.get("t"));
+            }
+
             final boolean processCooccurrences = args.containsKey("o");
 
-            return statisticsExtractor(namespace, property, context, processCooccurrences);
+            return statisticsExtractor(namespace, property, context, threshold,
+                    processCooccurrences);
         }
 
         private RDFProcessor newTBoxExtractor(final Map<String, Object> args) {

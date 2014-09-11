@@ -60,13 +60,16 @@ final class StatisticsProcessor extends RDFProcessor {
 
     private final boolean processCooccurrences;
 
+    private final long threshold;
+
     StatisticsProcessor(@Nullable final String outputNamespace,
             @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
-            final boolean processCooccurrences) {
+            @Nullable final Long threshold, final boolean processCooccurrences) {
         this.outputNamespace = outputNamespace;
         this.sourceProperty = sourceProperty;
         this.sourceContext = sourceContext;
         this.processCooccurrences = processCooccurrences;
+        this.threshold = threshold != null ? threshold : 0;
     }
 
     @Override
@@ -588,6 +591,9 @@ final class StatisticsProcessor extends RDFProcessor {
 
             for (final TypeStats ts : this.typeList) {
                 final TypeStats.Partition p0 = ts.partitions[0];
+                if (p0.entities < StatisticsProcessor.this.threshold) {
+                    continue;
+                }
                 final String label = Util.formatValue(ts.type).replace("<", "").replace(">", "")
                         + " (" + p0.entities + ")";
                 emit(ts.type, VOIDX.LABEL, label);
@@ -596,7 +602,7 @@ final class StatisticsProcessor extends RDFProcessor {
                 }
                 for (int i = 0; i < ts.partitions.length; ++i) {
                     final TypeStats.Partition p = ts.partitions[i];
-                    if (p != null) {
+                    if (p != null && p.entities >= StatisticsProcessor.this.threshold) {
                         final URI source = this.sourceList.get(i).source;
                         final URI spURI = spURIs.get(source);
                         final URI tpURI = mintURI(source, ts.type);
@@ -629,10 +635,13 @@ final class StatisticsProcessor extends RDFProcessor {
             }
 
             for (final PropertyStats ps : this.propertyList) {
+                final PropertyStats.Partition p0 = ps.partitions[0];
+                if (p0.triples < StatisticsProcessor.this.threshold) {
+                    continue;
+                }
                 final boolean isTBox = Util.TBOX_PROPERTIES.contains(ps.property);
                 final boolean isType = ps.property.equals(RDF.TYPE);
                 final boolean isSameAs = ps.property.equals(OWL.SAMEAS);
-                final PropertyStats.Partition p0 = ps.partitions[0];
                 final boolean fun = p0.triples > 0 && p0.triples == p0.distinctSubjects;
                 final boolean invfun = p0.triples > 0 && p0.triples == p0.distinctObjects;
                 final boolean data = OWL.DATATYPEPROPERTY.equals(ps.detectedType);
@@ -653,7 +662,7 @@ final class StatisticsProcessor extends RDFProcessor {
                 }
                 for (int i = 0; i < ps.partitions.length; ++i) {
                     final PropertyStats.Partition p = ps.partitions[i];
-                    if (p != null) {
+                    if (p != null && p.triples >= StatisticsProcessor.this.threshold) {
                         final URI source = this.sourceList.get(i).source;
                         final URI spURI = spURIs.get(source);
                         final URI ppURI = mintURI(source, ps.property);
