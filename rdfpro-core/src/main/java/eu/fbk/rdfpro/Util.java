@@ -13,6 +13,26 @@
  */
 package eu.fbk.rdfpro;
 
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import javax.annotation.Nullable;
+
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
@@ -38,30 +58,8 @@ import org.openrdf.rio.helpers.NTriplesParserSettings;
 import org.openrdf.rio.helpers.RDFJSONParserSettings;
 import org.openrdf.rio.helpers.TriXParserSettings;
 import org.openrdf.rio.helpers.XMLParserSettings;
-import org.openrdf.rio.trig.TriGWriter;
-import org.openrdf.rio.turtle.TurtleUtil;
-import org.openrdf.rio.turtle.TurtleWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nullable;
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 final class Util {
 
@@ -296,10 +294,6 @@ final class Util {
         RDFWriter writer;
         if (streamOrWriter instanceof OutputStream) {
             writer = Rio.createWriter(format, (OutputStream) streamOrWriter);
-        } else if (format.equals(RDFFormat.TURTLE)) {
-            writer = patchedTurtleWriter((Writer) streamOrWriter);
-        } else if (format.equals(RDFFormat.TRIG)) {
-            writer = patchedTriGWriter((Writer) streamOrWriter);
         } else {
             writer = Rio.createWriter(format, (Writer) streamOrWriter);
         }
@@ -309,93 +303,6 @@ final class Util {
         config.set(BasicWriterSettings.RDF_LANGSTRING_TO_LANG_LITERAL, true);
         config.set(BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL, true);
         return writer;
-    }
-
-    private static RDFWriter patchedTurtleWriter(final Writer writer) {
-        return new TurtleWriter(writer) {
-
-            @Override
-            protected void writeURI(final URI uri) throws IOException {
-                patchedWriteURI(uri, this.namespaceTable, this.writer);
-            }
-
-        };
-    }
-
-    private static RDFWriter patchedTriGWriter(final Writer writer) {
-        return new TriGWriter(writer) {
-
-            @Override
-            protected void writeURI(final URI uri) throws IOException {
-                patchedWriteURI(uri, this.namespaceTable, this.writer);
-            }
-
-        };
-    }
-
-    private static void patchedWriteURI(final URI uri, final Map<String, String> namespaceTable,
-            final Writer writer) throws IOException {
-        final String uriString = uri.toString();
-
-        // Try to find a prefix for the URI's namespace
-        String prefix = null;
-
-        final int splitIdx = patchedFindURISplitIndex(uriString);
-        if (splitIdx > 0) {
-            final String namespace = uriString.substring(0, splitIdx);
-            prefix = namespaceTable.get(namespace);
-        }
-
-        if (prefix != null) {
-            // Namespace is mapped to a prefix; write abbreviated URI
-            writer.write(prefix);
-            writer.write(":");
-            writer.write(uriString.substring(splitIdx));
-        } else {
-            // Write full URI
-            writer.write("<");
-            writer.write(TurtleUtil.encodeURIString(uriString));
-            writer.write(">");
-        }
-    }
-
-    private static int patchedFindURISplitIndex(final String uri) {
-        final int uriLength = uri.length();
-
-        int idx = uriLength - 1;
-
-        // BEGIN FIX
-        final char ch = uri.charAt(idx);
-        if (ch == '.' || ch == '\\') {
-            return -1;
-        }
-        // END FIX
-
-        // Search last character that is not a name character
-        for (; idx >= 0; idx--) {
-            if (!TurtleUtil.isNameChar(uri.charAt(idx))) {
-                // Found a non-name character
-                break;
-            }
-        }
-
-        idx++;
-
-        // Local names need to start with a 'nameStartChar', skip characters
-        // that are not nameStartChar's.
-        for (; idx < uriLength; idx++) {
-            if (TurtleUtil.isNameStartChar(uri.charAt(idx))) {
-                break;
-            }
-        }
-
-        if (idx > 0 && idx < uriLength) {
-            // A valid split index has been found
-            return idx;
-        }
-
-        // No valid local name has been found
-        return -1;
     }
 
     public static Value shortenValue(final Value value, final int threshold) {
@@ -424,89 +331,6 @@ final class Util {
             }
         }
         return value;
-    }
-
-    public static String formatValue(final Value value) {
-        final StringBuilder builder = new StringBuilder();
-        formatValue(value, builder);
-        return builder.toString();
-    }
-
-    public static void formatValue(final Value value, final StringBuilder builder) {
-
-        if (value instanceof Literal) {
-            final Literal literal = (Literal) value;
-            builder.append('\"').append(literal.getLabel()).append('\"');
-            final String language = literal.getLanguage();
-            if (language != null) {
-                builder.append('@').append(language);
-            }
-            final URI datatype = literal.getDatatype();
-            if (datatype != null) {
-                builder.append('^').append('^');
-                formatValue(datatype, builder);
-            }
-
-        } else if (value instanceof BNode) {
-            final BNode bnode = (BNode) value;
-            builder.append('_').append(':').append(bnode.getID());
-
-        } else if (value instanceof URI) {
-            final URI uri = (URI) value;
-            final String prefix = NS_TO_PREFIX_MAP.get(uri.getNamespace());
-            if (prefix != null) {
-                builder.append(prefix).append(":").append(uri.getLocalName());
-            } else {
-                builder.append('<').append(uri.stringValue()).append('>');
-            }
-        } else {
-            throw new Error("Unknown value type (!): " + value);
-        }
-    }
-
-    public static Value parseValue(final String string) {
-
-        final int length = string.length();
-        if (string.startsWith("\"") || string.startsWith("'")) {
-            if (string.charAt(length - 1) == '"' || string.charAt(length - 1) == '\'') {
-                return FACTORY.createLiteral(string.substring(1, length - 1));
-            }
-            int index = string.lastIndexOf("\"@");
-            if (index == length - 4) {
-                final String language = string.substring(index + 2);
-                if (Character.isLetter(language.charAt(0))
-                        && Character.isLetter(language.charAt(1))) {
-                    return FACTORY.createLiteral(string.substring(1, index), language);
-                }
-            }
-            index = string.lastIndexOf("\"^^");
-            if (index > 0) {
-                final String datatype = string.substring(index + 3);
-                try {
-                    final URI datatypeURI = (URI) parseValue(datatype);
-                    return FACTORY.createLiteral(string.substring(1, index), datatypeURI);
-                } catch (final Throwable ex) {
-                    // ignore
-                }
-            }
-            throw new IllegalArgumentException("Invalid literal: " + string);
-
-        } else if (string.startsWith("_:")) {
-            return FACTORY.createBNode(string.substring(2));
-
-        } else if (string.startsWith("<")) {
-            return FACTORY.createURI(string.substring(1, length - 1));
-
-        } else {
-            final int index = string.indexOf(':');
-            final String prefix = string.substring(0, index);
-            final String localName = string.substring(index + 1);
-            final String namespace = PREFIX_TO_NS_MAP.get(prefix);
-            if (namespace != null) {
-                return FACTORY.createURI(namespace, localName);
-            }
-            throw new IllegalArgumentException("Unknown prefix for URI: " + string);
-        }
     }
 
     public static RuntimeException propagate(final Throwable ex) {
@@ -551,17 +375,17 @@ final class Util {
         return objects;
     }
 
-    public static String valueToHash(Value v) {
-        StringBuilder sb = new StringBuilder();
-        if(v instanceof URI) {
+    public static String valueToHash(final Value v) {
+        final StringBuilder sb = new StringBuilder();
+        if (v instanceof URI) {
             sb.append('u');
             sb.append('#');
             sb.append(v.stringValue());
-        } else if(v instanceof BNode) {
+        } else if (v instanceof BNode) {
             sb.append('b');
             sb.append('#');
             sb.append(v.stringValue());
-        } else if(v instanceof Literal) {
+        } else if (v instanceof Literal) {
             sb.append('l');
             sb.append('#');
             sb.append(murmur3Str(v.stringValue()));
@@ -569,53 +393,67 @@ final class Util {
         return murmur3Str(sb.toString());
     }
 
-    public static Set<String> createHashSet(String pattern, File file) {
+    public static Set<String> createHashSet(final String pattern, final File file) {
         final boolean matchSub = pattern.contains("s");
         final boolean matchPre = pattern.contains("p");
         final boolean matchObj = pattern.contains("o");
         final boolean matchCtx = pattern.contains("c");
         final Set<String> hashes = new TreeSet<>();
-        final RDFHandler handler = RDFProcessor.reader(false, null, file.getAbsolutePath()).getHandler(new RDFHandler() {
-            @Override
-            public void startRDF() throws RDFHandlerException {
-            }
+        final RDFHandler handler = RDFProcessor.reader(false, null, file.getAbsolutePath())
+                .getHandler(new RDFHandler() {
 
-            @Override
-            public void endRDF() throws RDFHandlerException {
-            }
+                    @Override
+                    public void startRDF() throws RDFHandlerException {
+                    }
 
-            @Override
-            public void handleNamespace(String s, String s2) throws RDFHandlerException {
-            }
+                    @Override
+                    public void endRDF() throws RDFHandlerException {
+                    }
 
-            @Override
-            public void handleStatement(Statement statement) throws RDFHandlerException {
-                if(matchSub) hashes.add(valueToHash(statement.getSubject()));
-                if(matchPre) hashes.add(valueToHash(statement.getPredicate()));
-                if(matchObj) hashes.add(valueToHash(statement.getObject()));
-                if(matchCtx) hashes.add(valueToHash(statement.getContext()));
-            }
+                    @Override
+                    public void handleNamespace(final String s, final String s2)
+                            throws RDFHandlerException {
+                    }
 
-            @Override
-            public void handleComment(String s) throws RDFHandlerException {
-            }
-        });
+                    @Override
+                    public void handleStatement(final Statement statement)
+                            throws RDFHandlerException {
+                        if (matchSub) {
+                            hashes.add(valueToHash(statement.getSubject()));
+                        }
+                        if (matchPre) {
+                            hashes.add(valueToHash(statement.getPredicate()));
+                        }
+                        if (matchObj) {
+                            hashes.add(valueToHash(statement.getObject()));
+                        }
+                        if (matchCtx) {
+                            hashes.add(valueToHash(statement.getContext()));
+                        }
+                    }
+
+                    @Override
+                    public void handleComment(final String s) throws RDFHandlerException {
+                    }
+                });
 
         try {
             handler.startRDF();
             handler.endRDF();
-        } catch (RDFHandlerException e) {
+        } catch (final RDFHandlerException e) {
             throw new IllegalArgumentException("Error while parsing pattern file.", e);
         }
         return hashes;
     }
 
-    public static Set<String> parseFileFilterRule(String rule) {
+    public static Set<String> parseFileFilterRule(final String rule) {
         final int lastSeparator = rule.lastIndexOf(']');
         final String filename = rule.substring(2, lastSeparator);
         final String pattern = rule.substring(lastSeparator + 1);
         final File file = new File(filename);
-        if(!file.exists()) throw new IllegalArgumentException("Cannot find file " + file.getAbsolutePath());
+        if (!file.exists()) {
+            throw new IllegalArgumentException("Cannot find file " + file.getAbsolutePath());
+        }
         return createHashSet(pattern, file);
     }
 
@@ -733,7 +571,7 @@ final class Util {
         return builder.toString();
     }
 
-    public static String murmur3Str(String...in) {
+    public static String murmur3Str(final String... in) {
         return toString(murmur3(in));
     }
 

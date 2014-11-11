@@ -1,18 +1,20 @@
 package eu.fbk.rdfpro;
 
 import java.io.Closeable;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.Objects;
 
-import org.openrdf.http.client.HTTPClient;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
-import org.openrdf.query.QueryLanguage;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.ntriples.NTriplesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +48,6 @@ final class UploadProcessor extends RDFProcessor {
 
         private static final String HEAD = "INSERT DATA {\n";
 
-        private final HTTPClient client;
-
         private final StringBuilder builder;
 
         private Resource lastCtx;
@@ -59,14 +59,11 @@ final class UploadProcessor extends RDFProcessor {
         private int count;
 
         Handler() {
-            this.client = new HTTPClient();
             this.builder = new StringBuilder();
             this.lastCtx = null;
             this.lastSubj = null;
             this.lastPred = null;
             this.count = 0;
-
-            this.client.setUpdateURL(UploadProcessor.this.endpointURL);
             this.builder.append(HEAD);
         }
 
@@ -87,7 +84,8 @@ final class UploadProcessor extends RDFProcessor {
         }
 
         @Override
-        public void handleStatement(final Statement statement) throws RDFHandlerException {
+        public synchronized void handleStatement(final Statement statement)
+                throws RDFHandlerException {
 
             final boolean sameCtx = Objects.equals(this.lastCtx, statement.getContext());
             final boolean sameSubj = sameCtx && statement.getSubject().equals(this.lastSubj);
@@ -140,11 +138,14 @@ final class UploadProcessor extends RDFProcessor {
 
         @Override
         public void close() throws IOException {
-            this.client.shutDown();
         }
 
         private void emit(final Value value) {
-            this.builder.append(NTriplesUtil.toNTriplesString(value));
+            try {
+                Values.formatValue(value, this.builder);
+            } catch (final IOException ex) {
+                throw new Error("Unexpected exception (!)", ex);
+            }
         }
 
         private void flush() throws RDFHandlerException {
@@ -157,10 +158,42 @@ final class UploadProcessor extends RDFProcessor {
                 this.builder.setLength(HEAD.length());
                 this.count = 0;
                 try {
-                    this.client.sendUpdate(QueryLanguage.SPARQL, update, null, null, false);
+                    sendUpdate(update);
                 } catch (final Throwable ex) {
                     throw new RDFHandlerException(ex);
                 }
+            }
+        }
+
+        private void sendUpdate(final String update) throws IOException {
+
+            final byte[] requestBody = ("update=" + URLEncoder.encode(update, "UTF-8"))
+                    .getBytes(Charset.forName("UTF-8"));
+
+            final URL url = new URL(UploadProcessor.this.endpointURL);
+            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type",
+                    "application/x-www-form-urlencoded; charset=utf-8");
+            connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
+
+            connection.connect();
+
+            try {
+                final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+                out.write(requestBody);
+                out.close();
+
+                final int httpCode = connection.getResponseCode();
+                if (httpCode != HttpURLConnection.HTTP_OK) {
+                    throw new IOException("Upload to '" + UploadProcessor.this.endpointURL
+                            + "' failed (HTTP " + httpCode + ")");
+                }
+
+            } finally {
+                connection.disconnect();
             }
         }
 

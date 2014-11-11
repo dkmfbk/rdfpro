@@ -399,9 +399,9 @@ final class FilterProcessor extends RDFProcessor {
                 } else if (rule.charAt(1) == '|') {
                     pattern = Pattern.compile(rule.substring(2, rule.length() - 1));
                 } else if (rule.contains(":")) {
-                    constant = Util.parseValue(rule.substring(1)).stringValue();
-                } else if(rule.charAt(1) == '[') {
-                    list.add(new HashMatcherRule(Util.parseFileFilterRule(rule),polarity));
+                    constant = Values.parseValue(rule.substring(1)).stringValue();
+                } else if (rule.charAt(1) == '[') {
+                    list.add(new HashMatcherRule(Util.parseFileFilterRule(rule), polarity));
                     continue;
                 } else if (rule.length() != 2 || rule.charAt(1) != '*') {
                     final String prefix = rule.substring(1);
@@ -433,7 +433,9 @@ final class FilterProcessor extends RDFProcessor {
         }
 
         private interface Rule {
+
             boolean match(final String string, final String[] groups);
+
             boolean getPolarity();
         }
 
@@ -647,7 +649,7 @@ final class FilterProcessor extends RDFProcessor {
                 this.sequence = sequence.toArray(new Object[sequence.size()]);
 
             } else if (replacement.contains(":")) {
-                this.sequence = new Object[] { Util.parseValue(replacement).stringValue() };
+                this.sequence = new Object[] { Values.parseValue(replacement).stringValue() };
 
             } else {
                 final String namespace = Util.PREFIX_TO_NS_MAP.get(replacement);

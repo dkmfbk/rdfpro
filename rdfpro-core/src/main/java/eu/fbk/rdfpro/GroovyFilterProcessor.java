@@ -57,7 +57,6 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.turtle.TurtleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +65,8 @@ import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
 import groovy.util.ResourceConnector;
 import groovy.util.ResourceException;
+
+import info.aduna.text.ASCIIUtil;
 
 final class GroovyFilterProcessor extends RDFProcessor {
 
@@ -153,7 +154,6 @@ final class GroovyFilterProcessor extends RDFProcessor {
         return 0;
     }
 
-    @SuppressWarnings("resource")
     @Override
     public RDFHandler getHandler(final RDFHandler handler) {
         return this.scriptPooling ? Handlers.decouple(new PooledHandler(handler))
@@ -169,6 +169,23 @@ final class GroovyFilterProcessor extends RDFProcessor {
         } catch (final Throwable ex) {
             throw new Error("Could not instantiate script class", ex);
         }
+    }
+
+    private static boolean isPN_CHARS(final int c) {
+        return isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183 || c >= 768
+                && c <= 879 || c >= 8255 && c <= 8256;
+    }
+
+    private static boolean isPN_CHARS_U(final int c) {
+        return isPN_CHARS_BASE(c) || c == 95;
+    }
+
+    private static boolean isPN_CHARS_BASE(final int c) {
+        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246 || c >= 248
+                && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191 || c >= 8204
+                && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271 || c >= 12289
+                && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
+                || c >= 65536 && c <= 983039;
     }
 
     private static final class Loader implements ResourceConnector {
@@ -254,7 +271,7 @@ final class GroovyFilterProcessor extends RDFProcessor {
                     if (c == '<') {
                         final int end = parseURI(string, i);
                         if (end >= 0) {
-                            final URI u = (URI) Util.parseValue(string.substring(i, end));
+                            final URI u = (URI) Values.parseValue(string.substring(i, end));
                             builder.append("__iri(").append(counter.getAndIncrement())
                                     .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
@@ -263,10 +280,10 @@ final class GroovyFilterProcessor extends RDFProcessor {
                             ++i;
                         }
 
-                    } else if (TurtleUtil.isPN_CHARS_BASE(c)) {
+                    } else if (isPN_CHARS_BASE(c)) {
                         final int end = parseQName(string, i);
                         if (end >= 0) {
-                            final URI u = (URI) Util.parseValue(string.substring(i, end));
+                            final URI u = (URI) Values.parseValue(string.substring(i, end));
                             builder.append("__iri(").append(counter.getAndIncrement())
                                     .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
@@ -325,13 +342,13 @@ final class GroovyFilterProcessor extends RDFProcessor {
             final int len = string.length();
             char c;
 
-            if (!TurtleUtil.isPN_CHARS_BASE(string.charAt(i))) {
+            if (!isPN_CHARS_BASE(string.charAt(i))) {
                 return -1;
             }
 
             for (; i < len; ++i) {
                 c = string.charAt(i);
-                if (!TurtleUtil.isPN_CHARS(c) && c != '.') {
+                if (!isPN_CHARS(c) && c != '.') {
                     break;
                 }
             }
@@ -341,13 +358,13 @@ final class GroovyFilterProcessor extends RDFProcessor {
             }
 
             c = string.charAt(++i);
-            if (!TurtleUtil.isPN_CHARS_U(c) && c != ':' && c != '%' && !Character.isDigit(c)) {
+            if (!isPN_CHARS_U(c) && c != ':' && c != '%' && !Character.isDigit(c)) {
                 return -1;
             }
 
             for (; i < len; ++i) {
                 c = string.charAt(i);
-                if (!TurtleUtil.isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
+                if (!isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
                     break;
                 }
             }

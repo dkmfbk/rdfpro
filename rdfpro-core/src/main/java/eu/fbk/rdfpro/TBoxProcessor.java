@@ -170,7 +170,7 @@ final class TBoxProcessor extends RDFProcessor {
                     final Term term = entry.getValue();
                     if (term.isLanguage) {
                         if (term.isUsed) {
-                            final String s = Util.formatValue(uri);
+                            final String s = Values.formatValue(uri);
                             if (term.isProperty) {
                                 languageProperties.add(s);
                             } else {

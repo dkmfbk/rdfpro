@@ -90,9 +90,9 @@ public class Main {
                 }
             }
             System.out.println(String.format("RDF Processor Tool (RDFP) %s\nJava %s bit (%s) %s\n"
-                    + "This is free software released into the public domain",
-                    version, System.getProperty("sun.arch.data.model"),
-                    System.getProperty("java.vendor"), System.getProperty("java.version")));
+                    + "This is free software released into the public domain", version,
+                    System.getProperty("sun.arch.data.model"), System.getProperty("java.vendor"),
+                    System.getProperty("java.version")));
             System.exit(0);
         }
 

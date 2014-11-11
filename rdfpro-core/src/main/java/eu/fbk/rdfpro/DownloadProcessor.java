@@ -1,48 +1,38 @@
 package eu.fbk.rdfpro;
 
-import static org.openrdf.http.protocol.Protocol.ACCEPT_PARAM_NAME;
-
 import java.io.Closeable;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.HashSet;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.httpclient.HttpMethod;
-import org.openrdf.http.client.HTTPClient;
-import org.openrdf.http.protocol.UnauthorizedException;
-import org.openrdf.http.protocol.error.ErrorInfo;
-import org.openrdf.http.protocol.error.ErrorType;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.query.BindingSet;
-import org.openrdf.query.MalformedQueryException;
-import org.openrdf.query.QueryInterruptedException;
-import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.TupleQueryResultHandlerBase;
 import org.openrdf.query.TupleQueryResultHandlerException;
-import org.openrdf.query.UnsupportedQueryLanguageException;
+import org.openrdf.query.resultio.QueryResultIO;
 import org.openrdf.query.resultio.TupleQueryResultFormat;
-import org.openrdf.repository.RepositoryException;
+import org.openrdf.query.resultio.TupleQueryResultParser;
+import org.openrdf.rio.ParserConfig;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.Rio;
-import org.openrdf.rio.UnsupportedRDFormatException;
+import org.openrdf.rio.helpers.BasicParserSettings;
 import org.openrdf.rio.helpers.ParseErrorLogger;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import info.aduna.lang.FileFormat;
 
 final class DownloadProcessor extends RDFProcessor {
 
@@ -150,7 +140,7 @@ final class DownloadProcessor extends RDFProcessor {
                     try {
                         final String threadName = Thread.currentThread().getName();
                         LOGGER.debug("Begin query in thread {}", threadName);
-                        evaluateQuery();
+                        sendQuery();
                         LOGGER.debug("Done query in thread {}", threadName);
                     } catch (final Throwable ex) {
                         if (!Handler.this.halted) {
@@ -209,23 +199,59 @@ final class DownloadProcessor extends RDFProcessor {
             }
         }
 
-        private void evaluateQuery() throws Throwable {
+        private void sendQuery() throws Throwable {
 
-            final HTTPClient client = new Client();
-            client.setQueryURL(DownloadProcessor.this.endpointURL);
+            final List<String> acceptTypes;
+            acceptTypes = DownloadProcessor.this.isSelect ? TupleQueryResultFormat.SPARQL
+                    .getMIMETypes() : RDFFormat.RDFXML.getMIMETypes();
+
+            final byte[] requestBody = ("query="
+                    + URLEncoder.encode(DownloadProcessor.this.query, "UTF-8") + "&infer=true")
+                    .getBytes(Charset.forName("UTF-8"));
+
+            final URL url = new URL(DownloadProcessor.this.endpointURL);
+            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Accept", Util.join(",", acceptTypes));
+            connection.setRequestProperty("Content-Type",
+                    "application/x-www-form-urlencoded; charset=utf-8");
+            connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
+
+            connection.connect();
 
             try {
+                final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+                out.write(requestBody);
+                out.close();
+
+                final int httpCode = connection.getResponseCode();
+                if (httpCode != HttpURLConnection.HTTP_OK) {
+                    throw new IOException("Download from '" + DownloadProcessor.this.endpointURL
+                            + "' failed (HTTP " + httpCode + ")");
+                }
+
                 if (DownloadProcessor.this.isSelect) {
-                    client.sendTupleQuery(QueryLanguage.SPARQL, DownloadProcessor.this.query,
-                            null, null, true, 0, new TupleHandler());
+                    final TupleQueryResultParser parser = QueryResultIO
+                            .createParser(TupleQueryResultFormat.SPARQL);
+                    parser.setQueryResultHandler(new TupleHandler());
+                    parser.parseQueryResult(connection.getInputStream());
+
                 } else {
-                    client.setPreferredTupleQueryResultFormat(TupleQueryResultFormat.SPARQL);
-                    client.sendGraphQuery(QueryLanguage.SPARQL, DownloadProcessor.this.query,
-                            null, null, true, 0, new GraphHandler());
+                    final ParserConfig parserConfig = new ParserConfig();
+                    parserConfig.addNonFatalError(BasicParserSettings.VERIFY_DATATYPE_VALUES);
+                    parserConfig.addNonFatalError(BasicParserSettings.VERIFY_LANGUAGE_TAGS);
+
+                    final RDFParser parser = Rio.createParser(RDFFormat.RDFXML, Util.FACTORY);
+                    parser.setParserConfig(parserConfig);
+                    parser.setParseErrorListener(new ParseErrorLogger());
+                    parser.setRDFHandler(new GraphHandler());
+                    parser.parse(connection.getInputStream(), DownloadProcessor.this.endpointURL);
                 }
 
             } finally {
-                client.shutDown();
+                connection.disconnect();
             }
         }
 
@@ -293,93 +319,6 @@ final class DownloadProcessor extends RDFProcessor {
             }
 
         }
-
-    }
-
-    private static final class Client extends HTTPClient {
-
-        @Override
-        protected void getRDF(final HttpMethod method, final RDFHandler handler,
-                final boolean requireContext) throws IOException, RDFHandlerException,
-                RepositoryException, MalformedQueryException, UnauthorizedException,
-                QueryInterruptedException {
-
-            try {
-                // Patched in order to accept only RDF/XML, as advertising support of multiple
-                // formats seems to mislead Virtuoso, which then replies with Turtle but
-                // Content-Type: text/plain (and btw, Turtle returned by Virtuoso is broken).
-                final Set<RDFFormat> rdfFormats = new HashSet<RDFFormat>();
-                rdfFormats.add(RDFFormat.RDFXML);
-                for (final String acceptParam : RDFFormat.getAcceptParams(rdfFormats, false,
-                        RDFFormat.RDFXML)) {
-                    method.addRequestHeader(ACCEPT_PARAM_NAME, acceptParam);
-                }
-
-                final int httpCode = this.httpClient.executeMethod(method);
-
-                if (httpCode != HttpURLConnection.HTTP_OK) {
-                    try {
-                        switch (httpCode) {
-                        case HttpURLConnection.HTTP_UNAUTHORIZED: // 401
-                            throw new UnauthorizedException();
-                        case HttpURLConnection.HTTP_UNAVAILABLE: // 503
-                            throw new QueryInterruptedException();
-                        default:
-                            final ErrorInfo errInfo = getErrorInfo(method);
-                            if (errInfo.getErrorType() == ErrorType.MALFORMED_QUERY) {
-                                throw new MalformedQueryException(errInfo.getErrorMessage());
-                            } else if (errInfo.getErrorType() == ErrorType.UNSUPPORTED_QUERY_LANGUAGE) {
-                                throw new UnsupportedQueryLanguageException(
-                                        errInfo.getErrorMessage());
-                            } else {
-                                throw new RepositoryException(errInfo.getErrorMessage());
-                            }
-                        }
-                    } finally {
-                        method.abort();
-                    }
-                }
-
-                final String mimeType = getResponseMIMEType(method);
-                try {
-                    final RDFFormat format = FileFormat.matchMIMEType(mimeType, rdfFormats);
-                    final RDFParser parser = Rio.createParser(format, getValueFactory());
-                    parser.setParserConfig(getParserConfig());
-                    parser.setParseErrorListener(new ParseErrorLogger());
-                    parser.setRDFHandler(handler);
-                    parser.parse(method.getResponseBodyAsStream(), method.getURI().getURI());
-                } catch (final UnsupportedRDFormatException e) {
-                    throw new RepositoryException(
-                            "Server responded with an unsupported file format: " + mimeType);
-                } catch (final RDFParseException e) {
-                    throw new RepositoryException("Malformed query result from server", e);
-                }
-
-            } finally {
-                releaseConnection(method);
-            }
-        }
-        //
-        // @Override
-        // protected String getResponseMIMEType(final HttpMethod method) throws IOException {
-        // final Header[] headers = method.getResponseHeaders("Content-Type");
-        // for (final Header header : headers) {
-        // final HeaderElement[] headerElements = header.getElements();
-        //
-        // for (final HeaderElement headerEl : headerElements) {
-        // final String mimeType = headerEl.getName();
-        // if (mimeType != null) {
-        // LOGGER.debug("Response type is {}", mimeType);
-        // // Virtuoso sends turtle with Content-Type: text/plain, which triggers the
-        // // use of NTriples parser and subsequent failure. We thus replace
-        // // text/plain with text/turtle, exploiting the fact that Turtle is a
-        // // superset of NTriples.
-        // return mimeType.equals("text/plain") ? "text/turtle" : mimeType;
-        // }
-        // }
-        // }
-        // return null;
-        // }
 
     }
 

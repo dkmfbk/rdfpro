@@ -569,7 +569,7 @@ final class StatisticsProcessor extends RDFProcessor {
             final Map<URI, URI> spURIs = new HashMap<URI, URI>();
             for (final SourceStats s : this.sourceList) {
                 final URI uri = mintURI(s.source != null ? s.source : VOID.DATASET);
-                final String label = Util.formatValue(uri).replace("<", "").replace(">", "")
+                final String label = Values.formatValue(uri).replace("<", "").replace(">", "")
                         + " (" + s.entities + ", " + s.triples + ")";
                 spURIs.put(s.source, uri);
                 emit(uri, RDF.TYPE, VOID.DATASET);
@@ -594,7 +594,7 @@ final class StatisticsProcessor extends RDFProcessor {
                 if (p0.entities < StatisticsProcessor.this.threshold) {
                     continue;
                 }
-                final String label = Util.formatValue(ts.type).replace("<", "").replace(">", "")
+                final String label = Values.formatValue(ts.type).replace("<", "").replace(">", "")
                         + " (" + p0.entities + ")";
                 emit(ts.type, VOIDX.LABEL, label);
                 if (ts.example != null) {
@@ -606,7 +606,7 @@ final class StatisticsProcessor extends RDFProcessor {
                         final URI source = this.sourceList.get(i).source;
                         final URI spURI = spURIs.get(source);
                         final URI tpURI = mintURI(source, ts.type);
-                        final String tpLabel = Util.formatValue(tpURI).replace("<", "") //
+                        final String tpLabel = Values.formatValue(tpURI).replace("<", "") //
                                 .replace(">", "") + " (" + p.entities + ", C)";
                         emit(ts.type, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, tpURI);
                         emit(spURI, VOID.CLASS_PARTITION, tpURI);
@@ -646,9 +646,10 @@ final class StatisticsProcessor extends RDFProcessor {
                 final boolean invfun = p0.triples > 0 && p0.triples == p0.distinctObjects;
                 final boolean data = OWL.DATATYPEPROPERTY.equals(ps.detectedType);
                 final boolean object = OWL.OBJECTPROPERTY.equals(ps.detectedType);
-                final String label = String.format("%s (%d, %s%s%s)", Util
-                        .formatValue(ps.property).replace("<", "").replace(">", ""), p0.triples,
-                        data ? "D" : object ? "O" : "P", fun ? "F" : "", invfun ? "I" : "");
+                final String label = String.format("%s (%d, %s%s%s)",
+                        Values.formatValue(ps.property).replace("<", "").replace(">", ""),
+                        p0.triples, data ? "D" : object ? "O" : "P", fun ? "F" : "", invfun ? "I"
+                                : "");
                 emit(ps.property, VOIDX.LABEL, label);
                 emit(ps.property, VOIDX.TYPE, ps.detectedType);
                 if (fun) {
@@ -668,10 +669,10 @@ final class StatisticsProcessor extends RDFProcessor {
                         final URI ppURI = mintURI(source, ps.property);
                         final boolean ppFun = p.triples > 0 && p.triples == p.distinctSubjects;
                         final boolean ppInvfun = p.triples > 0 && p.triples == p.distinctObjects;
-                        final String ppLabel = String.format("%s (%d, %s%s%s)",
-                                Util.formatValue(ppURI).replace("<", "").replace(">", ""),
-                                p.triples, data ? "D" : object ? "O" : "P", ppFun ? "F" : "",
-                                ppInvfun ? "I" : "");
+                        final String ppLabel = String.format("%s (%d, %s%s%s)", Values
+                                .formatValue(ppURI).replace("<", "").replace(">", ""), p.triples,
+                                data ? "D" : object ? "O" : "P", ppFun ? "F" : "", ppInvfun ? "I"
+                                        : "");
                         emit(ps.property, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, ppURI);
                         emit(spURI, VOID.PROPERTY_PARTITION, ppURI);
                         emit(ppURI, RDF.TYPE, VOID.DATASET);
@@ -693,10 +694,10 @@ final class StatisticsProcessor extends RDFProcessor {
             }
 
             for (final URI term : VOID.TERMS) {
-                emit(term, VOIDX.LABEL, Util.formatValue(term));
+                emit(term, VOIDX.LABEL, Values.formatValue(term));
             }
             for (final URI term : VOIDX.TERMS) {
-                emit(term, VOIDX.LABEL, Util.formatValue(term));
+                emit(term, VOIDX.LABEL, Values.formatValue(term));
             }
         }
 
@@ -890,13 +891,13 @@ final class StatisticsProcessor extends RDFProcessor {
             synchronized String build() {
                 final List<String> lines = new ArrayList<String>();
                 for (int i = 0; i < this.data.size(); i += 2) {
-                    final String predicate = Util.formatValue(this.data.get(i));
-                    final String object = Util.formatValue(Util.shortenValue(this.data.get(i + 1),
-                            MAX_VALUE_LENGTH));
+                    final String predicate = Values.formatValue(this.data.get(i));
+                    final String object = Values.formatValue(Util.shortenValue(
+                            this.data.get(i + 1), MAX_VALUE_LENGTH));
                     lines.add(predicate + " " + object);
                 }
                 Collections.sort(lines);
-                final StringBuilder builder = new StringBuilder(Util.formatValue(this.id));
+                final StringBuilder builder = new StringBuilder(Values.formatValue(this.id));
                 for (int i = 0; i < lines.size(); ++i) {
                     builder.append("\n    ").append(lines.get(i));
                     builder.append(i < lines.size() - 1 ? ';' : '.');
@@ -1015,12 +1016,12 @@ final class StatisticsProcessor extends RDFProcessor {
                 for (final Statement statement : this.statements) {
                     if (statement != null) {
                         builder.append("\n    ")
-                                .append(Util.formatValue(statement.getSubject()))
+                                .append(Values.formatValue(statement.getSubject()))
                                 .append(" ")
-                                .append(Util.formatValue(statement.getPredicate()))
+                                .append(Values.formatValue(statement.getPredicate()))
                                 .append(" ")
-                                .append(Util.formatValue(Util.shortenValue(statement.getObject(),
-                                        MAX_VALUE_LENGTH))).append(" .");
+                                .append(Values.formatValue(Util.shortenValue(
+                                        statement.getObject(), MAX_VALUE_LENGTH))).append(" .");
                     }
                 }
                 return builder.toString();

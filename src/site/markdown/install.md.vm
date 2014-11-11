@@ -4,8 +4,8 @@ RDFpro installation
 
 The RDFpro command line tool is packaged as a self-contained, cross-platform Java application. Download it from the following links:
 
-  * [rdfpro-dist-0.2-bin.tar.gz](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/0.2/rdfpro-dist-0.2-bin.tar.gz)
-  * [rdfpro-dist-0.2-bin.zip](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/0.2/rdfpro-dist-0.2-bin.zip)
+  * [rdfpro-dist-${site-version}-bin.tar.gz](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.tar.gz)
+  * [rdfpro-dist-${site-version}-bin.zip](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.zip)
 
 Then, unpack the compressed archive in the location you prefer. The following, optional steps are recommended:
 
@@ -19,9 +19,12 @@ Then, unpack the compressed archive in the location you prefer. The following, o
     These utilities are available also for Windows (for `pigz` see [here](http://sourceforge.net/projects/pigzforwindows/) and [here](http://blog.kowalczyk.info/software/pigz-for-windows.html)).
     After their installation, you have to configure RDFpro to use them by setting the following environment variables (an information message is emitted if the configuration is successfully picked up by the tool):
 
-            RDFPRO_CMD_GZIP = path_to_pigz_executable
-            RDFPRO_CMD_BZIP2 = path_to_pbzip2_executable
+            $ export RDFPRO_CMD_GZIP=path_to_pigz_executable
+            $ export RDFPRO_CMD_BZIP2=path_to_pbzip2_executable
 
 You may test whether RDFpro has been correctly installed by executing the following command, which should display the tool version and other relevant system information:
 
-    rdfpro -v
+    $ rdfpro -v
+    RDF Processor Tool (RDFP) ${site-version}
+    Java 64 bit (Oracle Corporation) 1.7.0_67
+    This is free software released into the public domain

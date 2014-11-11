@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class Streams {
+public final class Streams {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Streams.class);
 
@@ -839,15 +839,15 @@ final class Streams {
 
             public static Fetcher forReader(final Reader reader, final char delimiter) {
                 synchronized (FETCHERS) {
-                    Fetcher manager = FETCHERS.get(reader);
-                    if (manager == null) {
-                        manager = new Fetcher(reader, delimiter);
-                        FETCHERS.put(reader, manager);
-                    } else if (manager.delimiter != delimiter) {
+                    Fetcher fetcher = FETCHERS.get(reader);
+                    if (fetcher == null) {
+                        fetcher = new Fetcher(reader, delimiter);
+                        FETCHERS.put(reader, fetcher);
+                    } else if (fetcher.delimiter != delimiter) {
                         throw new IllegalStateException("Already reading from reader " + reader
                                 + " using delimiter " + delimiter);
                     }
-                    return manager;
+                    return fetcher;
                 }
             }
 

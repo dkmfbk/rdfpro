@@ -138,16 +138,44 @@ public class TQLWriter extends RDFWriterBase {
         for (int i = 0; i < length; ++i) {
             final char ch = string.charAt(i);
             switch (ch) {
-            case '>':
-                this.writer.write('\\');
-                this.writer.write('>');
+            case 0x22: // "
+                this.writer.write("\\u0022");
                 break;
-            case '\\':
-                this.writer.write('\\');
-                this.writer.write('\\');
+            case 0x3C: // <
+                this.writer.write("\\u003C");
+                break;
+            case 0x3E: // >
+                this.writer.write("\\u003E");
+                break;
+            case 0x5C: // \
+                this.writer.write("\\u005C");
+                break;
+            case 0x5E: // ^
+                this.writer.write("\\u005E");
+                break;
+            case 0x60: // `
+                this.writer.write("\\u0060");
+                break;
+            case 0x7B: // {
+                this.writer.write("\\u007B");
+                break;
+            case 0x7C: // |
+                this.writer.write("\\u007C");
+                break;
+            case 0x7D: // }
+                this.writer.write("\\u007D");
+                break;
+            case 0x7F: // delete control char (not strictly necessary)
+                this.writer.write("\\u007F");
                 break;
             default:
-                this.writer.write(ch);
+                if (ch <= 32) { // control char and ' '
+                    this.writer.write("\\u00");
+                    this.writer.write(Character.forDigit(ch / 16, 16));
+                    this.writer.write(Character.forDigit(ch % 16, 16));
+                } else {
+                    this.writer.write(ch);
+                }
             }
         }
         this.writer.write('>');
@@ -155,15 +183,36 @@ public class TQLWriter extends RDFWriterBase {
 
     private void emitBNode(final BNode bnode) throws IOException, RDFHandlerException {
         final String id = bnode.getID();
+        final int last = id.length() - 1;
         this.writer.write('_');
         this.writer.write(':');
-        final int length = id.length();
-        for (int i = 0; i < length; ++i) {
-            final char ch = id.charAt(i);
-            if (!TQL.isLetterOrNumber(ch)) {
-                throw new RDFHandlerException("Illegal BNode ID: " + id);
+        if (last < 0) {
+            this.writer.write("genid-hash-");
+            this.writer.write(Integer.toHexString(System.identityHashCode(bnode)));
+        } else {
+            char ch = id.charAt(0);
+            if (!TQL.isPN_CHARS_U(ch) && !TQL.isNumber(ch)) {
+                this.writer.write("genid-start-");
+                this.writer.write(ch);
+            } else {
+                this.writer.write(ch);
             }
-            this.writer.write(ch);
+            if (last > 0) {
+                for (int i = 1; i < last; ++i) {
+                    ch = id.charAt(i);
+                    if (TQL.isPN_CHARS(ch) || ch == '.') {
+                        this.writer.write(ch);
+                    } else {
+                        this.writer.write(Integer.toHexString(ch));
+                    }
+                }
+                ch = id.charAt(last);
+                if (TQL.isPN_CHARS(ch)) {
+                    this.writer.write(ch);
+                } else {
+                    this.writer.write(Integer.toHexString(ch));
+                }
+            }
         }
     }
 
@@ -174,28 +223,45 @@ public class TQLWriter extends RDFWriterBase {
         for (int i = 0; i < length; ++i) {
             final char ch = label.charAt(i);
             switch (ch) {
-            case '\\':
+            case 0x08: // \b
                 this.writer.write('\\');
-                this.writer.write('\\');
+                this.writer.write('b');
                 break;
-            case '\t':
+            case 0x09: // \t
                 this.writer.write('\\');
                 this.writer.write('t');
                 break;
-            case '\n':
+            case 0x0A: // \n
                 this.writer.write('\\');
                 this.writer.write('n');
                 break;
-            case '\r':
+            case 0x0C: // \f
+                this.writer.write('\\');
+                this.writer.write('f');
+                break;
+            case 0x0D: // \r
                 this.writer.write('\\');
                 this.writer.write('r');
                 break;
-            case '\"':
+            case 0x22: // "
                 this.writer.write('\\');
-                this.writer.write('\"');
+                this.writer.write('"');
+                break;
+            case 0x5C: // \
+                this.writer.write('\\');
+                this.writer.write('\\');
+                break;
+            case 0x7F: // delete control char
+                this.writer.write("\\u007F");
                 break;
             default:
-                this.writer.write(ch);
+                if (ch < 32) { // other control char (not strictly necessary)
+                    this.writer.write("\\u00");
+                    this.writer.write(Character.forDigit(ch / 16, 16));
+                    this.writer.write(Character.forDigit(ch % 16, 16));
+                } else {
+                    this.writer.write(ch);
+                }
             }
         }
         this.writer.write('"');
@@ -208,13 +274,33 @@ public class TQLWriter extends RDFWriterBase {
             final String language = literal.getLanguage();
             if (language != null) {
                 this.writer.write('@');
-                final int l = language.length();
-                for (int i = 0; i < l; ++i) {
+                final int len = language.length();
+                boolean minusFound = false;
+                for (int i = 0; i < len; ++i) {
                     final char ch = language.charAt(i);
-                    if (!TQL.isLangChar(ch)) {
-                        throw new RDFHandlerException("Illegal language: '" + language + "'");
+                    boolean valid = true;
+                    if (ch == '-') {
+                        minusFound = true;
+                        if (i == 0) {
+                            valid = false;
+                        } else {
+                            final char prev = language.charAt(i - 1);
+                            valid = TQL.isLetter(prev) || TQL.isNumber(prev);
+                        }
+                    } else if (TQL.isNumber(ch)) {
+                        valid = minusFound;
+                    } else {
+                        valid = TQL.isLetter(ch);
+                    }
+                    if (!valid) {
+                        throw new RDFHandlerException("Cannot serialize language tag '" + language
+                                + "' in TQL: invalid char '" + ch + "' (see Turtle specs)");
                     }
                     this.writer.write(ch);
+                }
+                if (language.charAt(len - 1) == '-') {
+                    throw new RDFHandlerException("Cannot serialize language tag '" + language
+                            + "' in TQL: invalid final char '-' (see Turtle specs)");
                 }
             }
         }

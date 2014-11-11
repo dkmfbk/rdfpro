@@ -11,7 +11,7 @@ In order to use the `rdfpro-jsonld` library you have to include the following de
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-jsonld</artifactId>
-      <version>0.1</version>
+      <version>${site-version}</version>
     </dependency>
 
 Then, make sure to include `rdfpro` artifact repository:
@@ -23,11 +23,11 @@ Then, make sure to include `rdfpro` artifact repository:
 
 If you don't use Maven, you have to download and include the following JARs in the classpath:
 
-  * [rdfpro-jsonld-1.0.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-jsonld/0.1/rdfpro-jsonld-0.1.jar)
+  * [rdfpro-jsonld-${site-version}.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-jsonld/${site-version}/rdfpro-jsonld-${site-version}.jar)
   * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or higher version)
-  * [sesame-rio-api-2.7.12.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.12/sesame-rio-api-2.7.12.jar) (or higher version)
-  * [sesame-model-2.7.12.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.12/sesame-model-2.7.12.jar) (or higher version)
-  * [sesame-util-2.7.12.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.12/sesame-util-2.7.12.jar) (or higher version)
+  * [sesame-rio-api-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.13/sesame-rio-api-2.7.13.jar) (or higher version)
+  * [sesame-model-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.13/sesame-model-2.7.13.jar) (or higher version)
+  * [sesame-util-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.13/sesame-util-2.7.13.jar) (or higher version)
   * [semargl-core-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-core/0.6.1/semargl-core-0.6.1.jar)
   * [semargl-jsonld-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-jsonld/0.6.1/semargl-jsonld-0.6.1.jar)
   * [semargl-rdf-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-rdf/0.6.1/semargl-rdf-0.6.1.jar)

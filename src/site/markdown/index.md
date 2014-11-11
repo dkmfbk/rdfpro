@@ -23,11 +23,11 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### Features
 
-- RDF quad (triple + graph) filtering and replacement
+- RDF quad (triple + graph) filtering and replacement (with [Groovy](http://groovy.codehaus.org/) scripting support)
 - RDFS inference with selectable rules
 - owl:sameAs [smushing](http://patterns.dataincubator.org/book/smushing.html)
 - TBox and VOID statistics extraction
-- RDF deduplication, intersection and difference
+- RDF deduplication, union, intersection and difference
 - data upload/download via SPARQL endpoints
 - data read/write in multiple (compressed) formats (rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf)
 - command line [tool](usage.html) + [core](rdfprolib.html), [tql](tql.html), [jsonld](jsonld.html) libraries
@@ -37,5 +37,6 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### News
 
+- 2014-11-10 Version 0.3 has been released
 - 2014-08-04 Version 0.2 has been released
 - 2014-07-24 Version 0.1 has been released

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -67,7 +67,7 @@ public abstract class RDFProcessor {
         return new FilterProcessor(matchSpec, replaceSpec, keep);
     }
 
-    // empty rule array = all rules
+    // empty rule array = all rules; use SESAME.NIL to emit in default context
 
     public static RDFProcessor inferencer(final Iterable<? extends Statement> tbox,
             @Nullable final Resource tboxContext, final boolean decomposeOWLAxioms,
@@ -346,7 +346,7 @@ public abstract class RDFProcessor {
 
         private URI parseURI(final String string) {
             try {
-                return (URI) Util.parseValue(string);
+                return (URI) Values.parseValue(string);
             } catch (final Throwable ex) {
                 throw new IllegalArgumentException("Invalid URI '" + string + "': "
                         + ex.getMessage(), ex);

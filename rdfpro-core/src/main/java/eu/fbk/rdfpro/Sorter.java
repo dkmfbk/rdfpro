@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class Sorter implements Closeable {
+public abstract class Sorter implements Closeable {
 
     public static char DELIMITER = 0;
 
