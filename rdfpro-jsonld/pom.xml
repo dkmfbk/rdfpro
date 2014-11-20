@@ -21,12 +21,12 @@
     interpreting JSON contents as RDF. See http://www.w3.org/TR/json-ld/
     for the format specification.
   </description>
-  <url>http://fracor.bitbucket.org/rdfpro/jsonld.html</url>
+  <url>http://fracor.bitbucket.org/rdfpro/rdfpro-jsonld.html</url>
 
   <distributionManagement>
     <site>
       <id>siterdfpro</id>
-      <url>${site-path}/rdfpro-core/</url>
+      <url>${site-path}/rdfpro-jsonld/</url>
     </site>
   </distributionManagement>
 

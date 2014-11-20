@@ -19,6 +19,9 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 
+import org.slf4j.Logger;
+
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.encoder.Encoder;
@@ -28,7 +31,12 @@ import ch.qos.logback.core.spi.DeferredProcessingAware;
 import ch.qos.logback.core.status.ErrorStatus;
 import ch.qos.logback.core.util.EnvUtil;
 
-final class Logging {
+public final class Logging {
+
+    public static void setLevel(final Logger logger, final String level) {
+        final Level l = Level.valueOf(level);
+        ((ch.qos.logback.classic.Logger) logger).setLevel(l);
+    }
 
     public static final class NormalConverter extends
             ForegroundCompositeConverterBase<ILoggingEvent> {

@@ -45,59 +45,6 @@
       <artifactId>sesame-util</artifactId>
       <scope>provided</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-query</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryresultio-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryresultio-sparqlxml</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-rio-rdfxml</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <!-- <dependency> -->
-    <!-- <groupId>commons-httpclient</groupId> -->
-    <!-- <artifactId>commons-httpclient</artifactId> -->
-    <!-- <scope>provided</scope> -->
-    <!-- </dependency> -->
-
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryalgebra-evaluation</artifactId>
-      <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.openrdf.sesame</groupId>
-          <artifactId>sesame-queryalgebra-model</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.openrdf.sesame</groupId>
-          <artifactId>sesame-http-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.openrdf.sesame</groupId>
-          <artifactId>sesame-repository-sparql</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.codehaus.groovy</groupId>
-      <artifactId>groovy-all</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -122,7 +69,6 @@
       <artifactId>jcl-over-slf4j</artifactId>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <properties>

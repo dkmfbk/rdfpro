@@ -1,36 +1,47 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- *
+ * 
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- *
+ * 
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- *
+ * 
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 package eu.fbk.rdfpro;
 
 import java.io.BufferedReader;
-import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import eu.fbk.rdfpro.util.Handlers;
+import eu.fbk.rdfpro.util.Util;
 
 // assumptions
 // - lifecycle: start, followed by handleXXX in parallel, followed by end
@@ -39,138 +50,307 @@ import org.openrdf.rio.RDFHandlerException;
 
 public abstract class RDFProcessor {
 
-    public abstract int getExtraPasses();
+    private static final Logger LOGGER = LoggerFactory.getLogger(RDFProcessor.class);
 
-    public final RDFHandler getHandler() {
-        return getHandler(Handlers.nop());
+    private static final String CREATE_METHOD_NAME = "doCreate";
+
+    private static final Map<String, Method> PROCESSORS_FACTORIES;
+
+    private static final String PROCESSORS_HELP;
+
+    static {
+        // PROCESSORS_CLASSES = new HashMap<String, Class<? extends RDFProcessor>>();
+        PROCESSORS_FACTORIES = new HashMap<String, Method>();
+
+        final Map<String, String> helpTexts = new HashMap<String, String>();
+        try {
+            final Enumeration<URL> e = RDFProcessor.class.getClassLoader().getResources(
+                    "META-INF/rdfpro.properties");
+            while (e.hasMoreElements()) {
+                final URL url = e.nextElement();
+                final Properties properties = new Properties();
+                final Reader in = new InputStreamReader(url.openStream(), Charset.forName("UTF-8"));
+                try {
+                    properties.load(in);
+                    for (final Object key : properties.keySet()) {
+                        try {
+                            final String className = key.toString();
+                            final Class<? extends RDFProcessor> clazz = Class.forName(className)
+                                    .asSubclass(RDFProcessor.class);
+                            final Method method = clazz.getDeclaredMethod(CREATE_METHOD_NAME,
+                                    String[].class);
+                            if (!RDFProcessor.class.isAssignableFrom(method.getReturnType())) {
+                                throw new Error("Invalid return type for " + method
+                                        + " - should be RDFProcessor");
+                            }
+                            method.setAccessible(true);
+                            final String value = properties.getProperty(className);
+                            int index = value.indexOf(' ');
+                            index = index > 0 ? index : value.length();
+                            final String[] tokens = value.substring(0, index).split(",");
+                            for (int i = 0; i < tokens.length; ++i) {
+                                PROCESSORS_FACTORIES.put(tokens[i].trim(), method);
+                            }
+                            helpTexts.put(clazz.getName(), value.substring(index).trim());
+                        } catch (final Throwable ex) {
+                            LOGGER.warn("Invalid metadata entry '" + key + "' in file '" + url
+                                    + "' - ignoring", ex);
+                        }
+                    }
+                } catch (final Throwable ex) {
+                    LOGGER.warn("Could not load metadata file '" + url + "' - ignoring", ex);
+                } finally {
+                    in.close();
+                }
+            }
+        } catch (final IOException ex) {
+            LOGGER.warn("Could not complete loading of metadata from classpath resources", ex);
+        }
+
+        final List<String> sortedClassNames = new ArrayList<String>(helpTexts.keySet());
+        Collections.sort(sortedClassNames);
+        final StringBuilder helpBuilder = new StringBuilder();
+        for (final String className : sortedClassNames) {
+            helpBuilder.append(helpBuilder.length() == 0 ? "" : "\n\n");
+            helpBuilder.append(helpTexts.get(className));
+        }
+
+        PROCESSORS_HELP = helpBuilder.toString();
     }
 
-    public abstract RDFHandler getHandler(RDFHandler sink);
+    @Nullable
+    private static String readVersion(final String groupId, final String artifactId,
+            @Nullable final String defaultValue) {
 
-    public static RDFProcessor parallel(final Merging merging, final RDFProcessor... processors) {
-        return new ParallelProcessor(merging, Util.checkNotNull(processors));
+        Util.checkNotNull(groupId);
+        Util.checkNotNull(artifactId);
+
+        final URL url = RDFProcessor.class.getClassLoader().getResource(
+                "META-INF/maven/" + groupId + "/" + artifactId + "/pom.properties");
+
+        if (url != null) {
+            try {
+                final InputStream stream = url.openStream();
+                try {
+                    final Properties properties = new Properties();
+                    properties.load(stream);
+                    return properties.getProperty("version").trim();
+                } finally {
+                    stream.close();
+                }
+
+            } catch (final IOException ex) {
+                LOGGER.warn("Could not parse version string in " + url);
+            }
+        }
+
+        return defaultValue;
     }
 
-    public static RDFProcessor sequence(final RDFProcessor... processors) {
-        return new SequenceProcessor(Util.checkNotNull(processors));
+    private static String readResource(final URL url) {
+        Util.checkNotNull(url);
+        try {
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    url.openStream(), Charset.forName("UTF-8")));
+            final StringBuilder builder = new StringBuilder();
+            try {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line).append("\n");
+                }
+            } finally {
+                reader.close();
+            }
+            return builder.toString();
+        } catch (final Throwable ex) {
+            throw new Error("Could not load resource " + url);
+        }
     }
 
-    // TODO: should add a filter taking a Guava predicate or equivalent for programmatic use
+    public static void main(final String... args) {
 
-    public static RDFProcessor transform(final boolean scriptPooling,
-            @Nullable final String groovyExpressionOrFile, final String... groovyArgs) {
-        return new GroovyFilterProcessor(scriptPooling, groovyExpressionOrFile, groovyArgs);
-    }
+        try {
+            Class.forName("eu.fbk.rdfpro.tql.TQL");
+        } catch (final Throwable ex) {
+            // ignore - TQL will not be supported
+        }
 
-    public static RDFProcessor filter(@Nullable final String matchSpec,
-            @Nullable final String replaceSpec, final boolean keep) {
-        return new FilterProcessor(matchSpec, replaceSpec, keep);
-    }
+        try {
+            Class.forName("eu.fbk.rdfpro.tool.GeonamesRDF");
+        } catch (final Throwable ex) {
+            // ignore - Geonames format will not be supported
+        }
 
-    // empty rule array = all rules; use SESAME.NIL to emit in default context
+        boolean showHelp = false;
+        boolean showVersion = false;
+        boolean verbose = false;
 
-    public static RDFProcessor inferencer(final Iterable<? extends Statement> tbox,
-            @Nullable final Resource tboxContext, final boolean decomposeOWLAxioms,
-            final String... enabledRules) {
-        return new InferencerProcessor(tbox, tboxContext, decomposeOWLAxioms,
-                Util.checkNotNull(enabledRules));
-    }
+        int index = 0;
+        while (index < args.length) {
+            final String arg = args[index];
+            if (arg.startsWith("{") || arg.startsWith("@") || !arg.startsWith("-")) {
+                break;
+            }
+            showHelp |= arg.equals("-h");
+            showVersion |= arg.equals("-v");
+            verbose |= arg.equals("-V");
+            ++index;
+        }
+        showHelp |= index == args.length;
 
-    public static RDFProcessor smusher(final long bufferSize, final String... rankedNamespaces) {
-        return new SmusherProcessor(bufferSize, Util.checkNotNull(rankedNamespaces));
-    }
+        if (verbose) {
+            try {
+                final Logger root = LoggerFactory.getLogger("eu.fbk.rdfpro");
+                final Class<?> levelClass = Class.forName("ch.qos.logback.classic.Level");
+                final Class<?> loggerClass = Class.forName("ch.qos.logback.classic.Logger");
+                final Object level = levelClass.getDeclaredMethod("valueOf", String.class).invoke(
+                        null, "DEBUG");
+                loggerClass.getDeclaredMethod("setLevel", levelClass).invoke(root, level);
+            } catch (final Throwable ex) {
+                // ignore - no control on logging level
+            }
+        }
 
-    public static RDFProcessor statisticsExtractor(@Nullable final String outputNamespace,
-            @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
-            @Nullable final Long threshold, final boolean processCooccurrences) {
-        return new StatisticsProcessor(outputNamespace, sourceProperty, sourceContext, threshold,
-                processCooccurrences);
-    }
+        if (showVersion) {
+            System.out.println(String.format("RDF Processor Tool (RDFP) %s\nJava %s bit (%s) %s\n"
+                    + "This is free software released into the public domain",
+                    readVersion("eu.fbk.rdfpro", "rdfpro-core", "unknown version"),
+                    System.getProperty("sun.arch.data.model"), System.getProperty("java.vendor"),
+                    System.getProperty("java.version")));
+            System.exit(0);
+        }
 
-    public static RDFProcessor tboxExtractor() {
-        return new TBoxProcessor();
-    }
+        if (showHelp) {
+            System.out.println(String.format(
+                    readResource(RDFProcessor.class.getResource("RDFProcessor.help")),
+                    readVersion("eu.fbk.rdfpro", "rdfpro-core", "unknown version"),
+                    PROCESSORS_HELP));
+            System.exit(0);
+        }
 
-    // Note: supplied map should not be changed externally; make a defensive copy otherwise
-    public static RDFProcessor namespaceEnhancer(@Nullable final Map<String, String> nsToPrefixMap) {
-        return new NamespaceProcessor(nsToPrefixMap != null ? nsToPrefixMap
-                : Util.NS_TO_PREFIX_MAP);
-    }
+        RDFProcessor processor = null;
+        try {
+            processor = RDFProcessor.parse(Arrays.copyOfRange(args, index, args.length));
+        } catch (final IllegalArgumentException ex) {
+            System.err.println("INVOCATION ERROR. " + ex.getMessage() + "\n");
+            System.exit(1);
+        }
 
-    public static RDFProcessor reader(final boolean rewriteBNodes, @Nullable final String base,
-            final String... fileSpecs) {
-        return new ReaderProcessor(rewriteBNodes, base, Util.checkNotNull(fileSpecs));
-    }
+        try {
+            final long ts = System.currentTimeMillis();
+            final RDFHandler handler = processor.getHandler(Handlers.nop());
+            final int repetitions = processor.getExtraPasses() + 1;
+            for (int i = 0; i < repetitions; ++i) {
+                if (repetitions > 1) {
+                    LOGGER.info("Pass {} of {}", i + 1, repetitions);
+                }
+                handler.startRDF();
+                handler.endRDF();
+            }
+            LOGGER.info("Done in {} s", (System.currentTimeMillis() - ts) / 1000);
+            System.exit(0);
 
-    public static RDFProcessor writer(final String... fileSpecs) {
-        return new WriterProcessor(Util.checkNotNull(fileSpecs));
-    }
-
-    public static RDFProcessor unique(final boolean merge) {
-        return new ParallelProcessor(merge ? Merging.UNION_TRIPLES : Merging.UNION_QUADS, nop());
-    }
-
-    public static RDFProcessor download(final boolean rewriteBNodes, final String endpointURL,
-            final String query) {
-        return new DownloadProcessor(rewriteBNodes, endpointURL, query);
-    }
-
-    public static RDFProcessor upload(final int chunkSize, final String endpointURL) {
-        return new UploadProcessor(endpointURL, chunkSize);
-    }
-
-    public static RDFProcessor nop() {
-        return NOPProcessor.INSTANCE;
+        } catch (final Throwable ex) {
+            System.err.println("EXECUTION FAILED. " + ex.getMessage() + "\n");
+            ex.printStackTrace();
+            System.exit(2);
+        }
     }
 
     public static RDFProcessor parse(final String... args) {
         return new Parser(Arrays.asList(args)).parse();
     }
 
-    public static RDFProcessor parse(final String spec) {
-
-        final List<String> tokens = new ArrayList<String>();
-
-        final StringBuilder builder = new StringBuilder();
-        boolean quoted = false;
-        boolean escaped = false;
-        int start = -1;
-
-        for (int i = 0; i < spec.length(); ++i) {
-            final char ch = spec.charAt(i);
-            final boolean ws = Character.isWhitespace(ch);
-            if (ch == '\\' && !escaped) {
-                escaped = true;
-            } else {
-                if (start < 0) {
-                    if (!ws) {
-                        start = i;
-                        quoted = ch == '\'' || ch == '\"';
-                        builder.setLength(0);
-                        if (!quoted) {
-                            builder.append(ch);
-                        }
-                    }
-                } else {
-                    final boolean tokenChar = escaped || quoted && ch != spec.charAt(start)
-                            || !quoted && !ws;
-                    if (tokenChar) {
-                        builder.append(ch);
-                    }
-                    if (!tokenChar || i == spec.length() - 1) {
-                        tokens.add(builder.toString());
-                        start = -1;
-                        quoted = false;
-                    }
-                }
-                escaped = false;
-            }
+    public static RDFProcessor create(final String name, final String... args) {
+        final Method factory = PROCESSORS_FACTORIES.get(name);
+        if (factory == null) {
+            Util.checkNotNull(name);
+            throw new IllegalArgumentException("Unknown processor name '" + name + "'");
         }
-
-        return new Parser(tokens).parse();
+        try {
+            return (RDFProcessor) factory.invoke(null, (Object) args);
+        } catch (final IllegalAccessException ex) {
+            throw new Error("Unexpected error (!)", ex); // already checked when loading metadata
+        } catch (final InvocationTargetException ex) {
+            final Throwable cause = ex.getCause();
+            throw cause instanceof RuntimeException ? (RuntimeException) cause
+                    : new RuntimeException(ex);
+        }
     }
 
-    public enum Merging {
+    public static RDFProcessor parallel(final SetOperation merging,
+            final RDFProcessor... processors) {
+        Util.checkNotNull(merging);
+        Util.checkNotNull(processors);
+        if (processors.length >= 1) {
+            return new ParallelProcessor(merging, processors);
+        }
+        throw new IllegalArgumentException("At least one processor should be supplied "
+                + "in a parallel composition");
+    }
+
+    public static RDFProcessor sequence(final RDFProcessor... processors) {
+        Util.checkNotNull(processors);
+        if (processors.length == 1) {
+            return processors[0];
+        } else if (processors.length > 1) {
+            return new SequenceProcessor(processors);
+        }
+        throw new IllegalArgumentException("At least one processor should be supplied "
+                + "in a sequence composition");
+    }
+
+    public static RDFProcessor nop() {
+        return NOPProcessor.INSTANCE;
+    }
+
+    public int getExtraPasses() {
+        return 0; // may be overridden
+    }
+
+    public abstract RDFHandler getHandler(@Nullable RDFHandler handler);
+
+    public void process(@Nullable final Iterable<Statement> input,
+            @Nullable final RDFHandler output) throws RDFHandlerException {
+        final RDFHandler handler = getHandler(output != null ? output : Handlers.nop());
+        try {
+            final int passes = 1 + getExtraPasses();
+            for (int i = 0; i < passes; ++i) {
+                handler.startRDF();
+                if (input != null) {
+                    for (final Statement statement : input) {
+                        handler.handleStatement(statement);
+                    }
+                }
+                handler.endRDF();
+            }
+        } finally {
+            Util.closeQuietly(handler);
+        }
+    }
+
+    public final CompletableFuture<Void> processAsync(@Nullable final Iterable<Statement> input,
+            @Nullable final RDFHandler output) {
+        final CompletableFuture<Void> future = new CompletableFuture<Void>();
+        Util.getPool().execute(new Runnable() {
+
+            @Override
+            public void run() {
+                if (!future.isDone()) {
+                    try {
+                        process(input, output);
+                        future.complete(null);
+                    } catch (final Throwable ex) {
+                        future.completeExceptionally(ex);
+                    }
+                }
+            }
+
+        });
+        return future;
+    }
+
+    public enum SetOperation {
 
         UNION_ALL,
 
@@ -248,343 +428,32 @@ public abstract class RDFProcessor {
                 syntaxError("'}x'");
             }
             final char mod = this.token.length() == 1 ? 'a' : this.token.charAt(1);
-            final Merging merging = mergingFor(mod);
+            final SetOperation merging = mergingFor(mod);
             next();
             return parallel(merging, processors.toArray(new RDFProcessor[processors.size()]));
         }
 
         private RDFProcessor parseCommand() {
             final String command = this.token.substring(1).toLowerCase();
-            final List<String> options = new ArrayList<String>();
-            while (next() == OPTION) {
-                options.add(this.token);
-            }
-            if ("r".equals(command) || "read".equals(command)) {
-                return newReader(parseOptions(options, "b", "w", Integer.MAX_VALUE));
-            }
-            if ("w".equals(command) || "write".equals(command)) {
-                return newWriter(parseOptions(options, "", "", Integer.MAX_VALUE));
-            }
-            if ("d".equals(command) || "download".equals(command)) {
-                return newDownload(parseOptions(options, "qf", "w", 1));
-            }
-            if ("l".equals(command) || "upload".equals(command)) {
-                return newUpload(parseOptions(options, "s", "", 1));
-            }
-            if ("r".equals(command) || "transform".equals(command)) {
-                return newTransform(options);
-            }
-            if ("f".equals(command) || "filter".equals(command)) {
-                return newFilter(parseOptions(options, "r", "k", 1));
-            }
-            if ("s".equals(command) || "smush".equals(command)) {
-                return newSmusher(parseOptions(options, "s", "", Integer.MAX_VALUE));
-            }
-            if ("i".equals(command) || "infer".equals(command)) {
-                return newInferencer(parseOptions(options, "bcr", "Cdw", Integer.MAX_VALUE));
-            }
-            if ("t".equals(command) || "tbox".equals(command)) {
-                return newTBoxExtractor(parseOptions(options, "", "", 0));
-            }
-            if ("x".equals(command) || "stats".equals(command)) {
-                return newStatisticsExtractor(parseOptions(options, "npct", "o", 0));
-            }
-            if ("p".equals(command) || "prefix".equals(command)) {
-                return newNamespaceEnhancer(parseOptions(options, "f", "", 0));
-            }
-            if ("u".equals(command) || "unique".equals(command)) {
-                return newUnique(parseOptions(options, "", "m", 0));
-            }
-            throw new IllegalArgumentException("Invalid command @" + command);
-        }
-
-        private Map<String, Object> parseOptions(final List<? extends String> options,
-                final String argOptions, final String noArgOptions, final int maxNonOptions) {
-
-            final Map<String, Object> result = new HashMap<String, Object>();
             final List<String> args = new ArrayList<String>();
-            int index = 0;
-            final int length = options.size();
-            while (index < length) {
-                final String option = options.get(index++);
-                if (option.startsWith("-") && option.length() == 2) {
-                    final String name = option.substring(1);
-                    if (noArgOptions.contains(name)) {
-                        result.put(name, null);
-                    } else if (argOptions.contains(name)) {
-                        final String value = index < length ? options.get(index++) : null;
-                        if (value == null || value.startsWith("-") && value.length() == 2) {
-                            throw new IllegalArgumentException(
-                                    "Missing required argument of option " + option);
-                        }
-                        result.put(name, value);
-                    } else {
-                        throw new IllegalArgumentException("Invalid option " + option);
-                    }
-                } else {
-                    args.add(option);
-                }
+            while (next() == OPTION) {
+                args.add(this.token);
             }
-            if (args.size() > maxNonOptions) {
-                throw new IllegalArgumentException("Invalid number of arguments: expected (max) "
-                        + maxNonOptions + ", got " + args.size());
-            }
-            result.put(null, args.toArray(new String[args.size()]));
-            return result;
+            return RDFProcessor.create(command, args.toArray(new String[args.size()]));
         }
 
-        private String parseNamespace(final String string) {
-            if (string.contains(":")) {
-                return string;
-            }
-            final String namespace = Util.PREFIX_TO_NS_MAP.get(string);
-            if (namespace == null) {
-                throw new IllegalArgumentException("Invalid namespace: " + string);
-            }
-            return namespace;
-        }
-
-        private URI parseURI(final String string) {
-            try {
-                return (URI) Values.parseValue(string);
-            } catch (final Throwable ex) {
-                throw new IllegalArgumentException("Invalid URI '" + string + "': "
-                        + ex.getMessage(), ex);
-            }
-        }
-
-        private long parseLong(final String string) {
-            long multiplier = 1;
-            if (string.endsWith("k") || string.endsWith("K")) {
-                multiplier = 1024;
-            } else if (string.endsWith("m") || string.endsWith("M")) {
-                multiplier = 1024 * 1024;
-            } else if (string.endsWith("g") || string.endsWith("G")) {
-                multiplier = 1024 * 1024 * 1024;
-            }
-            return Long.parseLong(multiplier == 1 ? string : string.substring(0,
-                    string.length() - 1)) * multiplier;
-        }
-
-        private RDFProcessor newReader(final Map<String, Object> args) {
-            final String[] fileSpecs = (String[]) args.get(null);
-            final String base = (String) args.get("b");
-            final boolean rewriteBNodes = args.containsKey("w");
-            return reader(rewriteBNodes, base, fileSpecs);
-        }
-
-        private RDFProcessor newWriter(final Map<String, Object> args) {
-            final String[] fileSpecs = (String[]) args.get(null);
-            return writer(fileSpecs);
-        }
-
-        private RDFProcessor newDownload(final Map<String, Object> args) {
-            final boolean rewriteBNodes = args.containsKey("w");
-            final String endpointURL = ((String[]) args.get(null))[0];
-            String query = (String) args.get("q");
-            if (query == null) {
-                final String source = (String) args.get("f");
-                try {
-                    final File file = new File(source);
-                    URL url;
-                    if (file.exists()) {
-                        url = file.toURI().toURL();
-                    } else {
-                        url = getClass().getClassLoader().getResource(source);
-                    }
-                    final BufferedReader reader = new BufferedReader(new InputStreamReader(
-                            url.openStream()));
-                    try {
-                        final StringBuilder builder = new StringBuilder();
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            builder.append(line);
-                        }
-                        query = builder.toString();
-                    } finally {
-                        Util.closeQuietly(reader);
-                    }
-                } catch (final Throwable ex) {
-                    throw new IllegalArgumentException("Cannot load SPARQL query from " + source
-                            + ": " + ex.getMessage(), ex);
-                }
-            }
-            return download(rewriteBNodes, endpointURL, query);
-        }
-
-        private RDFProcessor newUpload(final Map<String, Object> args) {
-            int chunkSize = 1024;
-            if (args.containsKey("s")) {
-                try {
-                    chunkSize = (int) parseLong((String) args.get("s"));
-                } catch (final Throwable ex) {
-                    throw new IllegalArgumentException("Invalid buffer size: " + args.get("s"));
-                }
-            }
-            final String endpointURL = ((String[]) args.get(null))[0];
-            return upload(chunkSize, endpointURL);
-        }
-
-        private RDFProcessor newFilter(final Map<String, Object> args) {
-
-            final String[] specs = (String[]) args.get(null);
-            final String matchSpec = specs.length == 0 ? null : Util.join(" ",
-                    Arrays.asList(specs));
-
-            final String replaceSpec = (String) args.get("r");
-
-            final boolean keep = args.containsKey("k");
-
-            return filter(matchSpec, replaceSpec, keep);
-        }
-
-        private RDFProcessor newTransform(final List<String> args) {
-
-            int index = 0;
-
-            boolean pooling = false;
-            if (!args.isEmpty() && args.get(0).equals("-p")) {
-                pooling = true;
-                ++index;
-            }
-
-            if (index >= args.size()) {
-                throw new IllegalArgumentException(
-                        "Missing filter script expression or file reference");
-            }
-
-            final String groovyExpressionOrFile = args.get(index);
-            final String[] groovyArgs = args.subList(index + 1, args.size()).toArray(
-                    new String[args.size() - index - 1]);
-
-            return transform(pooling, groovyExpressionOrFile, groovyArgs);
-        }
-
-        private RDFProcessor newSmusher(final Map<String, Object> args) {
-
-            final String[] namespaces = (String[]) args.get(null);
-            for (int i = 0; i < namespaces.length; ++i) {
-                namespaces[i] = parseNamespace(namespaces[i]);
-            }
-
-            Long bufferSize = null;
-            if (args.containsKey("s")) {
-                try {
-                    bufferSize = parseLong((String) args.get("s"));
-                } catch (final Throwable ex) {
-                    throw new IllegalArgumentException("Invalid buffer size: " + args.get("S"));
-                }
-            }
-
-            return smusher(bufferSize, namespaces);
-        }
-
-        private RDFProcessor newInferencer(final Map<String, Object> args) {
-
-            final List<Statement> tbox = new ArrayList<Statement>();
-            try {
-                final String base = (String) args.get("b");
-                final boolean rewriteBNodes = args.containsKey("w");
-                final String[] fileSpecs = (String[]) args.get(null);
-                final RDFHandler handler = reader(rewriteBNodes, base, fileSpecs).getHandler(
-                        Handlers.collect(tbox, true));
-                handler.startRDF();
-                handler.endRDF();
-            } catch (final RDFHandlerException ex) {
-                throw new IllegalArgumentException("Cannot load TBox data: " + ex.getMessage(), ex);
-            }
-
-            final boolean decomposeOWLAxioms = args.containsKey("d");
-
-            String[] rules = new String[0];
-            if (args.containsKey("r")) {
-                rules = ((String) args.get("r")).split(",");
-            }
-
-            URI context = null;
-            if (args.containsKey("C")) {
-                context = SESAME.NIL;
-            } else if (args.containsKey("c")) {
-                context = parseURI((String) args.get("c"));
-            }
-
-            return inferencer(tbox, context, decomposeOWLAxioms, rules);
-        }
-
-        private RDFProcessor newStatisticsExtractor(final Map<String, Object> args) {
-
-            String namespace = null;
-            if (args.containsKey("n")) {
-                namespace = parseNamespace((String) args.get("n"));
-            }
-
-            URI property = null;
-            if (args.containsKey("p")) {
-                property = parseURI((String) args.get("p"));
-            }
-
-            URI context = null;
-            if (args.containsKey("c")) {
-                context = parseURI((String) args.get("c"));
-            }
-
-            Long threshold = null;
-            if (args.containsKey("t")) {
-                threshold = parseLong((String) args.get("t"));
-            }
-
-            final boolean processCooccurrences = args.containsKey("o");
-
-            return statisticsExtractor(namespace, property, context, threshold,
-                    processCooccurrences);
-        }
-
-        private RDFProcessor newTBoxExtractor(final Map<String, Object> args) {
-            return tboxExtractor();
-        }
-
-        private RDFProcessor newNamespaceEnhancer(final Map<String, Object> args) {
-
-            Map<String, String> nsToPrefixMap = null;
-            final String source = (String) args.get("f");
-            if (source != null) {
-                try {
-                    nsToPrefixMap = new HashMap<String, String>();
-                    URL url;
-                    final File file = new File(source);
-                    if (file.exists()) {
-                        url = file.toURI().toURL();
-                    } else {
-                        url = getClass().getClassLoader().getResource(source);
-                    }
-                    Util.parseNamespaces(url, nsToPrefixMap, null);
-                } catch (final Throwable ex) {
-                    throw new IllegalArgumentException(
-                            "Cannot load prefix/namespace bindings from " + source + ": "
-                                    + ex.getMessage(), ex);
-                }
-            }
-
-            return namespaceEnhancer(nsToPrefixMap);
-        }
-
-        private RDFProcessor newUnique(final Map<String, Object> args) {
-            final boolean merge = args.containsKey("m");
-            return unique(merge);
-        }
-
-        private Merging mergingFor(final char ch) {
+        private SetOperation mergingFor(final char ch) {
             switch (ch) {
             case 'a':
-                return Merging.UNION_ALL;
+                return SetOperation.UNION_ALL;
             case 'u':
-                return Merging.UNION_QUADS;
+                return SetOperation.UNION_QUADS;
             case 'U':
-                return Merging.UNION_TRIPLES;
+                return SetOperation.UNION_TRIPLES;
             case 'i':
-                return Merging.INTERSECTION;
+                return SetOperation.INTERSECTION;
             case 'd':
-                return Merging.DIFFERENCE;
+                return SetOperation.DIFFERENCE;
             }
             throw new IllegalArgumentException("Unknown merging strategy: " + ch);
         }

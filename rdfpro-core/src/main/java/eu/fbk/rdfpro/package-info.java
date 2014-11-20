@@ -13,7 +13,7 @@
  */
 
 /**
- * RDFpro library.
+ * RDFpro API (module rdfpro-core).
  */
 package eu.fbk.rdfpro;
 

@@ -1,0 +1,30 @@
+RDFpro
+======
+
+This product includes Apache Commons IO, a software developed by
+The Apache Software Foundation (http://www.apache.org/).
+License: http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes OpenRDF Sesame, a software library developed by
+Aduna (http://www.openrdf.org/).
+License: https://bitbucket.org/openrdf/sesame/src/master/core/LICENSE.txt
+
+This product includes the JSON Jackson parser, a software developed by
+FasterXML, LLC (https://fasterxml.com).
+License: http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes software developed by the Semargl project
+(http://semarglproject.org/).
+License: http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes Logback, a software developed by QOS.ch
+(http://logback.qos.ch/).
+License: http://logback.qos.ch/license.html
+
+This product includes SLF4J, a software developed by QOS.ch
+(http://www.slf4j.org/).
+License: http://www.slf4j.org/license.html
+
+The original code of RDFpro (not the included 3rd party code) is free
+and unencumbered software released into the public domain.
+(http://creativecommons.org/publicdomain/zero/1.0/legalcode.txt)

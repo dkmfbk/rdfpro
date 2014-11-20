@@ -10,6 +10,9 @@
       <directory>..</directory>
       <outputDirectory>/</outputDirectory>
       <excludes>
+        <exclude>.gitignore</exclude>
+        <exclude>.git/**</exclude>
+        <exclude>test/**</exclude>
         <exclude>target/**</exclude>
         <exclude>.settings/**</exclude>
         <exclude>.checkstyle</exclude>

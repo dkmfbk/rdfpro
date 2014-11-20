@@ -20,12 +20,12 @@
     with the more permissive (and efficient!) Turtle encoding. TQL is used in
     DBpedia exports and is supported in input by the Virtuoso triple store.
   </description>
-  <url>http://fracor.bitbucket.org/rdfpro/tql.html</url>
+  <url>http://fracor.bitbucket.org/rdfpro/rdfpro-tql.html</url>
 
   <distributionManagement>
     <site>
       <id>siterdfpro</id>
-      <url>${site-path}/rdfpro-core/</url>
+      <url>${site-path}/rdfpro-tql/</url>
     </site>
   </distributionManagement>
 

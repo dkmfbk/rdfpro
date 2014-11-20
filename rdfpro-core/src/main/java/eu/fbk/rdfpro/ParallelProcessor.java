@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -15,8 +15,6 @@ package eu.fbk.rdfpro;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,66 +24,72 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import eu.fbk.rdfpro.util.Handlers;
+import eu.fbk.rdfpro.util.Handlers.HandlerWrapper;
+import eu.fbk.rdfpro.util.Sorter;
+import eu.fbk.rdfpro.util.Statements;
+import eu.fbk.rdfpro.util.Util;
 
 final class ParallelProcessor extends RDFProcessor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ParallelProcessor.class);
-
-    private final Merging merging;
+    private final SetOperation merging;
 
     private final RDFProcessor[] processors;
 
-    ParallelProcessor(final Merging merging, final RDFProcessor... processors) {
+    private final int extraPasses;
+
+    ParallelProcessor(final SetOperation merging, final RDFProcessor... processors) {
         if (processors.length == 0) {
             throw new IllegalArgumentException("Empty processor list supplied");
         }
+
+        int extraPasses = 0;
+        for (final RDFProcessor processor : processors) {
+            extraPasses = Math.max(extraPasses, processor.getExtraPasses());
+        }
+
         this.merging = Util.checkNotNull(merging);
         this.processors = processors.clone();
+        this.extraPasses = extraPasses;
     }
 
     @Override
     public int getExtraPasses() {
-        int result = 0;
-        for (final RDFProcessor processor : this.processors) {
-            result = Math.max(result, processor.getExtraPasses());
-        }
-        return result;
+        return this.extraPasses;
     }
 
     @Override
-    public RDFHandler getHandler(final RDFHandler handler) {
+    public RDFHandler getHandler(@Nullable final RDFHandler handler) {
 
+        final RDFHandler sink = handler != null ? handler : Handlers.nop();
         final int numProcessors = this.processors.length;
 
-        if (this.merging == Merging.UNION_ALL && numProcessors == 1) {
-            return this.processors[0].getHandler(handler);
+        if (this.merging == SetOperation.UNION_ALL && numProcessors == 1) {
+            return this.processors[0].getHandler(sink);
         }
 
         CollectorHandler collector;
-        if (this.merging == Merging.UNION_ALL) {
-            collector = new CollectorHandler(handler, numProcessors);
-        } else if (this.merging == Merging.UNION_QUADS) {
-            collector = new SorterCollectorHandler(handler, numProcessors, true);
-        } else if (this.merging == Merging.UNION_TRIPLES) {
-            collector = new UniqueTriplesCollectorHandler(handler, numProcessors);
-        } else if (this.merging == Merging.INTERSECTION) {
-            collector = new IntersectionCollectorHandler(handler, numProcessors);
-        } else if (this.merging == Merging.DIFFERENCE) {
-            collector = new DifferenceCollectorHandler(handler, numProcessors);
+        if (this.merging == SetOperation.UNION_ALL) {
+            collector = new CollectorHandler(sink, numProcessors);
+        } else if (this.merging == SetOperation.UNION_QUADS) {
+            collector = new SorterCollectorHandler(sink, numProcessors, true);
+        } else if (this.merging == SetOperation.UNION_TRIPLES) {
+            collector = new UniqueTriplesCollectorHandler(sink, numProcessors);
+        } else if (this.merging == SetOperation.INTERSECTION) {
+            collector = new IntersectionCollectorHandler(sink, numProcessors);
+        } else if (this.merging == SetOperation.DIFFERENCE) {
+            collector = new DifferenceCollectorHandler(sink, numProcessors);
         } else {
             throw new Error();
         }
@@ -95,7 +99,8 @@ final class ParallelProcessor extends RDFProcessor {
         for (int i = 0; i < numProcessors; ++i) {
             final RDFProcessor processor = this.processors[i];
             extraPasses[i] = processor.getExtraPasses();
-            if (this.merging == Merging.INTERSECTION || this.merging == Merging.DIFFERENCE) {
+            if (this.merging == SetOperation.INTERSECTION
+                    || this.merging == SetOperation.DIFFERENCE) {
                 processorHandlers[i] = processor.getHandler(new LabellerHandler(collector, i));
             } else {
                 processorHandlers[i] = processor.getHandler(collector);
@@ -179,7 +184,7 @@ final class ParallelProcessor extends RDFProcessor {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             for (final RDFHandler handler : this.handlers) {
                 Util.closeQuietly(handler);
             }
@@ -187,60 +192,33 @@ final class ParallelProcessor extends RDFProcessor {
 
     }
 
-    private static final class LabellerHandler implements RDFHandler, Closeable {
+    private static final class LabellerHandler extends HandlerWrapper {
 
-        private final CollectorHandler handler;
+        private final CollectorHandler collector;
 
         private final int label;
 
         LabellerHandler(final CollectorHandler handler, final int label) {
-            this.handler = handler;
+            super(handler);
+            this.collector = handler;
             this.label = label;
         }
 
         @Override
-        public void startRDF() throws RDFHandlerException {
-            this.handler.startRDF();
-        }
-
-        @Override
-        public void handleComment(final String comment) throws RDFHandlerException {
-            this.handler.handleComment(comment);
-        }
-
-        @Override
-        public void handleNamespace(final String prefix, final String uri)
-                throws RDFHandlerException {
-            this.handler.handleNamespace(prefix, uri);
-        }
-
-        @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            this.handler.handleStatement(statement, this.label);
-        }
-
-        @Override
-        public void endRDF() throws RDFHandlerException {
-            this.handler.endRDF();
-        }
-
-        @Override
-        public void close() throws IOException {
-            Util.closeQuietly(this.handler);
+            this.collector.handleStatement(statement, this.label);
         }
 
     }
 
-    private static class CollectorHandler implements RDFHandler, Closeable {
-
-        final RDFHandler handler;
+    private static class CollectorHandler extends HandlerWrapper {
 
         final int numProcessors;
 
         private int pendingProcessors;
 
         CollectorHandler(final RDFHandler handler, final int numLabels) {
-            this.handler = handler;
+            super(handler);
             this.numProcessors = numLabels;
             this.pendingProcessors = 0;
         }
@@ -249,20 +227,9 @@ final class ParallelProcessor extends RDFProcessor {
         public final void startRDF() throws RDFHandlerException {
             if (this.pendingProcessors <= 0) {
                 this.pendingProcessors = this.numProcessors;
-                this.handler.startRDF();
+                super.startRDF();
                 doStartRDF();
             }
-        }
-
-        @Override
-        public final void handleComment(final String comment) throws RDFHandlerException {
-            this.handler.handleComment(comment);
-        }
-
-        @Override
-        public final void handleNamespace(final String prefix, final String uri)
-                throws RDFHandlerException {
-            this.handler.handleNamespace(prefix, uri);
         }
 
         @Override
@@ -280,14 +247,14 @@ final class ParallelProcessor extends RDFProcessor {
             --this.pendingProcessors;
             if (this.pendingProcessors == 0) {
                 doEndRDF();
-                this.handler.endRDF();
+                super.endRDF();
             }
         }
 
         @Override
         public final void close() {
             doClose();
-            Util.closeQuietly(this.handler);
+            super.close();
         }
 
         void doStartRDF() throws RDFHandlerException {
@@ -295,7 +262,7 @@ final class ParallelProcessor extends RDFProcessor {
 
         void doHandleStatement(final Statement statement, final int label)
                 throws RDFHandlerException {
-            this.handler.handleStatement(statement);
+            super.handleStatement(statement);
         }
 
         void doEndRDF() throws RDFHandlerException {
@@ -310,53 +277,19 @@ final class ParallelProcessor extends RDFProcessor {
 
         private final boolean parallelDecode;
 
-        private final Encoder encoder;
-
-        private final Tracker writeTracker;
-
-        private final Tracker readTracker;
-
-        private Sorter sorter;
+        private Sorter<Object[]> sorter;
 
         SorterCollectorHandler(final RDFHandler handler, final int numLabels,
                 final boolean parallelDecode) {
             super(handler, numLabels);
             this.parallelDecode = parallelDecode;
-            this.encoder = new Encoder();
-            this.writeTracker = new Tracker(LOGGER, null, //
-                    "%d triples to sort (%d tr/s avg)", "2" + toString(), //
-                    "%d triples to sort (%d tr/s, %d tr/s avg)");
-            this.readTracker = new Tracker(LOGGER, null, //
-                    "%d triples from sort (%d tr/s avg)", "3" + toString(), //
-                    "%d triples from sort (%d tr/s, %d tr/s avg)");
-            this.sorter = null;
         }
 
         @Override
         void doStartRDF() throws RDFHandlerException {
-            this.sorter = new Sorter(this.parallelDecode) {
-
-                @Override
-                protected void decode(final Reader reader) throws Throwable {
-                    while (true) {
-                        final Statement statement = SorterCollectorHandler.this.encoder
-                                .read(reader);
-                        if (statement == null) {
-                            return; // EOF
-                        }
-                        final int label = reader.read();
-                        if (label != 0) {
-                            reader.read(); // read the delimiter
-                        }
-                        doHandleStatementSorted(statement, label);
-                        SorterCollectorHandler.this.readTracker.increment();
-                    }
-                }
-
-            };
+            this.sorter = Sorter.newTupleSorter(true, Statement.class, Long.class);
             try {
-                this.sorter.start();
-                this.writeTracker.start();
+                this.sorter.start(true);
             } catch (final IOException ex) {
                 throw new RDFHandlerException(ex);
             }
@@ -366,13 +299,7 @@ final class ParallelProcessor extends RDFProcessor {
         void doHandleStatement(final Statement statement, final int label)
                 throws RDFHandlerException {
             try {
-                final Writer writer = this.sorter.getWriter();
-                this.encoder.write(writer, statement);
-                if (label > 0) {
-                    writer.write(label);
-                }
-                writer.write(0);
-                this.writeTracker.increment();
+                this.sorter.emit(new Object[] { statement, label });
             } catch (final Throwable ex) {
                 throw new RDFHandlerException(ex);
             }
@@ -381,10 +308,21 @@ final class ParallelProcessor extends RDFProcessor {
         @Override
         void doEndRDF() throws RDFHandlerException {
             try {
-                this.writeTracker.end();
-                this.readTracker.start();
-                this.sorter.end();
-                this.readTracker.end();
+                this.sorter.end(this.parallelDecode, new Consumer<Object[]>() {
+
+                    @Override
+                    public void accept(final Object[] record) {
+                        try {
+                            final Statement statement = (Statement) record[0];
+                            final int label = ((Long) record[1]).intValue();
+                            doHandleStatementSorted(statement, label);
+                        } catch (final Throwable ex) {
+                            Util.propagate(ex);
+                        }
+                    }
+
+                });
+                this.sorter.close();
                 this.sorter = null;
             } catch (final Throwable ex) {
                 Util.propagateIfPossible(ex, RDFHandlerException.class);
@@ -514,7 +452,7 @@ final class ParallelProcessor extends RDFProcessor {
                 final Set<Statement> statements = new HashSet<Statement>();
                 for (final Resource source : set.contexts) {
                     for (final Statement statement : this.contextsStatements.get(source)) {
-                        statements.add(Util.FACTORY.createStatement(context,
+                        statements.add(Statements.VALUE_FACTORY.createStatement(context,
                                 statement.getPredicate(), statement.getObject(),
                                 statement.getContext()));
                     }
@@ -533,8 +471,8 @@ final class ParallelProcessor extends RDFProcessor {
                 } else {
                     final Resource mergedContext = mergeContexts(this.statementContexts);
                     statement = mergedContext.equals(this.statement.getContext()) ? this.statement
-                            : Util.FACTORY.createStatement(this.statementSubj, this.statementPred,
-                                    this.statementObj, mergedContext);
+                            : Statements.VALUE_FACTORY.createStatement(this.statementSubj,
+                                    this.statementPred, this.statementObj, mergedContext);
                 }
                 this.handler.handleStatement(statement);
             }
@@ -577,9 +515,8 @@ final class ParallelProcessor extends RDFProcessor {
                         && !namespace.endsWith(":")) {
                     namespace = namespace + "/";
                 }
-                final long[] hc = Util.murmur3(args);
-                final String localName = Util.toString(hc);
-                context = Util.FACTORY.createURI(namespace, localName);
+                final String localName = Util.murmur3str(args);
+                context = Statements.VALUE_FACTORY.createURI(namespace, localName);
                 this.mergedContexts.put(set, context);
             }
             return context;
@@ -696,278 +633,6 @@ final class ParallelProcessor extends RDFProcessor {
                 this.statement = statement;
                 this.maxLabel = label;
             }
-        }
-
-    }
-
-    private static final class Encoder {
-
-        private static final char EOV = 1; // end of value
-
-        private static final int TYPE_URI = 0;
-
-        private static final int TYPE_SHORTENED_URI = 1;
-
-        private static final int TYPE_ENCODED_URI = 2;
-
-        private static final int TYPE_BNODE = 3;
-
-        private static final int TYPE_PLAIN_LITERAL = 4;
-
-        private static final int TYPE_TYPED_LITERAL = 5;
-
-        private static final int TYPE_LANG_LITERAL = 6;
-
-        private static final int TYPE_NONE = 7;
-
-        private final Index<URI> predicateIndex;
-
-        private final Index<URI> typeIndex;
-
-        private final Index<URI> contextIndex;
-
-        private final Index<URI> datatypeIndex;
-
-        private final Index<String> prefixIndex;
-
-        private final Index<String> langIndex;
-
-        Encoder() {
-            this.predicateIndex = new Index<URI>(64 * 1024);
-            this.typeIndex = new Index<URI>(64 * 1024);
-            this.contextIndex = new Index<URI>(64 * 1024);
-            this.datatypeIndex = new Index<URI>(1024);
-            this.prefixIndex = new Index<String>(64 * 1024);
-            this.langIndex = new Index<String>(1024);
-        }
-
-        void write(final Writer writer, final Statement statement) throws IOException {
-
-            final Resource s = statement.getSubject();
-            final URI p = statement.getPredicate();
-            final Value o = statement.getObject();
-            final Resource c = statement.getContext();
-
-            final Val sv = encode(s, null);
-            final Val pv = encode(p, this.predicateIndex);
-            final Val ov = encode(o, p.equals(RDF.TYPE) ? this.typeIndex : null);
-            final Val cv = encode(c, this.contextIndex);
-
-            final int mask1 = (sv.type << 5 | pv.type << 3 | ov.type) + 1; // +1 so not to be 0
-            final int mask2 = cv.type + 1; // +1 so not to be 0
-
-            writer.write(mask1);
-            write(writer, sv);
-            write(writer, pv);
-            write(writer, ov);
-            writer.write(mask2);
-            write(writer, cv);
-        }
-
-        private void write(final Writer writer, final Val val) throws IOException {
-            if (val.type == TYPE_SHORTENED_URI || val.type == TYPE_ENCODED_URI
-                    || val.type == TYPE_TYPED_LITERAL || val.type == TYPE_LANG_LITERAL) {
-                writer.write(val.index);
-            }
-            if (val.type != TYPE_ENCODED_URI && val.type != TYPE_NONE) {
-                final String s = val.string;
-                for (int i = 0; i < s.length(); ++i) {
-                    final char ch = s.charAt(i);
-                    if (ch > 2) {
-                        writer.write(ch);
-                    } else { // ESCAPE, EOV or EOF
-                        writer.write(2);
-                        writer.write(ch + 2); // avoid emitting EOV / EOF
-                    }
-                }
-                writer.write(EOV);
-            }
-        }
-
-        private Val encode(@Nullable final Value value, @Nullable final Index<URI> uriIndex) {
-
-            if (value == null) {
-                return new Val(TYPE_NONE, (char) 0, null);
-
-            } else if (value instanceof BNode) {
-                return new Val(TYPE_BNODE, (char) 0, ((BNode) value).getID());
-
-            } else if (value instanceof URI) {
-                final URI uri = (URI) value;
-                if (uriIndex != null) {
-                    final Character index = uriIndex.put(uri);
-                    if (index != null) {
-                        return new Val(TYPE_ENCODED_URI, index, null);
-                    }
-                }
-                final String string = uri.stringValue();
-                final int offset = string.lastIndexOf('/', Math.min(string.length(), 128));
-                if (offset > 0) {
-                    final String prefix = string.substring(0, offset + 1);
-                    final Character index = this.prefixIndex.put(prefix);
-                    if (index != null) {
-                        return new Val(TYPE_SHORTENED_URI, index, string.substring(offset + 1));
-                    }
-                }
-                return new Val(TYPE_URI, (char) 0, string);
-
-            } else if (value instanceof Literal) {
-                final Literal literal = (Literal) value;
-                if (literal.getDatatype() != null) {
-                    final Character index = this.datatypeIndex.put(literal.getDatatype());
-                    if (index == null) {
-                        throw new Error("Too many datatypes (!)");
-                    }
-                    return new Val(TYPE_TYPED_LITERAL, index, literal.getLabel());
-                }
-                if (literal.getLanguage() != null) {
-                    final Character index = this.langIndex.put(literal.getLanguage());
-                    if (index == null) {
-                        throw new Error("Too many languages (!)");
-                    }
-                    return new Val(TYPE_LANG_LITERAL, index, literal.getLabel());
-                }
-                return new Val(TYPE_PLAIN_LITERAL, (char) 0, literal.getLabel());
-
-            } else {
-                throw new Error();
-            }
-        }
-
-        @Nullable
-        Statement read(final Reader reader) throws IOException {
-
-            int mask1 = reader.read();
-            if (mask1 < 0) {
-                return null; // EOF
-            }
-
-            mask1 -= 1;
-            final Val sv = read(reader, mask1 >> 5 & 0x03);
-            final Val pv = read(reader, mask1 >> 3 & 0x03);
-            final Val ov = read(reader, mask1 & 0x07);
-
-            final int mask2 = reader.read() - 1;
-            final Val cv = read(reader, mask2 & 0x07);
-
-            final Resource s = (Resource) decode(sv, null);
-            final URI p = (URI) decode(pv, this.predicateIndex);
-            final Value o = decode(ov, p.equals(RDF.TYPE) ? this.typeIndex : null);
-            final Resource c = (Resource) decode(cv, this.contextIndex);
-
-            return c == null ? Util.FACTORY.createStatement(s, p, o) : Util.FACTORY
-                    .createStatement(s, p, o, c);
-        }
-
-        private Val read(final Reader reader, final int type) throws IOException {
-
-            String string = null;
-            char index = 0;
-
-            if (type == TYPE_SHORTENED_URI || type == TYPE_ENCODED_URI
-                    || type == TYPE_TYPED_LITERAL || type == TYPE_LANG_LITERAL) {
-                index = (char) reader.read();
-            }
-            if (type != TYPE_ENCODED_URI && type != TYPE_NONE) {
-                final StringBuilder builder = new StringBuilder(256);
-                while (true) {
-                    char ch = (char) reader.read();
-                    if (ch > 2) {
-                        builder.append(ch);
-                    } else if (ch == 2) {
-                        ch = (char) (reader.read() - 2);
-                        builder.append(ch);
-                    } else {
-                        break;
-                    }
-                }
-                string = builder.toString();
-            }
-
-            return new Val(type, index, string);
-        }
-
-        private Value decode(final Val val, final Index<URI> uriIndex) {
-
-            switch (val.type) {
-            case TYPE_URI:
-                return Util.FACTORY.createURI(val.string);
-
-            case TYPE_SHORTENED_URI:
-                final String prefix = this.prefixIndex.get(val.index);
-                return Util.FACTORY.createURI(prefix + val.string);
-
-            case TYPE_ENCODED_URI:
-                return uriIndex.get(val.index);
-
-            case TYPE_BNODE:
-                return Util.FACTORY.createBNode(val.string);
-
-            case TYPE_PLAIN_LITERAL:
-                return Util.FACTORY.createLiteral(val.string);
-
-            case TYPE_TYPED_LITERAL:
-                final URI datatype = this.datatypeIndex.get(val.index);
-                return Util.FACTORY.createLiteral(val.string, datatype);
-
-            case TYPE_LANG_LITERAL:
-                final String lang = this.langIndex.get(val.index);
-                return Util.FACTORY.createLiteral(val.string, lang);
-
-            case TYPE_NONE:
-                return null;
-
-            default:
-                throw new Error();
-            }
-        }
-
-        private static final class Val {
-
-            final int type;
-
-            final char index;
-
-            final String string;
-
-            Val(final int type, final char index, final String string) {
-                this.type = type;
-                this.index = index;
-                this.string = string;
-            }
-
-        }
-
-        private static final class Index<T> {
-
-            private final Map<T, Character> map;
-
-            private final List<T> list;
-
-            private final int size;
-
-            Index(final int size) {
-                this.map = new HashMap<T, Character>(size);
-                this.list = new ArrayList<T>(size);
-                this.size = Math.min(64 * 1024, 64 * 1024 - 2);
-            }
-
-            @Nullable
-            synchronized Character put(final T element) {
-                Character index = this.map.get(element);
-                if (index == null && this.list.size() < this.size) {
-                    index = (char) (this.list.size() + 1);
-                    this.list.add(element);
-                    this.map.put(element, index);
-                }
-                return index;
-            }
-
-            @Nullable
-            synchronized T get(final char ch) {
-                return this.list.get(ch - 1);
-            }
-
         }
 
     }

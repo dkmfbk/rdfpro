@@ -113,6 +113,16 @@
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
+      <artifactId>rdfpro-sparql</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.fbk.rdfpro</groupId>
+      <artifactId>rdfpro-groovy</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-jsonld</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -294,7 +304,7 @@
     <extensions>
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-ssh</artifactId>
+        <artifactId>wagon-ssh-external</artifactId>
         <version>${wagon.version}</version>
       </extension>
       <extension>
@@ -384,6 +394,7 @@
             <downloadSources>true</downloadSources>
             <downloadJavadocs>true</downloadJavadocs>
             <useProjectReferences>true</useProjectReferences>
+            <failOnError>false</failOnError>
           </configuration>
         </plugin>
         <plugin>
@@ -442,6 +453,7 @@
             <show>protected</show>
             <quiet>true</quiet>
             <excludePackageNames>eu.fbk.rdfpro.tool</excludePackageNames>
+            <failOnError>false</failOnError>
           </configuration>
         </plugin>
       </plugins>
@@ -545,7 +557,7 @@
         </configuration>
         <reportSets>
           <reportSet>
-            <reports />
+            <reports/>
           </reportSet>
         </reportSets>
       </plugin>
@@ -556,11 +568,25 @@
         <inherited>false</inherited>
         <configuration>
           <links>
-            <link>http://java.sun.com/javase/6/docs/api/</link>
+            <link>http://java.sun.com/javase/7/docs/api/</link>
             <link>http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/</link>
-            <link>http://openrdf.callimachus.net/sesame/2.7/apidocs/</link>
+            <link>http://rdf4j.org/sesame/2.7/apidocs/</link>
             <link>http://www.slf4j.org/apidocs/</link>
           </links>
+          <groups>
+            <group>
+              <title>API and core processors</title>
+              <packages>eu.fbk.rdfpro:eu.fbk.rdfpro.base:eu.fbk.rdfpro.util:eu.fbk.rdfpro.vocab</packages>
+            </group>
+            <group>
+              <title>Specialized processors</title>
+              <packages>eu.fbk.rdfpro.sparql:eu.fbk.rdfpro.groovy</packages>
+            </group>
+            <group>
+              <title>RDF formats</title>
+              <packages>eu.fbk.rdfpro.jsonld:eu.fbk.rdfpro.tql</packages>
+            </group>
+          </groups>
           <tags>
             <tag>
               <name>apiviz.uses</name>
@@ -590,6 +616,7 @@
           <show>protected</show>
           <quiet>true</quiet>
           <excludePackageNames>eu.fbk.rdfpro.tool</excludePackageNames>
+          <stylesheetfile>${basedir}/${parent-path}/src/site/javadoc.css</stylesheetfile>
           <!-- This is currently broken...
             <doclet>org.jboss.apiviz.APIviz</doclet>
             <docletArtifact>
@@ -848,6 +875,13 @@
         </plugins>
       </reporting>
     </profile>
+    <profile>
+      <id>intranet</id>
+      <properties>
+        <site-path>scpexe://stettler.fbk.eu/stettler0/sra/html/rdfpro</site-path>
+        <repo-path>scpexe://stettler.fbk.eu/stettler0/sra/html/maven</repo-path>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
@@ -861,15 +895,15 @@
 
     <!-- Build configuration -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.source.version>1.7</java.source.version>
-    <java.target.version>1.7</java.target.version>
+    <java.source.version>1.8</java.source.version>
+    <java.target.version>1.8</java.target.version>
 
     <!-- Dependency versions -->
-    <junit.version>4.11</junit.version>
+    <junit.version>4.12-beta-1</junit.version>
     <jsr305.version>3.0.0</jsr305.version>
     <slf4j.version>1.7.7</slf4j.version>
     <logback.version>1.1.2</logback.version>
-    <sesame.version>2.7.13</sesame.version>
+    <sesame.version>2.7.14</sesame.version>
     <jsonld-java.version>0.2</jsonld-java.version>
     <semargl-jsonld.version>0.6.1</semargl-jsonld.version>
     <httpclient.version>3.1</httpclient.version>
@@ -884,7 +918,7 @@
     <source-plugin.version>2.4</source-plugin.version>
     <jar-plugin.version>2.5</jar-plugin.version>
     <dependency-plugin.version>2.9</dependency-plugin.version>
-    <wagon.version>2.4</wagon.version>
+    <wagon.version>2.8</wagon.version>
 
     <!-- Reporting plugin versions -->
     <site-plugin.version>3.4</site-plugin.version>
@@ -905,6 +939,8 @@
 
   <modules>
     <module>rdfpro-core</module>
+    <module>rdfpro-sparql</module>
+    <module>rdfpro-groovy</module>
     <module>rdfpro-jsonld</module>
     <module>rdfpro-tql</module>
     <module>rdfpro-dist</module>

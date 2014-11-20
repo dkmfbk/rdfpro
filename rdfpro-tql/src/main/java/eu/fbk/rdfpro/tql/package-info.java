@@ -13,7 +13,7 @@
  */
 
 /**
- * Parser and writer for RDF in Turtle Quads (TQL) format.
+ * Parser and writer for RDF in Turtle Quads (TQL) format (module rdfpro-tql).
  */
 package eu.fbk.rdfpro.tql;
 

@@ -2,7 +2,6 @@
   <id>bin</id>
   <formats>
     <format>tar.gz</format>
-    <format>zip</format>
   </formats>
   <includeBaseDirectory>true</includeBaseDirectory>
   <baseDirectory>rdfpro</baseDirectory>
@@ -22,6 +21,10 @@
       <includes>
         <include>*.groovy</include>
       </includes>
+    </fileSet>
+    <fileSet>
+      <directory>src/main/config</directory>
+      <outputDirectory>/etc</outputDirectory>
     </fileSet>
     <fileSet>
       <directory>..</directory>

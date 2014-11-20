@@ -1,0 +1,52 @@
+RDFpro %s - http://bitbucket.org/fracor/rdfpro (Public Domain software)
+
+Builds and runs an RDF processing pipeline composed of one or more processors,
+reading/writing compressed RDF data from/to FILEs or SPARQL endpoints.
+
+
+USAGE: rdfpro -v | -h | [-V] CMD    show version [-v], help [-h] or perform CMD
+
+CMD ::=
+  @p args1                          builtin processor (see below)
+  @p1 args1 ... @pN argsN           sequence composition
+  { @p1 args1 , ... , @pN argsN }M  parallel composition, merge criterion M
+
+M ::=
+  <none>  union of @p1 .. @pN outputs, keep duplicates (very fast)
+  u       union of @p1 .. @pN outputs, no duplicates (as with @unique)
+  m       union of @p1 .. @pN outputs, no duplicates (as with @unique -m)
+  i       intersection of @p1 .. @pN outputs, no duplicates
+  d       difference @p1 \ (union of @p2 .. @pN), no duplicates
+
+
+AVAILABLE PROCESSORS:
+
+%s
+
+
+FILTER SYNTAX:
+
+A MATCHING EXPRESSION is a sequence of TARGET RULE... blocks. TARGET is a string
+with zero or more letters s,p,o,c,t (t = class in rdf:type quad) to select quad
+components (default: all selected) and one or more letters u,b,l,@,^ to select
+URI, BNode, Literal, lit. language and lit. datatype of a component. RULE is
++EXP or -EXP, where expression EXP  is 'constant', "constant", <uri>, |regex|,
+prefix:name. Regex follow Java syntax and may contain capturing groups (...).
+Evaluation: for each quad component rules are selected (based on TARGET). Rules
+are evaluated in order. If a +EXP rule matches evaluation moves to the next
+component. A quad is accepted if no -EXP rule matches.
+
+A REPLACEMENT EXPRESSION is a sequence of TARGET EXP blocks. TARGET is defined
+as above. EXP is 'constant', "constant", <uri>, |pattern|, prefix:name. Patterns
+may contain \i references to matched groups (i = #group in whole matching exp.)
+Evaluation: for each quad component the first applicable EXP is selected (based
+on TARGET). If EXP exists it is evaluated and the quad component replaced.
+
+
+FORMATS AND COMPRESSION:
+
+RDF format and compression are detected based from the file extension or from a
+'prefix' explicitly supplied using syntax 'prefix:filename'
+
+RDF formats: rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf, geonames
+Compression schemes: gz, bz2, xz, 7z (need resp. gzip, bzip2, xz, 7za)

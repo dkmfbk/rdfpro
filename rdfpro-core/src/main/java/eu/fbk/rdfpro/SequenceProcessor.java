@@ -13,36 +13,45 @@
  */
 package eu.fbk.rdfpro;
 
-import org.openrdf.rio.RDFHandler;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import javax.annotation.Nullable;
+
+import org.openrdf.rio.RDFHandler;
+
+import eu.fbk.rdfpro.util.Handlers;
 
 final class SequenceProcessor extends RDFProcessor {
 
     private final RDFProcessor[] processors;
 
+    private final int extraPasses;
+
     SequenceProcessor(final RDFProcessor... processors) {
+
+        int extraPasses = 0;
+        for (final RDFProcessor processor : processors) {
+            extraPasses += processor.getExtraPasses();
+        }
+
         this.processors = processors.clone();
+        this.extraPasses = extraPasses;
     }
 
     public List<RDFProcessor> getProcessors() {
-        return Collections.unmodifiableList(Arrays.asList(processors));
+        return Collections.unmodifiableList(Arrays.asList(this.processors));
     }
 
     @Override
     public int getExtraPasses() {
-        int result = 0;
-        for (final RDFProcessor processor : this.processors) {
-            result += processor.getExtraPasses();
-        }
-        return result;
+        return this.extraPasses;
     }
 
     @Override
-    public RDFHandler getHandler(final RDFHandler sink) {
-        RDFHandler result = sink;
+    public RDFHandler getHandler(@Nullable final RDFHandler handler) {
+        RDFHandler result = handler != null ? handler : Handlers.nop();
         for (int i = this.processors.length - 1; i >= 0; --i) {
             result = this.processors[i].getHandler(result);
         }
