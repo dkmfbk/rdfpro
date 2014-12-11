@@ -191,9 +191,51 @@ public final class RDFProcessors {
         }
 
         case "smush": {
-            final Options options = Options.parse("*", args);
+            final Options options = Options.parse("x|*", args);
             final String[] namespaces = options.getPositionalArgs(String.class).toArray(
                     new String[0]);
+            final boolean hasSmushEasterEgg = options.hasOption("x");
+            if (hasSmushEasterEgg) {
+                System.out.println();
+                System.out.println(".==================================================================.");
+                System.out.println("||    ( )              ( )                ( )              ( )    ||");
+                System.out.println("|'================================================================'|");
+                System.out.println("||                                                                ||");
+                System.out.println("||                                                                ||");
+                System.out.println("||                                  .::::.                        ||");
+                System.out.println("||                                .::::::::.                      ||");
+                System.out.println("||                                :::::::::::                     ||");
+                System.out.println("||                                ':::::::::::..                  ||");
+                System.out.println("||                                 :::::::::::::::'               ||");
+                System.out.println("||                                  ':::::::::::.                 ||");
+                System.out.println("||                                    .::::::::::::::'            ||");
+                System.out.println("||                                  .:::::::::::...               ||");
+                System.out.println("||                                 ::::::::::::::''               ||");
+                System.out.println("||                     .:::.       '::::::::''::::                ||");
+                System.out.println("||                   .::::::::.      ':::::'  '::::               ||");
+                System.out.println("||                  .::::':::::::.    :::::    '::::.             ||");
+                System.out.println("||                .:::::' ':::::::::. :::::      ':::.            ||");
+                System.out.println("||              .:::::'     ':::::::::.:::::       '::.           ||");
+                System.out.println("||            .::::''         '::::::::::::::       '::.          ||");
+                System.out.println("||           .::''              '::::::::::::         :::...      ||");
+                System.out.println("||        ..::::                  ':::::::::'        .:' ''''     ||");
+                System.out.println("||     ..''''':'                    ':::::.'                      ||");
+                System.out.println("||                                                                ||");
+                System.out.println("||                                                                ||");
+                System.out.println("|'================================================================'|");
+                System.out.println("||              __________________                                ||");
+                System.out.println("||              | ___ \\  _  \\  ___|                               ||");
+                System.out.println("||              | |_/ / | | | |_                                  ||");
+                System.out.println("||              |    /| | | |  _|                                 ||");
+                System.out.println("||              | |\\ \\| |/ /| |  ___  ___  ____                   ||");
+                System.out.println("||              \\_| \\_|___/ \\_| / _ \\/ _ \\/ __ \\                  ||");
+                System.out.println("||                             / ___/ , _/ /_/ /                  ||");
+                System.out.println("||                            /_/  /_/|_|\\____/                   ||");
+                System.out.println("||                                                                ||");
+                System.out.println("'=============================================================LGB=='");
+                System.out.println();
+            }
+
             for (int i = 0; i < namespaces.length; ++i) {
                 namespaces[i] = parseURI(namespaces[i]).stringValue();
             }
