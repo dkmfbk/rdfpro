@@ -113,11 +113,6 @@
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
-      <artifactId>rdfpro-sparql</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-groovy</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -575,16 +570,16 @@
           </links>
           <groups>
             <group>
-              <title>API and core processors</title>
-              <packages>eu.fbk.rdfpro:eu.fbk.rdfpro.base:eu.fbk.rdfpro.util:eu.fbk.rdfpro.vocab</packages>
+              <title>rdfpro-core</title>
+              <packages>eu.fbk.rdfpro:eu.fbk.rdfpro.util:eu.fbk.rdfpro.vocab</packages>
             </group>
             <group>
-              <title>Specialized processors</title>
-              <packages>eu.fbk.rdfpro.sparql:eu.fbk.rdfpro.groovy</packages>
+              <title>rdfpro-jsonld</title>
+              <packages>eu.fbk.rdfpro.jsonld</packages>
             </group>
             <group>
-              <title>RDF formats</title>
-              <packages>eu.fbk.rdfpro.jsonld:eu.fbk.rdfpro.tql</packages>
+              <title>rdfpro-tql</title>
+              <packages>eu.fbk.rdfpro.tql</packages>
             </group>
           </groups>
           <tags>
@@ -912,9 +907,9 @@
     <!-- Build plugin versions -->
     <release-plugin.version>2.5.1</release-plugin.version>
     <compiler-plugin.version>3.2</compiler-plugin.version>
-    <assembly-plugin.version>2.4.1</assembly-plugin.version>
+    <assembly-plugin.version>2.5.2</assembly-plugin.version>
     <eclipse-plugin.version>2.9</eclipse-plugin.version>
-    <surefire-plugin.version>2.17</surefire-plugin.version>
+    <surefire-plugin.version>2.18</surefire-plugin.version>
     <source-plugin.version>2.4</source-plugin.version>
     <jar-plugin.version>2.5</jar-plugin.version>
     <dependency-plugin.version>2.9</dependency-plugin.version>
@@ -924,13 +919,13 @@
     <site-plugin.version>3.4</site-plugin.version>
     <project-info-plugin.version>2.7</project-info-plugin.version>
     <taglist-plugin.version>2.4</taglist-plugin.version>
-    <surefire-report-plugin.version>2.17</surefire-report-plugin.version>
-    <pmd-plugin.version>3.2</pmd-plugin.version>
+    <surefire-report-plugin.version>2.18</surefire-report-plugin.version>
+    <pmd-plugin.version>3.3</pmd-plugin.version>
     <findbugs-plugin.version>3.0.0</findbugs-plugin.version>
-    <javancss-plugin.version>2.0</javancss-plugin.version>
+    <javancss-plugin.version>2.1</javancss-plugin.version>
     <javadoc-plugin.version>2.10.1</javadoc-plugin.version>
-    <jxr-plugin.version>2.4</jxr-plugin.version>
-    <cobertura-plugin.version>2.5.2</cobertura-plugin.version>
+    <jxr-plugin.version>2.5</jxr-plugin.version>
+    <cobertura-plugin.version>2.6</cobertura-plugin.version>
     <checkstyle-plugin.version>2.13</checkstyle-plugin.version>
     <jdepend-plugin.version>2.0</jdepend-plugin.version>
     <versions-plugin.version>2.1</versions-plugin.version>
@@ -939,7 +934,6 @@
 
   <modules>
     <module>rdfpro-core</module>
-    <module>rdfpro-sparql</module>
     <module>rdfpro-groovy</module>
     <module>rdfpro-jsonld</module>
     <module>rdfpro-tql</module>

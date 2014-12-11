@@ -191,6 +191,8 @@ public final class Logging {
 
         private static final class StatusAcceptorStream extends FilterOutputStream {
 
+            private static final int ESC = 27;
+
             private byte[] status;
 
             private boolean statusEnabled;
@@ -241,18 +243,35 @@ public final class Logging {
                     } else if (enabled) {
                         final int length = Math.min(this.status.length, MAX_STATUS_LENGTH);
                         this.out.write(this.status, 0, length);
-                        this.out.flush();
+                        this.out.write('\n'); // move cursor out of the way and cause flush
                     } else {
                         final int length = Math.min(this.status.length, MAX_STATUS_LENGTH);
+                        int newlines = 1;
                         for (int i = 0; i < length; ++i) {
-                            this.out.write('\b');
+                            if (this.status[i] == '\n') {
+                                ++newlines;
+                            }
                         }
-                        for (int i = 0; i < length; ++i) {
-                            this.out.write(' ');
-                        }
-                        for (int i = 0; i < length; ++i) {
-                            this.out.write('\b');
-                        }
+                        // move cursor up of # lines previously written
+                        this.out.write(ESC);
+                        this.out.write('[');
+                        this.out.write(Integer.toString(newlines).getBytes());
+                        this.out.write('A');
+                        // we emit a newline to move cursor down one line and to column 1, then we
+                        // move up one line, being sure to end up in column 1
+                        this.out.write('\n');
+                        this.out.write(ESC);
+                        this.out.write('[');
+                        this.out.write('1');
+                        this.out.write('A');
+                        // discard everything after the cursor; due to trick above we also discard
+                        // text entered by the user (but not newline - they can be managed by
+                        // saving and restoring cursor position, but many terminals do not handle
+                        // these calls)
+                        this.out.write(ESC);
+                        this.out.write('[');
+                        this.out.write('0');
+                        this.out.write('J');
                     }
                 } catch (final Throwable ex) {
                     if (ex instanceof Error) {

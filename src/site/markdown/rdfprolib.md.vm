@@ -20,66 +20,14 @@ Then, make sure to include `rdfpro` artifact repository:
       <url>http://fracor.bitbucket.org/rdfpro/mvnrepo</url>
     </repository>
 
-If you want to use the Groovy based `@transform` processor, you also have to import these optional dependencies:
-
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryalgebra-evaluation</artifactId>
-      <version>2.7.13</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.groovy</groupId>
-      <artifactId>groovy-all</artifactId>
-      <version>2.4.0-beta-3</version>
-    </dependency>
-
-If you want to use the `@download` and `@upload` processors, you also need the following optional dependencies:
-
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-query</artifactId>
-      <version>2.7.13</version>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryresultio-api</artifactId>
-      <version>2.7.13</version>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-queryresultio-sparqlxml</artifactId>
-      <version>2.7.13</version>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-rio-rdfxml</artifactId>
-      <version>2.7.13</version>
-    </dependency>
-
 If you don't use Maven, you have to download and include the following mandatory JARs in the classpath:
 
   * [rdfpro-core-${site-version}.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-core/${site-version}/rdfpro-core-${site-version}.jar)
-  * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or higher version)
-  * [sesame-rio-api-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.13/sesame-rio-api-2.7.13.jar) (or higher version)
-  * [sesame-model-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.13/sesame-model-2.7.13.jar) (or higher version)
-  * [sesame-util-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.13/sesame-util-2.7.13.jar) (or higher version)
-
-If using also `@transform`, you need also:
-
-  * [sesame-queryalgebra-evaluation-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-queryalgebra-evaluation/2.7.13/sesame-queryalgebra-evaluation-2.7.13.jar) (or higher version)
-  * [groovy-all-2.4.0-beta-3.jar](http://central.maven.org/maven2/org/codehaus/groovy/groovy-all/2.4.0-beta-3/groovy-all-2.4.0-beta-3.jar) (or higher version)
-
-If using `@download` or `@upload`, you need:
-
-  * [sesame-query-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-query/2.7.13/sesame-query-2.7.13.jar) (or higher version)
-  * [sesame-queryresultio-api-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-queryresultio-api/2.7.13/sesame-queryresultio-api-2.7.13.jar) (or higher version)
-  * [sesame-queryresultio-sparqlxml-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-queryresultio-sparqlxml/2.7.13/sesame-queryresultio-sparqlxml-2.7.13.jar) (or higher version)
-  * [sesame-rio-rdfxml-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-rdfxml/2.7.13/sesame-rio-rdfxml-2.7.13.jar) (or higher version)
-  * [sesame-rio-datatypes-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-datatypes/2.7.13/sesame-rio-datatypes-2.7.13.jar) (or higher version)
-  * [sesame-rio-languages-2.7.13.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-languages/2.7.13/sesame-rio-languages-2.7.13.jar) (or higher version)
-  * [commons-io-2.4.jar](http://central.maven.org/maven2/commons-io/commons-io/2.4/commons-io-2.4.jar) (or higher version)
+  * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or newer version)
+  * [sesame-rio-api-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.14/sesame-rio-api-2.7.14.jar) (or newer version)
+  * [sesame-model-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.14/sesame-model-2.7.14.jar) (or newer version)
+  * [sesame-util-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.14/sesame-util-2.7.14.jar) (or newer version)
 
 Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-2.7.X-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
 
-The library entry point is the abstract class `RDFProcessor`. You can use its static method to instantiate basic processors and aggregate them in composite processors via sequence and parallel composition. You can also extend the class realizing your own processor, which can then be used and composed in pipelines as done with builtin processors. See the Javadoc for further details.
-
+The library main abstraction is the interface [`RDFProcessor`](apidocs/eu/fbk/rdfpro/RDFProcessor.html). You can obtain `RDFProcessor` implementation for common processing tasks and you can apply sequential and parallel composition using the static factory methods in the companion class [`RDFProcessors`](apidocs/eu/fbk/rdfpro/RDFProcessors.html). You can also implement class `RDFProcessor` to build your own processor, which can then be used and composed in pipelines as done with builtin processors. See the [Javadoc](apidocs/eu/fbk/rdfpro/package-summary.html) for further details.

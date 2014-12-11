@@ -13,7 +13,7 @@
  */
 
 /**
- * RDF vocabulary definitions (module rdfpro-core).
+ * Vocabulary definitions.
  */
 package eu.fbk.rdfpro.vocab;
 

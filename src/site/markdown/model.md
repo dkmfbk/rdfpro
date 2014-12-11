@@ -4,11 +4,12 @@ RDFpro processing model
 
 RDFpro processing model is centred around the concept of **RDF processor**, a reusable Java component that consumes an input stream of RDF quads (i.e., an RDF triple with a fourth named graph component) in one or more passes, produces an output stream of quads and may have side effect like writing RDF data.
 
-Technically, a processor extends the `RDFProcessor` class as shown below:
+Technically, a processor extends the [`RDFProcessor`](apidocs/eu/fbk/rdfpro/RDFProcessor.html) class as shown below:
 
-    abstract class RDFProcessor {
+    interface RDFProcessor {
         int getExtraPasses();
-        RDFHandler getHandler(RDFHandler sink);
+        RDFHandler wrap(RDFHandler sink);
+        // other methods with default implementation
     }
 
     interface RDFHandler {
@@ -19,11 +20,11 @@ Technically, a processor extends the `RDFProcessor` class as shown below:
         void endRDF();
     }
 
-An `RDFProcessor` declares how many extra passes it needs on its input and providing, upon request, an `RDFHandler` (Sesame interface) where quads, prefix/namespace bindings and comments in RDF data can be fed and handled, with the result sent to a sink RDFHandler.
+An `RDFProcessor` declares how many extra passes it needs on its input and provides, upon request, an [`RDFHandler`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFHandler.html) (Sesame interface) where quads, prefix/namespace bindings and comments in RDF data can be fed and handled, with the result sent to a sink `RDFHandler`.
 Differently from Sesame, that does not specify whether an `RDFHandler` can be simultaneously accessed by multiple threads, here we expect methods `handleComment`, `handleNamespace` and `handleStatement` to be called concurrently by multiple threads to achieve higher throughputs.
 Thread management is done by RDFpro with the goal of using as many threads as reasonable (~ the number of available cores) to concurrently invoke methods of `RDFProcessor`s.
 
-RDFpro offers a number of processors for common tasks that can be easily extended by users (see the [tool usage page](usage.html) for their detailed description).
+RDFpro offers a number of processors for common tasks that can be easily extended by users (see the [tool usage page](usage.html) for their detailed description, or static factory methods in class [`RDFProcessors`](apidocs/eu/fbk/rdfpro/RDFProcessors.html) for their use in Java code).
 It is worth noting that some processors make use of the `sort` utility to perform tasks that cannot be done one quad at a time, enabling their execution on arbitrarily large inputs (disk space permitting).
 In addition to the `sort` utility, RDFpro also exploits the native `gzip`, `bzip2`, `xz` and `7za` utilities (and the multi-threaded version of the first two: `pigz` and `pbzip2`) to efficiently deal with compressed data.
 
@@ -34,7 +35,7 @@ Importantly, RDFpro allows to derive new processors by (recursively) applying se
 </div>
 
 In a sequential composition (second figure), two or more processors `@Pi` are chained so that the output stream of `@Pi` become the input stream of `@Pi+1`.
-In a parallel composition (third figure), the input stream is sent concurrently to several processors `@Pi`, whose output streams are merged into a resulting stream according to one of several possible merging criteria: union (`u` flag), intersection (`i` flag) and difference (`d` flag) of quads collected from different parallel branches.
+In a parallel composition (third figure), the input stream is sent concurrently to several processors `@Pi`, whose output streams are merged into a resulting stream applying a specific [`SetOperator`](apidocs/eu/fbk/rdfpro/SetOperator.html), e.g., set union (`u` flag), set intersection (`i` flag) and set difference (`d` flag) of quads collected from different parallel branches.
 For both types of composition, RDFpro introduces special buffers in front of each RDF processor that collect a fraction of incoming quads and triggers their processing in separate threads when full; the fraction is adapted at runtime using heuristics trying to ensure that all CPU cores are exploited.
 
 An example of composition and the corresponding RDFpro command line syntax are shown below

@@ -35,7 +35,6 @@
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-core</artifactId>
-      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
@@ -69,11 +68,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <dependency>
-      <groupId>eu.fbk.rdfpro</groupId>
-      <artifactId>rdfpro-sparql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-groovy</artifactId>

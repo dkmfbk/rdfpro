@@ -26,6 +26,7 @@ import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.RDFProcessor;
+import eu.fbk.rdfpro.RDFProcessors;
 
 /**
  * Test case for {@link eu.fbk.rdfpro.base.FilterProcessorOld}.
@@ -38,11 +39,11 @@ public class TransformProcessorTest {
     public void testFilter() throws RDFHandlerException {
         // Create a filter which matches any subject and object with predicates of statements
         // contained into the file.nt.
-        final RDFProcessor filter = RDFProcessor.parse("@filter 'sou +[./file.nt]p -*'");
+        final RDFProcessor filter = RDFProcessors.parse(true, "@filter 'sou +[./file.nt]p -*'");
         Assert.assertEquals(0, filter.getExtraPasses());
         final int[] flags = new int[2];
         final List<Statement> statements = new ArrayList<>();
-        final RDFHandler handler = filter.getHandler(new RDFHandler() {
+        final RDFHandler handler = filter.wrap(new RDFHandler() {
 
             @Override
             public void startRDF() throws RDFHandlerException {

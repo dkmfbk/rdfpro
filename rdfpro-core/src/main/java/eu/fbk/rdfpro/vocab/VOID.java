@@ -29,7 +29,7 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 public final class VOID {
 
     /** Recommended prefix for the vocabulary namespace: "void". */
-    public static final String PREFIX = "voidx";
+    public static final String PREFIX = "void";
 
     /** Vocabulary namespace: "http://rdfs.org/ns/void#". */
     public static final String NAMESPACE = "http://rdfs.org/ns/void#";

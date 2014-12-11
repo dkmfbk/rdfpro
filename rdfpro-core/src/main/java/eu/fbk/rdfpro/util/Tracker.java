@@ -14,6 +14,7 @@
 package eu.fbk.rdfpro.util;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,7 +61,7 @@ public final class Tracker {
 
     public Tracker(final Logger logger, @Nullable final String startMessage,
             @Nullable final String endMessage, @Nullable final String statusMessage) {
-        this.logger = Util.checkNotNull(logger);
+        this.logger = Objects.requireNonNull(logger);
         this.startMessage = startMessage;
         this.endMessage = endMessage;
         this.statusMessage = statusMessage;

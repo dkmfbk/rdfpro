@@ -13,12 +13,12 @@
  */
 
 /**
- * Parser and writer for RDF in JSON-LD format (module rdfpro-jsonld, depends on Semargl lib).
+ * Parser and writer for RDF in JSON-LD format (depends on Semargl lib).
  * <p>
  * Parsing depends on the {@code Semargl} JSONLD parser, while writing is implemented directly by
  * this factory and can be configured via setting {@code #ROOT_TYPES}, which specifies the types
  * of RDF resources to be emitted as top level JSONLD nodes.
- * <p>
+ * </p>
  */
 package eu.fbk.rdfpro.jsonld;
 

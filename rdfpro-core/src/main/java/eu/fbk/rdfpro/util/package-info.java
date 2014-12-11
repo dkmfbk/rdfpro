@@ -13,7 +13,7 @@
  */
 
 /**
- * Utility classes (module rdfpro-core).
+ * Utility classes.
  */
 package eu.fbk.rdfpro.util;
 

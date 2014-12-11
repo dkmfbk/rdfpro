@@ -2,12 +2,21 @@
 RDFpro installation
 ===================
 
-The RDFpro command line tool is packaged as a self-contained, cross-platform Java application. Download it from the following links:
+The RDFpro command line tool is packaged as a self-contained, cross-platform Java application. Download it from the following links and unpack in the location you prefer:
 
   * [rdfpro-dist-${site-version}-bin.tar.gz](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.tar.gz)
   * [rdfpro-dist-${site-version}-bin.zip](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.zip)
 
-Then, unpack the compressed archive in the location you prefer. The following, optional steps are recommended:
+You can run RDFpro by executing the `rdfpro` script. For instance, you can test if everything works correctly by executing the following command, which should display the tool version and other relevant system information:
+
+    $ rdfpro -v
+    RDF Processor Tool (RDFP) ${site-version}
+    Java 64 bit (Oracle Corporation) 1.8.0_25
+    This is free software released into the public domain
+
+RDFpro configuration is performed either editing its configuration file `etc/rdfpro.properties` (syntax `property = value`) or by supplying configuration properties as environment variables (`export property=value`) or as Java system properties (`export JAVA_OPTS="-Dproperty=value"`).
+
+The following, optional steps are recommended after downloading and extracting RDFpro:
 
   * Add the rdfpro directory to your PATH variable, so that the `rdfpro` script can be called without specifying its full path.
 
@@ -15,16 +24,8 @@ Then, unpack the compressed archive in the location you prefer. The following, o
     On a Mac/Linux machine they should be already installed.
     On Windows, you can get them from the [GnuWin](http://gnuwin32.sourceforge.net/) project.
 
-  * For better performances, you may install the multi-threaded versions of `gzip` and `bzip2`, called [`pigz`](http://zlib.net/pigz/) and [`pbzip2`](http://compression.ca/pbzip2/)
+  * For better performances, install the multi-threaded versions of `gzip` and `bzip2`, called [`pigz`](http://zlib.net/pigz/) and [`pbzip2`](http://compression.ca/pbzip2/)
     These utilities are available also for Windows (for `pigz` see [here](http://sourceforge.net/projects/pigzforwindows/) and [here](http://blog.kowalczyk.info/software/pigz-for-windows.html)).
-    After their installation, you have to configure RDFpro to use them by setting the following environment variables (an information message is emitted if the configuration is successfully picked up by the tool):
+    After their installation, you have to configure RDFpro to use them by setting properties `rdfpro.cmd.gzip = path_to_pigz` and `rdfpro.cmd.bzip2 = path_to_pbzip2`.
 
-            $ export RDFPRO_CMD_GZIP=path_to_pigz_executable
-            $ export RDFPRO_CMD_BZIP2=path_to_pbzip2_executable
-
-You may test whether RDFpro has been correctly installed by executing the following command, which should display the tool version and other relevant system information:
-
-    $ rdfpro -v
-    RDF Processor Tool (RDFP) ${site-version}
-    Java 64 bit (Oracle Corporation) 1.7.0_67
-    This is free software released into the public domain
+  * For better performances, it is advised to configure `sort` to use more memory and to compress temporary files, by setting property `rdfpro.cmd.sort = sort -S 1024M --compress-program gzip` (you can use a value larger than 1024M and `pigz` in place of `gzip`). Also make sure that you have enough space under your `/tmp` folder, or configure `sort` to use a specific folder for temporary files (option `-T tmp_directory_path`).

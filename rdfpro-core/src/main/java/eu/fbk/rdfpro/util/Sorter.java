@@ -1,7 +1,19 @@
+/*
+ * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
+ * 
+ * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
+ * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * 
+ * To the extent possible under law, the author has dedicated all copyright and related and
+ * neighboring rights to this software to the public domain worldwide. This software is
+ * distributed without any warranty.
+ * 
+ * You should have received a copy of the CC0 Public Domain Dedication along with this software.
+ * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 package eu.fbk.rdfpro.util;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +39,7 @@ import org.openrdf.model.ValueFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class Sorter<T> implements Closeable {
+public abstract class Sorter<T> implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Sorter.class);
 
@@ -98,7 +110,7 @@ public abstract class Sorter<T> implements Closeable {
 
             @Override
             protected Output initialValue() {
-                final OutputStream out = Streams.parallelBuffer(Sorter.this.sortOut, (byte) 0);
+                final OutputStream out = IO.parallelBuffer(Sorter.this.sortOut, (byte) 0);
                 final Output output = new Output(out, Sorter.this.dictionary);
                 synchronized (Sorter.this.outputs) {
                     Sorter.this.outputs.add(output);
@@ -109,7 +121,7 @@ public abstract class Sorter<T> implements Closeable {
         };
 
         // Invoke sort
-        final List<String> command = new ArrayList<String>(Arrays.asList(Util.settingFor(
+        final List<String> command = new ArrayList<String>(Arrays.asList(Environment.getProperty(
                 "rdfpro.cmd.sort", "sort").split("\\s+")));
         command.add("-z"); // zero-terminated lines
         if (deduplicate) {
@@ -124,7 +136,7 @@ public abstract class Sorter<T> implements Closeable {
         this.sortIn = this.sortProcess.getInputStream();
 
         // Launch a task to log STDERR at ERROR level
-        Util.getPool().submit(new Runnable() {
+        Environment.getPool().submit(new Runnable() {
 
             @Override
             public void run() {
@@ -138,7 +150,7 @@ public abstract class Sorter<T> implements Closeable {
                 } catch (final Throwable ex) {
                     LOGGER.error("[sort] failed to read from stream", ex);
                 } finally {
-                    Util.closeQuietly(in);
+                    IO.closeQuietly(in);
                 }
             }
 
@@ -194,21 +206,21 @@ public abstract class Sorter<T> implements Closeable {
             }
 
             // Consume sort output, possibly using multiple decode threads
-            final int decoders = parallelize ? Util.CORES : 1;
+            final int decoders = parallelize ? Environment.getCores() : 1;
             this.decodersLatch = new CountDownLatch(decoders);
             this.inputs = new ArrayList<Input>();
             this.readTracker.start();
             if (!parallelize) {
-                this.inputs.add(new Input(Streams.buffer(this.sortIn), this.dictionary));
+                this.inputs.add(new Input(IO.buffer(this.sortIn), this.dictionary));
                 tryDecode(this.inputs.get(0), consumer);
             } else {
                 for (int i = 0; i < decoders; ++i) {
-                    final InputStream in = Streams.parallelBuffer(this.sortIn, (byte) 0);
+                    final InputStream in = IO.parallelBuffer(this.sortIn, (byte) 0);
                     this.inputs.add(new Input(in, this.dictionary));
                 }
                 for (int i = 1; i < decoders; ++i) {
                     final Input input = this.inputs.get(i);
-                    Util.getPool().execute(new Runnable() {
+                    Environment.getPool().execute(new Runnable() {
 
                         @Override
                         public void run() {
@@ -227,12 +239,20 @@ public abstract class Sorter<T> implements Closeable {
 
         } finally {
             // Close streams and propagate exception, if any
-            Util.closeQuietly(this.sortIn);
-            for (final Input input : this.inputs) {
-                input.close();
+            IO.closeQuietly(this.sortIn);
+            if (this.inputs != null) {
+                for (final Input input : this.inputs) {
+                    input.close();
+                }
             }
             if (this.exception != null) {
-                Util.propagateIfPossible(this.exception, IOException.class);
+                if (this.exception instanceof IOException) {
+                    throw (IOException) this.exception;
+                } else if (this.exception instanceof RuntimeException) {
+                    throw (RuntimeException) this.exception;
+                } else if (this.exception instanceof Error) {
+                    throw (Error) this.exception;
+                }
                 throw new RuntimeException(this.exception);
             }
         }
@@ -381,11 +401,12 @@ public abstract class Sorter<T> implements Closeable {
                         if (r < 0) {
                             write(7);
                             writeNumber(key);
+                            done = true;
                         } else {
                             writeStringHelper(uri.stringValue(), r, 7);
                             writeNumber(key);
+                            done = true;
                         }
-                        done = true;
                     }
                 }
                 if (!done) {
@@ -503,7 +524,11 @@ public abstract class Sorter<T> implements Closeable {
         }
 
         void close() {
-            Util.closeQuietly(this.in);
+            IO.closeQuietly(this.in);
+        }
+
+        public final boolean isEOF() {
+            return this.c <= 0;
         }
 
         @Nullable
@@ -782,7 +807,7 @@ public abstract class Sorter<T> implements Closeable {
             this.vocabNameIndex = new StringIndex(VOCAB_INDEX_SIZE);
             this.otherNameIndex = new StringIndex(OTHER_INDEX_SIZE);
 
-            for (final String ns : Statements.NS_TO_PREFIX_MAP.keySet()) {
+            for (final String ns : Namespaces.DEFAULT.uris()) {
                 int nsHash = 0;
                 for (int i = ns.length() - 1; i >= 0; --i) {
                     final int c = ns.charAt(i);
@@ -790,7 +815,7 @@ public abstract class Sorter<T> implements Closeable {
                 }
                 this.namespaceIndex.put(ns, 0, ns.length(), nsHash, false);
             }
-            this.vocabNamespaces = Statements.NS_TO_PREFIX_MAP.size();
+            this.vocabNamespaces = Namespaces.DEFAULT.uris().size();
 
             this.vocabNameIndex.put("", 0, 0, 0, false);
             this.otherNameIndex.put("", 0, 0, 0, false);
@@ -844,7 +869,7 @@ public abstract class Sorter<T> implements Closeable {
             final int nsKey = this.namespaceIndex.put(s, 0, nsLen, nsHash, false);
             if (nsKey < 0) {
                 remaining[0] = -1;
-                return -1; // remaining unaffected
+                return -1;
             }
 
             if (nsKey < this.vocabNamespaces) {
@@ -953,12 +978,19 @@ public abstract class Sorter<T> implements Closeable {
                     final boolean likelyExist) {
 
                 final int tableSize = this.table.length / 2;
+                final int segmentSize = (tableSize + NUM_LOCKS - 1) / NUM_LOCKS;
+
                 int index = Math.abs(hash) % tableSize;
+
+                final int segment = index / segmentSize;
+                final int segmentStart = segment * segmentSize;
+                final int segmentEnd = Math.min(tableSize, segmentStart + segmentSize);
+
                 final boolean full = this.size.get() >= this.capacity;
 
                 // first we operate read-only with no synchronization if possible
                 if (full || likelyExist) {
-                    while (true) {
+                    for (int i = 0; i < segmentSize; ++i) {
                         final int offset = index * 2;
                         final int key = this.table[offset] - 1;
                         if (key < 0) {
@@ -970,15 +1002,17 @@ public abstract class Sorter<T> implements Closeable {
                                 && equals(this.list.get(key), string, begin, end)) {
                             return key;
                         }
-                        index = (index + 1) % tableSize;
+                        ++index;
+                        if (index >= segmentEnd) {
+                            index = segmentStart;
+                        }
                     }
                 }
 
                 // then operate read-write with synchronization using lock striping
-                final int segmentSize = (tableSize + NUM_LOCKS - 1) / NUM_LOCKS;
-                final int segment = index / segmentSize;
+                // NOTE: index may have changed
                 synchronized (this.locks[segment]) {
-                    while (true) {
+                    for (int i = 0; i < segmentSize; ++i) {
                         final int offset = index * 2;
                         final int key = this.table[offset] - 1;
                         if (key < 0) {
@@ -990,7 +1024,7 @@ public abstract class Sorter<T> implements Closeable {
                                 this.list.add(string.substring(begin, end));
                                 this.table[offset] = newKey + 1;
                                 this.table[offset + 1] = hash;
-                                this.size.incrementAndGet(); // should flush previous changes
+                                this.size.incrementAndGet(); // should flush memory changes
                                 return newKey;
                             }
                         } else if (hash == this.table[offset + 1]
@@ -998,11 +1032,13 @@ public abstract class Sorter<T> implements Closeable {
                             return key;
                         }
                         ++index;
-                        if (index >= (segment + 1) * segmentSize) {
-                            index = segment * segmentSize;
+                        if (index >= segmentEnd) {
+                            index = segmentStart;
                         }
                     }
                 }
+
+                return -1; // segment full (unlikely, thus we handle but don't optimize this case)
             }
 
             @Nullable
@@ -1026,7 +1062,8 @@ public abstract class Sorter<T> implements Closeable {
                     int i = len;
                     int j = end;
                     while (--i >= 0) {
-                        if (reference.charAt(i) != string.charAt(--j)) {
+                        --j;
+                        if (reference.charAt(i) != string.charAt(j)) {
                             return false;
                         }
                     }
@@ -1072,7 +1109,7 @@ public abstract class Sorter<T> implements Closeable {
                     index = (index + 1) % tableSize;
                 }
 
-                // then we operate read-write with a simple global lock (few insertions expected
+                // then we operate read-write with a simple global lock (few insertions expected)
                 synchronized (this.list) {
                     while (true) {
                         final int offset = index * 2;
@@ -1090,7 +1127,7 @@ public abstract class Sorter<T> implements Closeable {
                                 && element.equals(this.list.get(key))) {
                             return key;
                         }
-                        index = index + 1 & tableSize;
+                        index = (index + 1) % tableSize;
                     }
                 }
             }

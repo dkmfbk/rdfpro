@@ -41,6 +41,9 @@ public final class Options {
         for (final String tokenUntrimmed : spec.split("\\|")) {
             final String token = tokenUntrimmed.trim();
             final int len = token.length();
+            if (len == 0) {
+                continue;
+            }
             final char last = token.charAt(len - 1);
             final int minCard = last == '!' || last == '+' ? 1 : 0;
             final int maxCard = last == '?' || last == '!' ? 1
@@ -101,7 +104,7 @@ public final class Options {
                         break;
                     }
                 }
-            } else if (args[j].startsWith("-")) {
+            } else if (args[j].startsWith("-") && !args[j].contains(" ")) {
                 throw new IllegalArgumentException("Unrecognized option '" + args[j] + "'");
             } else {
                 positionalArgs.add(args[j++]);

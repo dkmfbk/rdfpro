@@ -1,3 +1,16 @@
+/*
+ * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
+ * 
+ * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
+ * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * 
+ * To the extent possible under law, the author has dedicated all copyright and related and
+ * neighboring rights to this software to the public domain worldwide. This software is
+ * distributed without any warranty.
+ * 
+ * You should have received a copy of the CC0 Public Domain Dedication along with this software.
+ * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 package eu.fbk.rdfpro.util;
 
 import java.lang.reflect.Method;
@@ -10,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.script.Invocable;
@@ -28,7 +42,7 @@ public final class JavaScript {
     private static final Set<URL> INCLUDES = new LinkedHashSet<URL>();
 
     public static void include(final URL url) {
-        Util.checkNotNull(url);
+        Objects.requireNonNull(url);
         synchronized (INCLUDES) {
             INCLUDES.add(url);
         }
@@ -38,8 +52,8 @@ public final class JavaScript {
             final String... parameterNames) throws Throwable {
 
         // Validate parameters
-        Util.checkNotNull(interfaceClass);
-        Util.checkNotNull(spec);
+        Objects.requireNonNull(interfaceClass);
+        Objects.requireNonNull(spec);
         if (!interfaceClass.isInterface()) {
             throw new IllegalArgumentException("Class " + interfaceClass.getName()
                     + " is not an interface");

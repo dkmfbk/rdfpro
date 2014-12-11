@@ -27,16 +27,16 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 - RDFS inference with selectable rules
 - owl:sameAs [smushing](http://patterns.dataincubator.org/book/smushing.html)
 - TBox and VOID statistics extraction
-- RDF deduplication, union, intersection and difference
+- RDF deduplication and set/multiset operations
 - data upload/download via SPARQL endpoints
 - data read/write in multiple (compressed) formats (rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf)
-- command line [tool](usage.html) + [core](rdfprolib.html), [tql](tql.html), [jsonld](jsonld.html) libraries
-- based on [Sesame](http://www.openrdf.org/).
+- command line [tool](usage.html) plus [core](rdfprolib.html), [tql](tql.html), [jsonld](jsonld.html) libraries
+- based on [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html) and [Sesame](http://www.openrdf.org/)
 - public domain software ([Creative Commons CC0](license.html))
 
 
 ### News
 
-- 2014-11-10 Version 0.3 has been released
+- 2014-12-01 Version 0.3 has been released
 - 2014-08-04 Version 0.2 has been released
 - 2014-07-24 Version 0.1 has been released

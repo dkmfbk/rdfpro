@@ -1,20 +1,28 @@
+/*
+ * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
+ * 
+ * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
+ * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * 
+ * To the extent possible under law, the author has dedicated all copyright and related and
+ * neighboring rights to this software to the public domain worldwide. This software is
+ * distributed without any warranty.
+ * 
+ * You should have received a copy of the CC0 Public Domain Dedication along with this software.
+ * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 package eu.fbk.rdfpro.util;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,48 +94,6 @@ public final class Statements {
             DATATYPE_FACTORY = DatatypeFactory.newInstance();
         } catch (final Throwable ex) {
             throw new Error("Unexpected exception (!): " + ex.getMessage(), ex);
-        }
-    }
-
-    public static final Map<String, String> NS_TO_PREFIX_MAP;
-
-    public static final Map<String, String> PREFIX_TO_NS_MAP;
-
-    static {
-        try {
-            final Map<String, String> nsToPrefixMap = new HashMap<String, String>();
-            final Map<String, String> prefixToNsMap = new HashMap<String, String>();
-            parseNamespaces(Util.class.getResource("prefixes"), nsToPrefixMap, prefixToNsMap);
-            NS_TO_PREFIX_MAP = Collections.unmodifiableMap(nsToPrefixMap);
-            PREFIX_TO_NS_MAP = Collections.unmodifiableMap(prefixToNsMap);
-        } catch (final IOException ex) {
-            throw new Error("Unexpected exception (!): " + ex.getMessage(), ex);
-        }
-    }
-
-    public static void parseNamespaces(final URL resource,
-            @Nullable final Map<String, String> nsToPrefixMap,
-            @Nullable final Map<String, String> prefixToNsMap) throws IOException {
-
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(
-                resource.openStream(), Charset.forName("UTF-8")));
-        try {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                final String[] tokens = line.split("\\s+");
-                if (tokens.length >= 2) {
-                    if (nsToPrefixMap != null) {
-                        nsToPrefixMap.put(tokens[0], tokens[1]);
-                    }
-                    if (prefixToNsMap != null) {
-                        for (int i = 1; i < tokens.length; ++i) {
-                            prefixToNsMap.put(tokens[i], tokens[0]);
-                        }
-                    }
-                }
-            }
-        } finally {
-            reader.close();
         }
     }
 
@@ -208,30 +174,82 @@ public final class Statements {
 
     @Nullable
     public static String formatValue(@Nullable final Value value) {
+        return formatValue(value, null);
+    }
+
+    public static String formatValue(@Nullable final Value value,
+            @Nullable final Namespaces namespaces) {
         if (value == null) {
             return null;
         }
         try {
             final StringBuilder builder = new StringBuilder(value.stringValue().length() * 2);
-            formatValue(value, builder);
+            formatValue(value, namespaces, builder);
             return builder.toString();
         } catch (final Throwable ex) {
             throw new Error("Unexpected exception (!)", ex);
         }
     }
 
-    public static void formatValue(final Value value, final Appendable out) throws IOException {
+    public static void formatValue(final Value value, @Nullable final Namespaces namespaces,
+            final Appendable out) throws IOException {
         if (value instanceof URI) {
-            formatURI((URI) value, out);
+            formatURI((URI) value, out, namespaces);
         } else if (value instanceof BNode) {
             formatBNode((BNode) value, out);
         } else if (value instanceof Literal) {
-            formatLiteral((Literal) value, out);
+            formatLiteral((Literal) value, out, namespaces);
+        } else {
+            throw new Error("Unexpected value class (!): " + value.getClass().getName());
         }
-        throw new Error("Unexpected value class (!): " + value.getClass().getName());
     }
 
-    private static void formatURI(final URI uri, final Appendable out) throws IOException {
+    private static boolean isGoodQName(final String prefix, final String name) { // good to emit
+
+        final int prefixLen = prefix.length();
+        if (prefixLen > 0) {
+            if (!isPN_CHARS_BASE(prefix.charAt(0)) || !isPN_CHARS(prefix.charAt(prefixLen - 1))) {
+                return false;
+            }
+            for (int i = 1; i < prefixLen - 1; ++i) {
+                final char c = prefix.charAt(i);
+                if (!isPN_CHARS(c) && c != '.') {
+                    return false;
+                }
+            }
+        }
+
+        final int nameLen = name.length();
+        if (nameLen > 0) {
+            int i = 0;
+            while (i < nameLen) {
+                final char c = name.charAt(i++);
+                if (!isPN_CHARS_BASE(c) && c != ':' && (i != 1 || c != '_' && !isNumber(c))
+                        && (i == 1 || !isPN_CHARS(c) && (i == nameLen || c != '.'))) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static void formatURI(final URI uri, final Appendable out,
+            @Nullable final Namespaces namespaces) throws IOException {
+
+        if (namespaces != null) {
+            final String prefix = namespaces.prefixFor(uri.getNamespace());
+            if (prefix != null) {
+                final String name = uri.getLocalName();
+                if (isGoodQName(prefix, name)) {
+                    out.append(prefix);
+                    out.append(":");
+                    out.append(name);
+                    return;
+                }
+            }
+        }
+
         final String string = uri.stringValue();
         final int len = string.length();
         out.append('<');
@@ -312,8 +330,8 @@ public final class Statements {
         }
     }
 
-    private static void formatLiteral(final Literal literal, final Appendable out)
-            throws IOException {
+    private static void formatLiteral(final Literal literal, final Appendable out,
+            @Nullable final Namespaces namespaces) throws IOException {
         final String label = literal.getLabel();
         final int length = label.length();
         out.append('"');
@@ -366,7 +384,7 @@ public final class Statements {
         if (datatype != null) {
             out.append('^');
             out.append('^');
-            formatURI(datatype, out);
+            formatURI(datatype, out, namespaces);
         } else {
             final String language = literal.getLanguage();
             if (language != null) {
@@ -401,50 +419,111 @@ public final class Statements {
 
     @Nullable
     public static Value parseValue(@Nullable final CharSequence sequence) {
+        return parseValue(sequence, null);
+    }
+
+    public static Value parseValue(@Nullable final CharSequence sequence,
+            @Nullable final Namespaces namespaces) {
         if (sequence == null) {
             return null;
         }
         final int c = sequence.charAt(0);
-        if (c == '<') {
-            return parseURI(sequence);
-        } else if (c == '_') {
+        if (c == '_') {
             return parseBNode(sequence);
         } else if (c == '"' || c == '\'') {
-            return parseLiteral(sequence);
+            return parseLiteral(sequence, namespaces);
+        } else {
+            return parseURI(sequence, namespaces);
         }
-        throw new IllegalArgumentException("Invalid value '" + sequence + "'");
     }
 
-    private static URI parseURI(final CharSequence sequence) {
-        final int last = sequence.length() - 1;
-        final StringBuilder builder = new StringBuilder(last - 1);
-        if (sequence.charAt(last) != '>') {
-            throw new IllegalArgumentException("Invalid URI: " + sequence);
-        }
-        int i = 1;
-        while (i < last) {
-            char c = sequence.charAt(i++);
-            if (c < 32) { // discard control chars but accept other chars forbidden by W3C
-                throw new IllegalArgumentException("Invalid char '" + c + "' in URI: " + sequence);
-            } else if (c != '\\') {
-                builder.append(c);
-            } else {
-                if (i == last) {
-                    throw new IllegalArgumentException("Invalid URI: " + sequence);
-                }
-                c = sequence.charAt(i++);
-                if (c == 'u') {
-                    builder.append(parseHex(sequence, i, 4));
-                    i += 4;
-                } else if (c == 'U') {
-                    builder.append(parseHex(sequence, i, 8));
-                    i += 8;
+    private static URI parseURI(final CharSequence sequence, @Nullable final Namespaces namespaces) {
+
+        if (sequence.charAt(0) == '<') {
+            final int last = sequence.length() - 1;
+            final StringBuilder builder = new StringBuilder(last - 1);
+            if (sequence.charAt(last) != '>') {
+                throw new IllegalArgumentException("Invalid URI: " + sequence);
+            }
+            int i = 1;
+            while (i < last) {
+                char c = sequence.charAt(i++);
+                if (c < 32) { // discard control chars but accept other chars forbidden by W3C
+                    throw new IllegalArgumentException("Invalid char '" + c + "' in URI: "
+                            + sequence);
+                } else if (c != '\\') {
+                    builder.append(c);
                 } else {
-                    builder.append(c); // accept \> and \\ plus others
+                    if (i == last) {
+                        throw new IllegalArgumentException("Invalid URI: " + sequence);
+                    }
+                    c = sequence.charAt(i++);
+                    if (c == 'u') {
+                        builder.append(parseHex(sequence, i, 4));
+                        i += 4;
+                    } else if (c == 'U') {
+                        builder.append(parseHex(sequence, i, 8));
+                        i += 8;
+                    } else {
+                        builder.append(c); // accept \> and \\ plus others
+                    }
                 }
             }
+            return VALUE_FACTORY.createURI(builder.toString());
+
+        } else if (namespaces != null) {
+            final int len = sequence.length();
+            final StringBuilder builder = new StringBuilder(len);
+
+            int i = 0;
+            while (i < len) {
+                final char c = sequence.charAt(i++);
+                if (c == ':') {
+                    if (i > 2 && !isPN_CHARS(sequence.charAt(i - 2))) {
+                        throw new IllegalArgumentException("Invalid qname " + sequence);
+                    }
+                    break;
+                } else if (i == 1 && !isPN_CHARS_BASE(c) || i > 1 && !isPN_CHARS(c) && c != '.') {
+                    throw new IllegalArgumentException("Invalid qname " + sequence);
+                } else {
+                    builder.append(c);
+                }
+            }
+            final String prefix = builder.toString();
+            final String namespace = namespaces.uriFor(prefix);
+            if (namespace == null) {
+                throw new IllegalArgumentException("Unknown prefix " + prefix);
+            }
+            builder.setLength(0);
+
+            while (i < len) {
+                final char c = sequence.charAt(i++);
+                if (c == '%') {
+                    builder.append(parseHex(sequence, i, 2));
+                    i += 2;
+                } else if (c == '\\') {
+                    final char d = sequence.charAt(i++);
+                    if (d == '_' || d == '~' || d == '.' || d == '-' || d == '!' || d == '$'
+                            || d == '&' || d == '\'' || d == '(' || d == ')' || d == '*'
+                            || d == '+' || d == ',' || d == ';' || d == '=' || d == '/'
+                            || d == '?' || d == '#' || d == '@' || d == '%') {
+                        builder.append(d);
+                    } else {
+                        throw new IllegalArgumentException("Invalid qname " + sequence);
+                    }
+                } else if (isPN_CHARS_BASE(c) || c == ':' || i == 1 && (c == '_' || isNumber(c))
+                        || i > 1 && (isPN_CHARS(c) || i < len && c == '.')) {
+                    builder.append(c);
+                } else {
+                    throw new IllegalArgumentException("Invalid qname " + sequence);
+                }
+            }
+            final String name = builder.toString();
+
+            return VALUE_FACTORY.createURI(namespace, name);
         }
-        return VALUE_FACTORY.createURI(builder.toString());
+
+        throw new IllegalArgumentException("Unsupported qname " + sequence);
     }
 
     private static BNode parseBNode(final CharSequence sequence) {
@@ -470,7 +549,8 @@ public final class Statements {
         throw new IllegalArgumentException("Invalid BNode '" + sequence + "'");
     }
 
-    private static Literal parseLiteral(final CharSequence sequence) {
+    private static Literal parseLiteral(final CharSequence sequence,
+            @Nullable final Namespaces namespaces) {
 
         final StringBuilder builder = new StringBuilder(sequence.length());
         final int len = sequence.length();
@@ -519,7 +599,7 @@ public final class Statements {
             return VALUE_FACTORY.createLiteral(label);
 
         } else if (i < len - 2 && sequence.charAt(i) == '^' && sequence.charAt(i + 1) == '^') {
-            final URI datatype = parseURI(sequence.subSequence(i + 2, len));
+            final URI datatype = parseURI(sequence.subSequence(i + 2, len), namespaces);
             return VALUE_FACTORY.createLiteral(label, datatype);
 
         } else if (i < len - 1 && sequence.charAt(i) == '@') {
@@ -589,7 +669,7 @@ public final class Statements {
      * an instance of the class specified. If the input is null, null is returned. If conversion
      * is unsupported or fails, an exception is thrown. The following table lists the supported
      * conversions: <blockquote>
-     * <table border="1">
+     * <table border="1" summary="supported conversions">
      * <thead>
      * <tr>
      * <th>From classes (and sub-classes)</th>
@@ -606,7 +686,7 @@ public final class Statements {
      * string), {@code BNode} (as BNode ID), {@link Integer}, {@link Long}, {@link Double},
      * {@link Float}, {@link Short}, {@link Byte}, {@link BigDecimal}, {@link BigInteger},
      * {@link AtomicInteger}, {@link AtomicLong}, {@link Boolean}, {@link XMLGregorianCalendar},
-     * {@link GregorianCalendar}, {@link Date} (via parsing), {@link Character} (length >= 1)</td>
+     * {@link GregorianCalendar}, {@link Date} (via parsing), {@link Character} (length &gt;= 1)</td>
      * </tr>
      * <tr>
      * <td>{@link Number}, {@link Literal} (any numeric {@code xsd:} type)</td>
@@ -656,7 +736,7 @@ public final class Statements {
     public static <T> T convert(@Nullable final Object object, final Class<T> clazz)
             throws IllegalArgumentException {
         if (object == null) {
-            Util.checkNotNull(clazz);
+            Objects.requireNonNull(clazz);
             return null;
         }
         if (clazz.isInstance(object)) {
@@ -690,7 +770,7 @@ public final class Statements {
     public static <T> T convert(@Nullable final Object object, final Class<T> clazz,
             @Nullable final T defaultValue) {
         if (object == null) {
-            Util.checkNotNull(clazz);
+            Objects.requireNonNull(clazz);
             return defaultValue;
         }
         if (clazz.isInstance(object)) {
