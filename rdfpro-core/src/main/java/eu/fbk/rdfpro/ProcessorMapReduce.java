@@ -126,10 +126,10 @@ final class ProcessorMapReduce implements RDFProcessor {
                     final Value p = statement.getPredicate();
                     final Value o = statement.getObject();
                     final Value c = statement.getContext();
-                    final boolean skey = s == key;
-                    final boolean pkey = p == key;
-                    final boolean okey = o == key;
-                    final boolean ckey = c == key;
+                    final boolean skey = Objects.equals(s, key);
+                    final boolean pkey = Objects.equals(p, key);
+                    final boolean okey = Objects.equals(o, key);
+                    final boolean ckey = Objects.equals(c, key);
                     final Object[] record = new Object[6];
                     record[0] = key;
                     record[1] = skey ? null : s;

@@ -472,7 +472,7 @@ public final class IO {
             }
             flushBuffer();
             this.stream.close();
-            this.count = BUFFER_SIZE; // fail soon in case a new write request is received
+            // this.count = BUFFER_SIZE; // fail soon in case a new write request is received
         }
 
         private void flushBuffer() throws IOException {
@@ -678,7 +678,7 @@ public final class IO {
             }
             flushBuffer();
             this.writer.close();
-            this.count = BUFFER_SIZE; // fail soon in case a new write request is received
+            // this.count = BUFFER_SIZE; // fail soon in case a new write request is received
         }
 
         private void flushBuffer() throws IOException {
@@ -692,7 +692,7 @@ public final class IO {
 
     private static final class ParallelBufferedReader extends Reader {
 
-        private final Fetcher fetcher;
+        private Fetcher fetcher;
 
         private final List<CharBuffer> buffers;
 
@@ -789,7 +789,9 @@ public final class IO {
                 this.closed = true;
             }
             this.count = this.pos;
+            this.buffers.clear();
             this.fetcher.close();
+            this.fetcher = null;
         }
 
         private void fill() throws IOException {
@@ -824,7 +826,7 @@ public final class IO {
 
             private final BlockingQueue<Object> queue;
 
-            private final Reader reader;
+            private Reader reader;
 
             private final char delimiter;
 
@@ -892,6 +894,12 @@ public final class IO {
                         // ignore
                     }
                 }
+                synchronized (FETCHERS) {
+                    FETCHERS.remove(this.reader);
+                }
+                this.queue.clear();
+                this.buffers.clear();
+                this.reader = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
                         propagate(this.exception);
@@ -1010,7 +1018,7 @@ public final class IO {
 
     private static final class ParallelBufferedWriter extends Writer {
 
-        private final Emitter emitter;
+        private Emitter emitter;
 
         private final char delimiter;
 
@@ -1096,9 +1104,12 @@ public final class IO {
                     return;
                 }
                 flushBuffers();
-                this.emitter.close();
                 this.closed = true;
             }
+            this.buffers.clear();
+            this.buffer = null;
+            this.emitter.close();
+            this.emitter = null;
         }
 
         private void writeAndTryFlush(final char c) throws IOException {
@@ -1146,7 +1157,7 @@ public final class IO {
 
             private final List<CharBuffer> buffers;
 
-            private final Writer writer;
+            private Writer writer;
 
             private int references;
 
@@ -1215,6 +1226,12 @@ public final class IO {
                         // ignore
                     }
                 }
+                synchronized (EMITTERS) {
+                    EMITTERS.remove(this.writer);
+                }
+                this.queue.clear();
+                this.buffers.clear();
+                this.writer = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
                         propagate(this.exception);
@@ -1284,7 +1301,7 @@ public final class IO {
 
     private static final class ParallelBufferedInputStream extends InputStream {
 
-        private final Fetcher fetcher;
+        private Fetcher fetcher;
 
         private final List<ByteBuffer> buffers;
 
@@ -1378,10 +1395,12 @@ public final class IO {
                 if (this.closed) {
                     return;
                 }
-                this.count = this.pos;
-                this.fetcher.close();
                 this.closed = true;
             }
+            this.count = this.pos;
+            this.buffers.clear();
+            this.fetcher.close();
+            this.fetcher = null;
         }
 
         private void fill() throws IOException {
@@ -1416,7 +1435,7 @@ public final class IO {
 
             private final BlockingQueue<Object> queue;
 
-            private final InputStream stream;
+            private InputStream stream;
 
             private final byte delimiter;
 
@@ -1484,6 +1503,12 @@ public final class IO {
                         // ignore
                     }
                 }
+                synchronized (FETCHERS) {
+                    FETCHERS.remove(this.stream);
+                }
+                this.queue.clear();
+                this.buffers.clear();
+                this.stream = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
                         propagate(this.exception);
@@ -1609,7 +1634,7 @@ public final class IO {
 
     private static final class ParallelBufferedOutputStream extends OutputStream {
 
-        private final Emitter emitter;
+        private Emitter emitter;
 
         private final byte delimiter;
 
@@ -1675,9 +1700,12 @@ public final class IO {
                     return;
                 }
                 flushBuffers();
-                this.emitter.close();
                 this.closed = true;
             }
+            this.buffers.clear();
+            this.buffer = null;
+            this.emitter.close();
+            this.emitter = null;
         }
 
         private void writeAndTryFlush(final byte c) throws IOException {
@@ -1725,7 +1753,7 @@ public final class IO {
 
             private final List<ByteBuffer> buffers;
 
-            private final OutputStream stream;
+            private OutputStream stream;
 
             private int references;
 
@@ -1794,6 +1822,12 @@ public final class IO {
                         // ignore
                     }
                 }
+                synchronized (EMITTERS) {
+                    EMITTERS.remove(this.stream);
+                }
+                this.queue.clear();
+                this.buffers.clear();
+                this.stream = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
                         propagate(this.exception);

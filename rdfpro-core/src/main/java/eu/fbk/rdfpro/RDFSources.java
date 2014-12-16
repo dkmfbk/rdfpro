@@ -558,7 +558,7 @@ public final class RDFSources {
                 final RDFFormat format = RDFFormat.forFileName("test"
                         + IO.extractExtension(this.location));
 
-                final String logMsg = "Starting parallel {} {} {} parsing for {}";
+                final String logMsg = "Starting {} {} {} parsing for {}";
                 if (!Statements.isRDFFormatTextBased(format)) {
                     LOGGER.debug(logMsg, "sequential", "binary", format.getName(), this.location);
                     this.in = IO.buffer(IO.read(this.location));
@@ -608,6 +608,7 @@ public final class RDFSources {
                     }
                 } finally {
                     IO.closeQuietly(this.in);
+                    this.in = null;
                     synchronized (this.readers) {
                         this.readers.put(this.location, null); // ensure stream is not read again
                     }
