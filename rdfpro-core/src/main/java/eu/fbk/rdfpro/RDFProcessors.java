@@ -16,6 +16,7 @@ package eu.fbk.rdfpro;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -196,44 +197,45 @@ public final class RDFProcessors {
                     new String[0]);
             final boolean hasSmushEasterEgg = options.hasOption("x");
             if (hasSmushEasterEgg) {
-                System.out.println();
-                System.out.println(".==================================================================.");
-                System.out.println("||    ( )              ( )                ( )              ( )    ||");
-                System.out.println("|'================================================================'|");
-                System.out.println("||                                                                ||");
-                System.out.println("||                                                                ||");
-                System.out.println("||                                  .::::.                        ||");
-                System.out.println("||                                .::::::::.                      ||");
-                System.out.println("||                                :::::::::::                     ||");
-                System.out.println("||                                ':::::::::::..                  ||");
-                System.out.println("||                                 :::::::::::::::'               ||");
-                System.out.println("||                                  ':::::::::::.                 ||");
-                System.out.println("||                                    .::::::::::::::'            ||");
-                System.out.println("||                                  .:::::::::::...               ||");
-                System.out.println("||                                 ::::::::::::::''               ||");
-                System.out.println("||                     .:::.       '::::::::''::::                ||");
-                System.out.println("||                   .::::::::.      ':::::'  '::::               ||");
-                System.out.println("||                  .::::':::::::.    :::::    '::::.             ||");
-                System.out.println("||                .:::::' ':::::::::. :::::      ':::.            ||");
-                System.out.println("||              .:::::'     ':::::::::.:::::       '::.           ||");
-                System.out.println("||            .::::''         '::::::::::::::       '::.          ||");
-                System.out.println("||           .::''              '::::::::::::         :::...      ||");
-                System.out.println("||        ..::::                  ':::::::::'        .:' ''''     ||");
-                System.out.println("||     ..''''':'                    ':::::.'                      ||");
-                System.out.println("||                                                                ||");
-                System.out.println("||                                                                ||");
-                System.out.println("|'================================================================'|");
-                System.out.println("||              __________________                                ||");
-                System.out.println("||              | ___ \\  _  \\  ___|                               ||");
-                System.out.println("||              | |_/ / | | | |_                                  ||");
-                System.out.println("||              |    /| | | |  _|                                 ||");
-                System.out.println("||              | |\\ \\| |/ /| |  ___  ___  ____                   ||");
-                System.out.println("||              \\_| \\_|___/ \\_| / _ \\/ _ \\/ __ \\                  ||");
-                System.out.println("||                             / ___/ , _/ /_/ /                  ||");
-                System.out.println("||                            /_/  /_/|_|\\____/                   ||");
-                System.out.println("||                                                                ||");
-                System.out.println("'=============================================================LGB=='");
-                System.out.println();
+                final PrintStream p = System.out;
+                p.println();
+                p.println(".==================================================================.");
+                p.println("||    ( )              ( )                ( )              ( )    ||");
+                p.println("|'================================================================'|");
+                p.println("||                                                                ||");
+                p.println("||                                                                ||");
+                p.println("||                                  .::::.                        ||");
+                p.println("||                                .::::::::.                      ||");
+                p.println("||                                :::::::::::                     ||");
+                p.println("||                                ':::::::::::..                  ||");
+                p.println("||                                 :::::::::::::::'               ||");
+                p.println("||                                  ':::::::::::.                 ||");
+                p.println("||                                    .::::::::::::::'            ||");
+                p.println("||                                  .:::::::::::...               ||");
+                p.println("||                                 ::::::::::::::''               ||");
+                p.println("||                     .:::.       '::::::::''::::                ||");
+                p.println("||                   .::::::::.      ':::::'  '::::               ||");
+                p.println("||                  .::::':::::::.    :::::    '::::.             ||");
+                p.println("||                .:::::' ':::::::::. :::::      ':::.            ||");
+                p.println("||              .:::::'     ':::::::::.:::::       '::.           ||");
+                p.println("||            .::::''         '::::::::::::::       '::.          ||");
+                p.println("||           .::''              '::::::::::::         :::...      ||");
+                p.println("||        ..::::                  ':::::::::'        .:' ''''     ||");
+                p.println("||     ..''''':'                    ':::::.'                      ||");
+                p.println("||                                                                ||");
+                p.println("||                                                                ||");
+                p.println("|'================================================================'|");
+                p.println("||              __________________                                ||");
+                p.println("||              | ___ \\  _  \\  ___|                               ||");
+                p.println("||              | |_/ / | | | |_                                  ||");
+                p.println("||              |    /| | | |  _|                                 ||");
+                p.println("||              | |\\ \\| |/ /| |  ___  ___  ____                   ||");
+                p.println("||              \\_| \\_|___/ \\_| / _ \\/ _ \\/ __ \\                  ||");
+                p.println("||                             / ___/ , _/ /_/ /                  ||");
+                p.println("||                            /_/  /_/|_|\\____/                   ||");
+                p.println("||                                                                ||");
+                p.println("'=============================================================LGB=='");
+                p.println();
             }
 
             for (int i = 0; i < namespaces.length; ++i) {
@@ -248,7 +250,7 @@ public final class RDFProcessors {
         }
 
         case "rdfs": {
-            final Options options = Options.parse("d|e!|C|c!|b!|p|+", args);
+            final Options options = Options.parse("d|e!|C|c!|b!|t|p|+", args);
             final URI base = parseURI(options.getOptionArg("b", String.class));
             final boolean preserveBNodes = options.hasOption("p");
             final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
@@ -259,6 +261,7 @@ public final class RDFProcessors {
                     RDFSources.read(true, preserveBNodes,
                             base == null ? null : base.stringValue(), null, fileSpecs));
             final boolean decomposeOWLAxioms = options.hasOption("d");
+            final boolean dropBNodeTypes = options.hasOption("t");
             String[] excludedRules = new String[0];
             if (options.hasOption("e")) {
                 excludedRules = options.getOptionArg("e", String.class).split(",");
@@ -269,7 +272,7 @@ public final class RDFProcessors {
             } else if (options.hasOption("c")) {
                 context = parseURI(options.getOptionArg("c", String.class));
             }
-            return rdfs(tbox, context, decomposeOWLAxioms, excludedRules);
+            return rdfs(tbox, context, decomposeOWLAxioms, dropBNodeTypes, excludedRules);
         }
 
         case "stats": {
@@ -509,14 +512,21 @@ public final class RDFProcessors {
      *            true if simple OWL axioms mappable to RDFS (e.g. {@code owl:equivalentClass}
      *            should be decomposed to corresponding RDFS axioms (OWL axioms are otherwise
      *            ignored when computing the closure)
+     * @param dropBNodeTypes
+     *            true if {@code <x rdf:type _:b>} statements should not be emitted (as
+     *            uninformative); note that this option does not prevent this statements to be
+     *            used for inference (even if dropped), possibly leading to infer statements that
+     *            are not dropped
      * @param excludedRules
      *            a vararg array with the names of the RDFS rule to exclude; if empty, all the
      *            RDFS rules will be used
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor rdfs(final RDFSource tbox, @Nullable final Resource tboxContext,
-            final boolean decomposeOWLAxioms, final String... excludedRules) {
-        return new ProcessorRDFS(tbox, tboxContext, decomposeOWLAxioms, excludedRules);
+            final boolean decomposeOWLAxioms, final boolean dropBNodeTypes,
+            final String... excludedRules) {
+        return new ProcessorRDFS(tbox, tboxContext, decomposeOWLAxioms, dropBNodeTypes,
+                excludedRules);
     }
 
     /**

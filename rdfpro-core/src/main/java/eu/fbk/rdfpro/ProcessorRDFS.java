@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
@@ -88,10 +89,13 @@ final class ProcessorRDFS implements RDFProcessor {
 
     private final TBox tbox;
 
+    private final boolean dropBNodeTypes;
+
     private final boolean emitTBox;
 
     ProcessorRDFS(final RDFSource tbox, @Nullable final Resource tboxContext,
-            final boolean decomposeOWLAxioms, final String... excludedRules) {
+            final boolean decomposeOWLAxioms, final boolean dropBNodeTypes,
+            final String... excludedRules) {
 
         final Map<Value, Value> interner = new HashMap<Value, Value>();
         for (final URI uri : VOC.keySet()) {
@@ -129,6 +133,7 @@ final class ProcessorRDFS implements RDFProcessor {
         new TBoxInferencer(decomposeOWLAxioms, ruleset, database).infer();
 
         this.tbox = new TBox(database, SESAME.NIL.equals(tboxContext) ? null : tboxContext);
+        this.dropBNodeTypes = dropBNodeTypes;
         this.emitTBox = tboxContext != null;
         this.ruleset = ruleset;
     }
@@ -154,7 +159,8 @@ final class ProcessorRDFS implements RDFProcessor {
                 @Override
                 protected ABoxInferencer initialValue() {
                     return new ABoxInferencer(Handler.this.handler, ProcessorRDFS.this.ruleset,
-                            ProcessorRDFS.this.tbox, Handler.this.deduplicator);
+                            ProcessorRDFS.this.tbox, Handler.this.deduplicator,
+                            ProcessorRDFS.this.dropBNodeTypes);
                 }
 
             };
@@ -210,18 +216,18 @@ final class ProcessorRDFS implements RDFProcessor {
                         : context == null ? Statements.VALUE_FACTORY.createStatement(s, p, o)
                                 : Statements.VALUE_FACTORY.createStatement(s, p, o, context);
 
-                resources.put(s, s);
-                resources.put(p, p);
-                if (o instanceof Resource) {
-                    resources.put((Resource) o, (Resource) o);
-                }
+                        resources.put(s, s);
+                        resources.put(p, p);
+                        if (o instanceof Resource) {
+                            resources.put((Resource) o, (Resource) o);
+                        }
 
-                if (o instanceof Resource
-                        && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
-                                || p.equals(RDFS.RANGE) || p.equals(RDFS.SUBPROPERTYOF)
-                                && o instanceof URI)) {
-                    attributes.add(statement);
-                }
+                        if (o instanceof Resource
+                                && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
+                                        || p.equals(RDFS.RANGE) || p.equals(RDFS.SUBPROPERTYOF)
+                                        && o instanceof URI)) {
+                            attributes.add(statement);
+                        }
             }
 
             Collections.sort(attributes, Sorter.INSTANCE);
@@ -443,9 +449,19 @@ final class ProcessorRDFS implements RDFProcessor {
                     }
 
                 } else if (p == OWL.EQUIVALENTPROPERTY) {
-                    if (s instanceof URI && o instanceof URI) {
-                        emit(s, RDFS.SUBPROPERTYOF, o);
-                        emit((URI) o, RDFS.SUBPROPERTYOF, s);
+                    if (s instanceof URI && o instanceof URI && !s.equals(o)) {
+                        for (final URI prop : new URI[] { (URI) s, (URI) o }) {
+                            final URI other = prop == s ? (URI) o : (URI) s;
+                            emit(prop, RDFS.SUBPROPERTYOF, other);
+                            List<Resource> list = subprops.get(prop);
+                            if (list == null) {
+                                list = new ArrayList<>();
+                                subprops.put(prop, list);
+                            }
+                            if (!list.contains(other)) {
+                                list.add(other);
+                            }
+                        }
                     }
 
                 } else if (p == RDFS.DOMAIN || p == RDFS.RANGE || p == RDFS.SUBPROPERTYOF) {
@@ -456,7 +472,7 @@ final class ProcessorRDFS implements RDFProcessor {
                                 : p == RDFS.RANGE ? ranges : subprops;
                         List<Resource> list = map.get(s);
                         if (list == null) {
-                            list = new ArrayList<Resource>();
+                            list = new ArrayList<>();
                             map.put((URI) s, list);
                         }
                         list.add((Resource) o);
@@ -537,7 +553,7 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             // C owl:intersectionOf list(Ci) -> C rdfs:subClassOf Ci
-            for (final Map.Entry<Resource, Resource> entry : unions.entrySet()) {
+            for (final Map.Entry<Resource, Resource> entry : intersections.entrySet()) {
                 final Resource intersectionClass = entry.getKey();
                 for (Resource[] node = nodes.get(entry.getValue()); node != null
                         && node[0] != null; node = nodes.get(node[1])) {
@@ -746,6 +762,8 @@ final class ProcessorRDFS implements RDFProcessor {
 
         private final Deduplicator deduplicator;
 
+        private final boolean dropBNodeTypes;
+
         private Resource context;
 
         private long bitmask;
@@ -757,11 +775,12 @@ final class ProcessorRDFS implements RDFProcessor {
         private final List<Statement> emitted;
 
         ABoxInferencer(final RDFHandler handler, final Ruleset ruleset, final TBox tbox,
-                final Deduplicator deduplicator) {
+                final Deduplicator deduplicator, final boolean dropBNodesTypes) {
             this.handler = handler;
             this.ruleset = ruleset;
             this.tbox = tbox;
             this.deduplicator = deduplicator;
+            this.dropBNodeTypes = dropBNodesTypes;
             this.matrix = new Statement[64 * STATEMENTS_PER_BUCKET];
             this.set = new HashSet<Statement>();
             this.emitted = new ArrayList<Statement>();
@@ -804,7 +823,11 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             for (final Statement t : this.emitted) {
-                this.handler.handleStatement(t);
+                final boolean emit = !this.dropBNodeTypes || t.getPredicate() != RDF.TYPE
+                        || !(t.getObject() instanceof BNode);
+                if (emit) {
+                    this.handler.handleStatement(t);
+                }
             }
         }
 
@@ -932,7 +955,7 @@ final class ProcessorRDFS implements RDFProcessor {
         private Statement create(final Resource subject, final URI predicate, final Value object) {
             return this.context == null ? Statements.VALUE_FACTORY.createStatement(subject,
                     predicate, object) : Statements.VALUE_FACTORY.createStatement(subject,
-                    predicate, object, this.context);
+                            predicate, object, this.context);
         }
 
     }

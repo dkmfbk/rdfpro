@@ -715,6 +715,10 @@ final class RuleTransformer implements Transformer {
                 } else if (expression.endsWith(":*")) {
                     this.matchedURINamespaces.add(Namespaces.DEFAULT.uriFor(expression.substring(
                             0, expression.length() - 2)));
+
+                } else if (expression.endsWith("*>")) {
+                    this.matchedURINamespaces
+                            .add(expression.substring(1, expression.length() - 2));
                 } else {
                     final Value value = Statements.parseValue(expression, Namespaces.DEFAULT);
                     if (value instanceof URI) {
