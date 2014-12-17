@@ -144,6 +144,10 @@ final class ProcessorStats implements RDFProcessor {
             this.mintedURIs = new HashSet<String>();
             this.sorter = null;
             this.firstPass = true;
+
+            PropertyStats ps = new PropertyStats(RDF.TYPE, 0);
+            this.propertyMap.put(RDF.TYPE, ps);
+            this.propertyList.add(ps);
         }
 
         @Override
@@ -476,36 +480,35 @@ final class ProcessorStats implements RDFProcessor {
                     ss.types.set(ts.index);
                     s.types.set(ts.index);
                 }
+            }
 
+            final PropertyStats ps = this.propertyList.get(record.property);
+            s.pss = s.pss != null ? s.pss : new HashSet<PropertyStats>();
+            s.pss.add(ps);
+            PropertyStats.Partition pp = ps.partitions[ss.index];
+            if (pp == null) {
+                pp = new PropertyStats.Partition();
+                ps.partitions[ss.index] = pp;
+            }
+            ++pp.triples;
+            if (this.directBlockPartitions.add(pp)) {
+                ++pp.distinctSubjects;
+                pp.entities += isEntity ? 1 : 0;
+            }
+            if (Statements.TBOX_PROPERTIES.contains(ps.property)) {
+                ++ss.tboxTriples;
+                ++s.tboxTriples;
             } else {
-                final PropertyStats ps = this.propertyList.get(record.property);
-                s.pss = s.pss != null ? s.pss : new HashSet<PropertyStats>();
-                s.pss.add(ps);
-                PropertyStats.Partition pp = ps.partitions[ss.index];
-                if (pp == null) {
-                    pp = new PropertyStats.Partition();
-                    ps.partitions[ss.index] = pp;
+                ++ss.aboxTriples;
+                ++s.aboxTriples;
+                if (ps.property.equals(OWL.SAMEAS)) {
+                    ++ss.sameAsTriples;
+                    ++s.sameAsTriples;
                 }
-                ++pp.triples;
-                if (this.directBlockPartitions.add(pp)) {
-                    ++pp.distinctSubjects;
-                    pp.entities += isEntity ? 1 : 0;
-                }
-                if (Statements.TBOX_PROPERTIES.contains(ps.property)) {
-                    ++ss.tboxTriples;
-                    ++s.tboxTriples;
-                } else {
-                    ++ss.aboxTriples;
-                    ++s.aboxTriples;
-                    if (ps.property.equals(OWL.SAMEAS)) {
-                        ++ss.sameAsTriples;
-                        ++s.sameAsTriples;
-                    }
-                }
-                if (ProcessorStats.this.processCooccurrences) {
-                    ss.properties.set(ps.index);
-                    s.properties.set(ps.index);
-                }
+            }
+            if (ProcessorStats.this.processCooccurrences) {
+                ss.properties.set(ps.index);
+                s.properties.set(ps.index);
             }
         }
 
@@ -1088,6 +1091,7 @@ final class ProcessorStats implements RDFProcessor {
                 // s t c
                 subject = hash;
                 type = (int) reader.readNumber();
+                predicate = 0; // explicit mapping of rdf:type to 0
             } else if (format == 2) {
                 // s p o c
                 subject = hash;
