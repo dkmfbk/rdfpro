@@ -495,20 +495,23 @@ final class ProcessorStats implements RDFProcessor {
                 ++pp.distinctSubjects;
                 pp.entities += isEntity ? 1 : 0;
             }
-            if (Statements.TBOX_PROPERTIES.contains(ps.property)) {
-                ++ss.tboxTriples;
-                ++s.tboxTriples;
-            } else {
-                ++ss.aboxTriples;
-                ++s.aboxTriples;
-                if (ps.property.equals(OWL.SAMEAS)) {
-                    ++ss.sameAsTriples;
-                    ++s.sameAsTriples;
+
+            if (record.type < 0) {
+                if (Statements.TBOX_PROPERTIES.contains(ps.property)) {
+                    ++ss.tboxTriples;
+                    ++s.tboxTriples;
+                } else {
+                    ++ss.aboxTriples;
+                    ++s.aboxTriples;
+                    if (ps.property.equals(OWL.SAMEAS)) {
+                        ++ss.sameAsTriples;
+                        ++s.sameAsTriples;
+                    }
                 }
-            }
-            if (ProcessorStats.this.processCooccurrences) {
-                ss.properties.set(ps.index);
-                s.properties.set(ps.index);
+                if (ProcessorStats.this.processCooccurrences) {
+                    ss.properties.set(ps.index);
+                    s.properties.set(ps.index);
+                }
             }
         }
 
