@@ -454,7 +454,7 @@ public final class RDFSources {
 
             });
 
-            final Map<String, Reader> readers = new HashMap<String, Reader>();
+            final Map<String, InputStream> streams = new HashMap<String, InputStream>();
 
             final List<ParseJob> jobs = new ArrayList<ParseJob>();
             for (final String location : this.locations) {
@@ -463,7 +463,7 @@ public final class RDFSources {
                 final int parallelism = !this.parallelize
                         || !Statements.isRDFFormatLineBased(format) ? 1 : Environment.getCores();
                 for (int i = 0; i < parallelism; ++i) {
-                    jobs.add(new ParseJob(readers, location.toString(), handler));
+                    jobs.add(new ParseJob(streams, location.toString(), handler));
                 }
             }
 
@@ -517,15 +517,15 @@ public final class RDFSources {
                     throw exception.get();
                 }
             } finally {
-                for (final Reader reader : readers.values()) {
-                    IO.closeQuietly(reader);
+                for (final InputStream stream : streams.values()) {
+                    IO.closeQuietly(stream);
                 }
             }
         }
 
         private class ParseJob {
 
-            private final Map<String, Reader> readers;
+            private final Map<String, InputStream> streams;
 
             private final String location;
 
@@ -535,9 +535,9 @@ public final class RDFSources {
 
             private Closeable in;
 
-            ParseJob(final Map<String, Reader> readers, final String location,
+            ParseJob(final Map<String, InputStream> streams, final String location,
                     final RDFHandler handler) {
-                this.readers = readers;
+                this.streams = streams;
                 this.location = location;
                 this.handler = handler;
                 this.closed = false;
@@ -571,17 +571,16 @@ public final class RDFSources {
 
                 } else {
                     LOGGER.debug(logMsg, "parallel", "text", format.getName(), this.location);
-                    synchronized (this.readers) {
-                        Reader reader = this.readers.get(this.location);
-                        if (reader == null) {
-                            if (this.readers.containsKey(this.location)) {
+                    synchronized (this.streams) {
+                        InputStream stream = this.streams.get(this.location);
+                        if (stream == null) {
+                            if (this.streams.containsKey(this.location)) {
                                 return; // read already completed for file at location
                             }
-                            reader = new InputStreamReader(IO.read(this.location),
-                                    Charset.forName("UTF-8"));
-                            this.readers.put(this.location, reader);
+                            stream = IO.read(this.location);
+                            this.streams.put(this.location, stream);
                         }
-                        this.in = IO.parallelBuffer(reader, '\n');
+                        this.in = IO.utf8Reader(IO.parallelBuffer(stream, (byte) '\n'));
                     }
                 }
 
@@ -609,8 +608,8 @@ public final class RDFSources {
                 } finally {
                     IO.closeQuietly(this.in);
                     this.in = null;
-                    synchronized (this.readers) {
-                        this.readers.put(this.location, null); // ensure stream is not read again
+                    synchronized (this.streams) {
+                        this.streams.put(this.location, null); // ensure stream is not read again
                     }
                 }
             }

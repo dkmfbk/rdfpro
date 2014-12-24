@@ -139,6 +139,8 @@ public final class IO {
             cmd = Environment.getProperty("rdfpro.cmd.xz", "xz") + " -dc";
         } else if (ext.endsWith(".7z")) {
             cmd = Environment.getProperty("rdfpro.cmd.7za", "7za") + " -so e";
+        } else if (ext.endsWith(".lz4")) {
+            cmd = Environment.getProperty("rdfpro.cmd.lz4", "lz4") + " -dc";
         }
 
         if ("file".equals(url.getProtocol())) {
@@ -222,6 +224,8 @@ public final class IO {
             cmd = Environment.getProperty("rdfpro.cmd.gzip", "gzip") + " -c -9";
         } else if (ext.endsWith(".xz")) {
             cmd = Environment.getProperty("rdfpro.cmd.xz", "xz") + " -c -9";
+        } else if (ext.endsWith(".lz4")) {
+            cmd = Environment.getProperty("rdfpro.cmd.lz4", "lz4") + " -c -9";
         }
 
         if (cmd == null) {
@@ -266,6 +270,14 @@ public final class IO {
 
     public static Writer parallelBuffer(final Writer writer, final char delimiter) {
         return new ParallelBufferedWriter(writer, delimiter);
+    }
+
+    public static Reader utf8Reader(final InputStream stream) {
+        return new UTF8Reader(stream);
+    }
+
+    public static Writer utf8Writer(final OutputStream stream) {
+        return new UTF8Writer(stream);
     }
 
     private static void propagate(final Throwable ex) throws IOException {
@@ -1889,6 +1901,213 @@ public final class IO {
                 }
             }
 
+        }
+
+    }
+
+    private static final class UTF8Reader extends Reader {
+
+        private final InputStream stream;
+
+        private boolean closed;
+
+        public UTF8Reader(final InputStream stream) {
+            this.stream = stream;
+            this.closed = false;
+        }
+
+        @Override
+        public int read() throws IOException {
+            final int b0 = this.stream.read();
+            return (b0 & 0xFFFFFF80) == 0 ? b0 : readHelper(b0);
+        }
+
+        private int readHelper(final int b0) throws IOException {
+
+            if (b0 < 0) { // EOF
+                return -1;
+
+            } else if (b0 <= 0b11011111) { // 110xxxxx 10xxxxxx
+                final int b1 = this.stream.read();
+                if ((b1 & 0b11000000) == 0b10000000) {
+                    return (b0 & 0b00011111) << 6 | b1 & 0b00111111;
+                }
+
+            } else if (b0 <= 0b11101111) { // 1110xxxx 10xxxxxx 10xxxxxx
+                final int b1 = this.stream.read();
+                final int b2 = this.stream.read();
+                if ((b1 & 0b11000000) == 0b10000000 && (b2 & 0b11000000) == 0b10000000) {
+                    return (b0 & 0b00001111) << 12 | (b1 & 0b00111111) << 6 | b2 & 0b00111111;
+                }
+
+            } else if (b0 <= 0b11110111) { // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+                final int b1 = this.stream.read();
+                final int b2 = this.stream.read();
+                final int b3 = this.stream.read();
+                if ((b1 & 0b11000000) == 0b10000000 && (b2 & 0b11000000) == 0b10000000
+                        && (b3 & 0b11000000) == 0b10000000) {
+                    return (b0 & 0b00000111) << 18 | (b1 & 0b00111111) << 12
+                            | (b2 & 0b00111111) << 6 | b3 & 0b00111111;
+                }
+            }
+
+            throw new IOException("Invalid/truncated UTF8 code");
+        }
+
+        @Override
+        public int read(final char[] buf, final int off, final int len) throws IOException {
+            if ((off | len | off + len | buf.length - (off + len)) < 0) {
+                throw new IndexOutOfBoundsException();
+            }
+            if (len == 0) {
+                checkNotClosed();
+                return 0;
+            }
+            int index = off;
+            int c = read();
+            if (c < 0) {
+                return -1;
+            }
+            buf[index++] = (char) c;
+            final int end = off + Math.min(len, this.stream.available() / 2);
+            while (index < end) {
+                c = read();
+                if (c < 0) {
+                    break;
+                }
+                buf[index++] = (char) c;
+            }
+            return index - off;
+        }
+
+        @Override
+        public long skip(final long n) throws IOException {
+            if (n == 0L) {
+                checkNotClosed();
+                return 0L;
+            }
+            final int skippable = this.stream.available() / 2;
+            int toSkip = skippable;
+            do {
+                final int c = read();
+                if (c < 0) {
+                    break;
+                }
+                --toSkip;
+            } while (toSkip > 0);
+            return skippable - toSkip;
+        }
+
+        @Override
+        public boolean ready() throws IOException {
+            return this.stream.available() >= 4;
+        }
+
+        @Override
+        public void reset() throws IOException {
+            throw new IOException("Mark not supported");
+        }
+
+        @Override
+        public void mark(final int readlimit) {
+        }
+
+        @Override
+        public boolean markSupported() {
+            return false;
+        }
+
+        @Override
+        public void close() throws IOException {
+            synchronized (this) {
+                if (this.closed) {
+                    return;
+                }
+                this.closed = true;
+            }
+            this.stream.close();
+        }
+
+        private void checkNotClosed() throws IOException {
+            if (this.closed) {
+                throw new IOException("Reader has been closed");
+            }
+        }
+
+    }
+
+    private static final class UTF8Writer extends Writer {
+
+        private final OutputStream stream;
+
+        private boolean closed;
+
+        UTF8Writer(final OutputStream stream) {
+            this.stream = stream;
+            this.closed = false;
+        }
+
+        @Override
+        public void write(final int c) throws IOException {
+            if (c <= 0b1111111) { // 0xxxxxxx
+                this.stream.write(c);
+            } else {
+                writeHelper(c);
+            }
+        }
+
+        private void writeHelper(final int c) throws IOException {
+
+            if (c <= 0b11111_111111) { // 110xxxxx 10xxxxxx
+                this.stream.write(0b11000000 | c >>> 6);
+                this.stream.write(0b10000000 | c & 0b00111111);
+
+            } else if (c <= 0b1111_111111_111111) { // 1110xxxx 10xxxxxx 10xxxxxx
+                this.stream.write(0b11100000 | c >>> 12);
+                this.stream.write(0b10000000 | c >>> 6 & 0b00111111);
+                this.stream.write(0b10000000 | c & 0b00111111);
+
+            } else if (c <= 0b111_111111_111111_111111) { // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+                this.stream.write(0b11110000 | c >>> 18);
+                this.stream.write(0b10000000 | c >>> 12 & 0b00111111);
+                this.stream.write(0b10000000 | c >>> 6 & 0b00111111);
+                this.stream.write(0b10000000 | c & 0b00111111);
+
+            } else {
+                throw new IOException("Invalid code point " + c);
+            }
+        }
+
+        @Override
+        public void write(final char[] cbuf, final int off, final int len) throws IOException {
+            final int end = off + len;
+            for (int index = off; index < end; ++index) {
+                write(cbuf[index]);
+            }
+        }
+
+        @Override
+        public void write(final String str, final int off, final int len) throws IOException {
+            final int end = off + len;
+            for (int index = off; index < end; ++index) {
+                write(str.charAt(index));
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            this.stream.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            synchronized (this) {
+                if (this.closed) {
+                    return;
+                }
+                this.closed = true;
+            }
+            this.stream.close();
         }
 
     }

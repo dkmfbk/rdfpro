@@ -567,7 +567,7 @@ public final class RDFHandlers {
         private final String location;
 
         @Nullable
-        private Writer out;
+        private OutputStream out;
 
         @Nullable
         private List<Writer> partialOuts;
@@ -588,8 +588,7 @@ public final class RDFHandlers {
             try {
                 LOGGER.debug("Starting parallel {} writing of {}",
                         Statements.toRDFFormat(this.location).getName(), this.location);
-                this.out = new OutputStreamWriter(IO.write(this.location),
-                        Charset.forName("UTF-8"));
+                this.out = IO.write(this.location);
                 this.partialOuts = new ArrayList<Writer>();
                 this.partialWriters = new ArrayList<RDFWriter>();
                 this.threadWriter = new ThreadLocal<RDFWriter>() {
@@ -637,7 +636,7 @@ public final class RDFHandlers {
         }
 
         private RDFWriter newWriter() {
-            final Writer partialOut = IO.parallelBuffer(this.out, '\n');
+            final Writer partialOut = IO.utf8Writer(IO.parallelBuffer(this.out, (byte) '\n'));
             final RDFFormat format = Statements.toRDFFormat(this.location);
             final RDFWriter partialWriter = Rio.createWriter(format, partialOut);
             partialWriter.setWriterConfig(this.config);
