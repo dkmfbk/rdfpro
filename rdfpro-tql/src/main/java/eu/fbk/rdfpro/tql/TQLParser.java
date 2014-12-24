@@ -60,7 +60,7 @@ public class TQLParser extends RDFParserBase {
     /**
      * Creates a new TQLParser that will use the supplied ValueFactory to create RDF model
      * objects.
-     * 
+     *
      * @param valueFactory
      *            the ValueFactory to use
      */
@@ -271,14 +271,14 @@ public class TQLParser extends RDFParserBase {
                 if (c == EOF) {
                     throwEOFException();
                 } else if (c == 'u' || c == 'U') {
-                    c = parseUChar(c);
+                    parseUChar(c);
                 } else {
                     this.builder.append((char) c); // accept \> and \\ plus others
                 }
                 break;
             default:
                 if (c < 32) { // discard control chars but accept other chars forbidden by W3C
-                              // rec, for compatibility with previous Turtle specification
+                    // rec, for compatibility with previous Turtle specification
                     throwParseException("Expected valid IRI char, found: " + (char) c);
                 }
                 this.builder.append((char) c);
@@ -358,7 +358,7 @@ public class TQLParser extends RDFParserBase {
                     break;
                 case 'u':
                 case 'U':
-                    c = parseUChar(c);
+                    parseUChar(c);
                     break;
                 default:
                     this.builder.append((char) c); // handles ' " \
@@ -411,7 +411,7 @@ public class TQLParser extends RDFParserBase {
         return c;
     }
 
-    private int parseUChar(final int ch) throws IOException, RDFParseException {
+    private void parseUChar(final int ch) throws IOException, RDFParseException {
         int c = ch;
         int count = 0;
         if (c == 'u') {
@@ -435,7 +435,6 @@ public class TQLParser extends RDFParserBase {
             }
         }
         this.builder.append((char) code);
-        return read();
     }
 
     private int read() throws IOException {
