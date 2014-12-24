@@ -1218,12 +1218,13 @@ final class ProcessorStats implements RDFProcessor {
                 final eu.fbk.rdfpro.util.Hash hash = eu.fbk.rdfpro.util.Hash.murmur3(string);
                 lo = hash.getLow();
                 hi = hash.getHigh();
-                lo = (lo & 0x7F7F7F7F7F7F7F7FL) + 0x0101010101010101L;
-                lo = lo & 0x7F7F7F7F7F7F7F7FL | (lo & 0x8080808080808080L) >> 1;
-                hi = (hi & 0x7F7F7F7F7F7F7F7FL) + 0x0101010101010101L;
-                hi = hi & 0x7F7F7F7F7F7F7F7FL | (hi & 0x8080808080808080L) >> 1;
-                hi = hi & 0x0FFFFFFFFFFFFFFFL | 0x4000000000000000L;
             }
+
+            lo = (lo & 0x7F7F7F7F7F7F7F7FL) + 0x0101010101010101L;
+            lo = lo & 0x7F7F7F7F7F7F7F7FL | (lo & 0x8080808080808080L) >> 1;
+            hi = (hi & 0x7F7F7F7F7F7F7F7FL) + 0x0101010101010101L;
+            hi = hi & 0x7F7F7F7F7F7F7F7FL | (hi & 0x8080808080808080L) >> 1;
+            hi = hi & 0x0FFFFFFFFFFFFFFFL | 0x4000000000000000L;
 
             if (value instanceof URI) {
                 hi = hi | 0x3000000000000000L;
