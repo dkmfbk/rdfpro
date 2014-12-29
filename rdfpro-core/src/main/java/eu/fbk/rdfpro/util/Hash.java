@@ -33,7 +33,7 @@ public final class Hash implements Serializable, Comparable<Hash> {
         return new Hash(high, low);
     }
 
-    public static Hash murmur3(final String... args) {
+    public static Hash murmur3(final CharSequence... args) {
 
         long h1 = 0;
         long h2 = 0;
@@ -46,7 +46,7 @@ public final class Hash implements Serializable, Comparable<Hash> {
         long cur = 0;
         for (int i = 0; i < args.length; ++i) {
             final boolean lastArg = i == args.length - 1;
-            final String arg = args[i];
+            final CharSequence arg = args[i];
             for (int j = 0; j < arg.length(); ++j) {
                 final long c = arg.charAt(j) & 0xFFFFL;
                 cur = cur | c << index % 4 * 16;
