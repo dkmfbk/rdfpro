@@ -83,10 +83,15 @@ public final class Environment {
         } catch (final IOException ex) {
             LOGGER.warn("Could not complete loading of configuration from classpath resources", ex);
         }
-        for (final Map<?, ?> map : new Map[] { properties, System.getProperties(), System.getenv() }) {
-            for (final Map.Entry<?, ?> entry : map.entrySet()) {
-                loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
-            }
+        for (final Map.Entry<?, ?> entry : properties.entrySet()) {
+            loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
+        }
+        for (final Map.Entry<?, ?> entry : System.getProperties().entrySet()) {
+            loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
+        }
+        for (final Map.Entry<String, String> entry : System.getenv().entrySet()) {
+            final String key = entry.getKey().toString().toLowerCase().replace('_', '.');
+            loadedProperties.put(key, entry.getValue());
         }
     }
 
