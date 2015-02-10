@@ -88,7 +88,7 @@ public final class Main {
         }
 
         if (showVersion) {
-            System.out.println(String.format("RDF Processor Tool (RDFP) %s\nJava %s bit (%s) %s\n"
+            System.out.println(String.format("RDF Processor Tool (RDFpro) %s\nJava %s bit (%s) %s\n"
                     + "This is free software released into the public domain",
                     readVersion("eu.fbk.rdfpro", "rdfpro-core", "unknown version"),
                     System.getProperty("sun.arch.data.model"), System.getProperty("java.vendor"),
@@ -97,8 +97,7 @@ public final class Main {
         }
 
         if (showHelp) {
-            System.out.println(String.format(
-                    readResource(RDFProcessor.class.getResource("RDFProcessor.help")),
+            System.out.println(String.format(readResource(RDFProcessor.class.getResource("help")),
                     readVersion("eu.fbk.rdfpro", "rdfpro-core", "unknown version"),
                     readPluginDocs()));
             System.exit(0);

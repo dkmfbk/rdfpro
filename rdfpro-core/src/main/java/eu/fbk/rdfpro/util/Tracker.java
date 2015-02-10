@@ -132,7 +132,22 @@ public final class Tracker {
             } else {
                 STATUS_DATA.put(key, message);
             }
-            STATUS_LOGGER.info(String.join(" | ", STATUS_DATA.values()) + (char) 0);
+            if (STATUS_LOGGER.isInfoEnabled()) {
+                final StringBuilder builder = new StringBuilder();
+                int count = 0;
+                for (final String value : STATUS_DATA.values()) {
+                    if (count == 4) {
+                        builder.append(" ..."); // max 4 elements printed
+                        break;
+                    } else if (count > 0) {
+                        builder.append(" | ");
+                    }
+                    builder.append(value);
+                    ++count;
+                }
+                builder.append((char) 0);
+                STATUS_LOGGER.info(builder.toString());
+            }
         }
     }
 

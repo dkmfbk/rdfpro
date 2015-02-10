@@ -7,7 +7,7 @@ public class JavaScriptTest {
     @Test
     public void testCompile() throws Throwable {
         JavaScript.include(JavaScriptTest.class.getResource("JavaScriptTest.js"));
-        compileAndCall("function call(name, surname) { return 'hello ' + name + ' ' + surname; }");
+        compileAndCall("function call(name, surname) { var x = function(s) { print(s + ' ' + name); }; x(foaf:name); return 'hello ' + name + ' ' + surname; }");
         compileAndCall("'hello ' + n + ' ' + s;");
     }
 

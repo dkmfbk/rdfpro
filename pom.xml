@@ -19,15 +19,6 @@
 
   <developers>
     <developer>
-      <id>corcoglio</id>
-      <name>Francesco Corcoglioniti</name>
-      <email>corcoglio@fbk.eu</email>
-      <roles>
-        <role>Developer</role>
-      </roles>
-      <timezone>+1</timezone>
-    </developer>
-    <developer>
       <id>rospocher</id>
       <name>Marco Rospocher</name>
       <email>rospocher@fbk.eu</email>
@@ -38,19 +29,6 @@
       <timezone>+1</timezone>
       <properties>
         <picUrl>https://my.fbk.eu/fbk-api/v2/picture/rospocher</picUrl>
-      </properties>
-    </developer>
-    <developer>
-      <id>amadori</id>
-      <name>Marco Amadori</name>
-      <email>amadori@fbk.eu</email>
-      <url>http://wed.fbk.eu/people/profile/amadori</url>
-      <roles>
-        <role>Developer</role>
-      </roles>
-      <timezone>+1</timezone>
-      <properties>
-        <picUrl>https://my.fbk.eu/fbk-api/v2/picture/amadori</picUrl>
       </properties>
     </developer>
     <developer>
@@ -66,6 +44,32 @@
         <picUrl>https://my.fbk.eu/fbk-api/v2/picture/mostarda</picUrl>
       </properties>
     </developer>
+    <developer>
+      <id>aprosio</id>
+      <name>Alessio Palmero Aprosio</name>
+      <email>aprosio@fbk.eu</email>
+      <url>https://dkm.fbk.eu/people/profile/aprosio</url>
+      <roles>
+        <role>Developer</role>
+      </roles>
+      <timezone>+1</timezone>
+      <properties>
+        <picUrl>https://my.fbk.eu/fbk-api/v2/picture/aprosio</picUrl>
+      </properties>
+    </developer>
+    <developer>
+      <id>amadori</id>
+      <name>Marco Amadori</name>
+      <email>amadori@fbk.eu</email>
+      <url>http://wed.fbk.eu/people/profile/amadori</url>
+      <roles>
+        <role>Developer</role>
+      </roles>
+      <timezone>+1</timezone>
+      <properties>
+        <picUrl>https://my.fbk.eu/fbk-api/v2/picture/amadori</picUrl>
+      </properties>
+    </developer>
   </developers>
 
   <licenses>
@@ -77,11 +81,20 @@
   </licenses>
 
   <scm>
+    <connection>scm:git:ssh://git@github.com/dkmfbk/rdfpro.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/dkmfbk/rdfpro.git</developerConnection>
+    <url>https://github.com/dkmfbk/rdfpro</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <!--
+  <scm>
     <connection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</connection>
     <developerConnection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</developerConnection>
     <url>https://bitbucket.org/fracor/rdfpro.git</url>
     <tag>HEAD</tag>
   </scm>
+  -->
 
   <distributionManagement>
     <repository>
@@ -109,168 +122,168 @@
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-core</artifactId>
-      <version>${project.version}</version>
+      <version>${project-version}</version>
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-groovy</artifactId>
-      <version>${project.version}</version>
+      <version>${project-version}</version>
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-jsonld</artifactId>
-      <version>${project.version}</version>
+      <version>${project-version}</version>
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-tql</artifactId>
-      <version>${project.version}</version>
+      <version>${project-version}</version>
     </dependency>
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-dist</artifactId>
-      <version>${project.version}</version>
+      <version>${project-version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-model</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-api</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-binary</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-n3</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-nquads</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-ntriples</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-rdfjson</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-rdfxml</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-trig</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-trix</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-rio-turtle</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-http-client</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-http-protocol</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-repository-api</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-query</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-queryresultio-api</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-queryresultio-sparqlxml</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-queryalgebra-evaluation</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.openrdf.sesame</groupId>
       <artifactId>sesame-util</artifactId>
-      <version>${sesame.version}</version>
+      <version>${sesame-version}</version>
     </dependency>
     <dependency>
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-jsonld</artifactId>
-      <version>${semargl-jsonld.version}</version>
+      <version>${semargl-jsonld-version}</version>
     </dependency>
     <dependency>
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-core</artifactId>
-      <version>${semargl-jsonld.version}</version>
+      <version>${semargl-jsonld-version}</version>
     </dependency>
     <dependency>
       <groupId>org.semarglproject</groupId>
       <artifactId>semargl-sesame</artifactId>
-      <version>${semargl-jsonld.version}</version>
+      <version>${semargl-jsonld-version}</version>
     </dependency>
     <dependency>
       <groupId>commons-httpclient</groupId>
       <artifactId>commons-httpclient</artifactId>
-      <version>${httpclient.version}</version>
+      <version>${httpclient-version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
-      <version>${jsr305.version}</version>
+      <version>${jsr305-version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
+      <version>${slf4j-version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
-      <version>${slf4j.version}</version>
+      <version>${slf4j-version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-core</artifactId>
-      <version>${logback.version}</version>
+      <version>${logback-version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
+      <version>${logback-version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.tomcat</groupId>
@@ -285,12 +298,12 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
+      <version>${junit-version}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.groovy</groupId>
       <artifactId>groovy-all</artifactId>
-      <version>${groovy.version}</version>
+      <version>${groovy-version}</version>
     </dependency>
     </dependencies>
   </dependencyManagement>
@@ -300,12 +313,12 @@
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-ssh-external</artifactId>
-        <version>${wagon.version}</version>
+        <version>${wagon-version}</version>
       </extension>
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
         <artifactId>wagon-webdav-jackrabbit</artifactId>
-        <version>${wagon.version}</version>
+        <version>${wagon-version}</version>
       </extension>
     </extensions>
 
@@ -315,15 +328,15 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>${release-plugin.version}</version>
+          <version>${release-plugin-version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>${compiler-plugin.version}</version>
+          <version>${compiler-plugin-version}</version>
           <configuration>
-            <source>${java.source.version}</source>
-            <target>${java.target.version}</target>
+            <source>${java-source-version}</source>
+            <target>${java-target-version}</target>
             <debug>true</debug>
             <optimize>false</optimize>
             <showDeprecation>true</showDeprecation>
@@ -333,17 +346,17 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>${jar-plugin.version}</version>
+          <version>${jar-plugin-version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
-          <version>${source-plugin.version}</version>
+          <version>${source-plugin-version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>${assembly-plugin.version}</version>
+          <version>${assembly-plugin-version}</version>
           <configuration>
             <!-- avoid warnings for paths longer than 100 chars -->
             <tarLongFileMode>gnu</tarLongFileMode>
@@ -353,7 +366,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>${site-plugin.version}</version>
+          <version>${site-plugin-version}</version>
           <configuration>
             <locales>en</locales>
           </configuration>
@@ -384,7 +397,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
-          <version>${eclipse-plugin.version}</version>
+          <version>${eclipse-plugin-version}</version>
           <configuration>
             <downloadSources>true</downloadSources>
             <downloadJavadocs>true</downloadJavadocs>
@@ -395,7 +408,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>${surefire-plugin.version}</version>
+          <version>${surefire-plugin-version}</version>
           <configuration>
             <argLine>-enableassertions</argLine>
             <includes>
@@ -411,7 +424,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>${javadoc-plugin.version}</version>
+          <version>${javadoc-plugin-version}</version>
           <configuration>
             <links>
               <link>http://java.sun.com/javase/6/docs/api/</link>
@@ -519,7 +532,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>${dependency-plugin.version}</version>
+        <version>${dependency-plugin-version}</version>
         <executions>
           <execution>
             <id>analyze</id>
@@ -541,12 +554,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>${site-plugin.version}</version>
+        <version>${site-plugin-version}</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>${project-info-plugin.version}</version>
+        <version>${project-info-plugin-version}</version>
         <configuration>
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
@@ -559,7 +572,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${javadoc-plugin.version}</version>
+        <version>${javadoc-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <links>
@@ -634,7 +647,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>${jxr-plugin.version}</version>
+        <version>${jxr-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <linkJavadoc>false</linkJavadoc>
@@ -649,20 +662,22 @@
           </reportSet>
         </reportSets>
       </plugin>
+      <!-- Does not support JAVA 8 syntax
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javancss-maven-plugin</artifactId>
-        <version>${javancss-plugin.version}</version>
+        <version>${javancss-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <linkXRef>true</linkXRef>
           <xrefLocation>${basedir}/${parent-path}/target/site/xref</xrefLocation>
         </configuration>
       </plugin>
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${checkstyle-plugin.version}</version>
+        <version>${checkstyle-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <enableRSS>true</enableRSS>
@@ -684,7 +699,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>${surefire-report-plugin.version}</version>
+        <version>${surefire-report-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <aggregate>true</aggregate>
@@ -696,7 +711,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>cobertura-maven-plugin</artifactId>
-        <version>${cobertura-plugin.version}</version>
+        <version>${cobertura-plugin-version}</version>
         <configuration>
           <aggregate>${aggregate}</aggregate>
           <forceMojoExecution>true</forceMojoExecution>
@@ -707,7 +722,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>taglist-maven-plugin</artifactId>
-        <version>${taglist-plugin.version}</version>
+        <version>${taglist-plugin-version}</version>
         <configuration>
           <tagListOptions>
             <tagClasses>
@@ -752,7 +767,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>versions-maven-plugin</artifactId>
-        <version>${versions-plugin.version}</version>
+        <version>${versions-plugin-version}</version>
         <inherited>false</inherited>
         <reportSets>
           <reportSet>
@@ -765,7 +780,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-changelog-plugin</artifactId>
-        <version>${changelog-plugin.version}</version>
+        <version>${changelog-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <type>range</type>
@@ -784,7 +799,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs-plugin.version}</version>
+        <version>${findbugs-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <threshold>Normal</threshold>
@@ -794,11 +809,11 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
-        <version>${pmd-plugin.version}</version>
+        <version>${pmd-plugin-version}</version>
         <inherited>false</inherited>
         <configuration>
           <aggregate>true</aggregate>
-          <targetJdk>${java.source.version}</targetJdk>
+          <targetJdk>${java.source-version}</targetJdk>
           <linkXref>true</linkXref>
           <sourceEncoding>UTF-8</sourceEncoding>
           <rulesets>
@@ -886,50 +901,50 @@
     <aggregate>true</aggregate>
     <site-path>file:///${basedir}/${parent-path}/target/website</site-path>
     <repo-path>file:///${basedir}/${parent-path}/target/mvnrepo</repo-path>
-    <site-version>${project.version}</site-version>
+    <project-version>${project.version}</project-version>
 
     <!-- Build configuration -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.source.version>1.8</java.source.version>
-    <java.target.version>1.8</java.target.version>
+    <java-source-version>1.8</java-source-version>
+    <java-target-version>1.8</java-target-version>
 
     <!-- Dependency versions -->
-    <junit.version>4.12-beta-1</junit.version>
-    <jsr305.version>3.0.0</jsr305.version>
-    <slf4j.version>1.7.7</slf4j.version>
-    <logback.version>1.1.2</logback.version>
-    <sesame.version>2.7.14</sesame.version>
-    <jsonld-java.version>0.2</jsonld-java.version>
-    <semargl-jsonld.version>0.6.1</semargl-jsonld.version>
-    <httpclient.version>3.1</httpclient.version>
-    <groovy.version>2.4.0-beta-3</groovy.version>
+    <junit-version>4.12-beta-2</junit-version>
+    <jsr305-version>3.0.0</jsr305-version>
+    <slf4j-version>1.7.10</slf4j-version>
+    <logback-version>1.1.2</logback-version>
+    <sesame-version>2.7.14</sesame-version>
+    <jsonld-java-version>0.2</jsonld-java-version>
+    <semargl-jsonld-version>0.6.1</semargl-jsonld-version>
+    <httpclient-version>3.1</httpclient-version>
+    <groovy-version>2.4.0-beta-4</groovy-version>
 
     <!-- Build plugin versions -->
-    <release-plugin.version>2.5.1</release-plugin.version>
-    <compiler-plugin.version>3.2</compiler-plugin.version>
-    <assembly-plugin.version>2.5.2</assembly-plugin.version>
-    <eclipse-plugin.version>2.9</eclipse-plugin.version>
-    <surefire-plugin.version>2.18</surefire-plugin.version>
-    <source-plugin.version>2.4</source-plugin.version>
-    <jar-plugin.version>2.5</jar-plugin.version>
-    <dependency-plugin.version>2.9</dependency-plugin.version>
-    <wagon.version>2.8</wagon.version>
+    <release-plugin-version>2.5.1</release-plugin-version>
+    <compiler-plugin-version>3.2</compiler-plugin-version>
+    <assembly-plugin-version>2.5.3</assembly-plugin-version>
+    <eclipse-plugin-version>2.9</eclipse-plugin-version>
+    <surefire-plugin-version>2.18.1</surefire-plugin-version>
+    <source-plugin-version>2.4</source-plugin-version>
+    <jar-plugin-version>2.5</jar-plugin-version>
+    <dependency-plugin-version>2.9</dependency-plugin-version>
+    <wagon-version>2.8</wagon-version>
 
     <!-- Reporting plugin versions -->
-    <site-plugin.version>3.4</site-plugin.version>
-    <project-info-plugin.version>2.7</project-info-plugin.version>
-    <taglist-plugin.version>2.4</taglist-plugin.version>
-    <surefire-report-plugin.version>2.18</surefire-report-plugin.version>
-    <pmd-plugin.version>3.3</pmd-plugin.version>
-    <findbugs-plugin.version>3.0.0</findbugs-plugin.version>
-    <javancss-plugin.version>2.1</javancss-plugin.version>
-    <javadoc-plugin.version>2.10.1</javadoc-plugin.version>
-    <jxr-plugin.version>2.5</jxr-plugin.version>
-    <cobertura-plugin.version>2.6</cobertura-plugin.version>
-    <checkstyle-plugin.version>2.13</checkstyle-plugin.version>
-    <jdepend-plugin.version>2.0</jdepend-plugin.version>
-    <versions-plugin.version>2.1</versions-plugin.version>
-    <changelog-plugin.version>2.3</changelog-plugin.version>
+    <site-plugin-version>3.4</site-plugin-version>
+    <project-info-plugin-version>2.8</project-info-plugin-version>
+    <taglist-plugin-version>2.4</taglist-plugin-version>
+    <surefire-report-plugin-version>2.18.1</surefire-report-plugin-version>
+    <pmd-plugin-version>3.3</pmd-plugin-version>
+    <findbugs-plugin-version>3.0.0</findbugs-plugin-version>
+    <javancss-plugin-version>2.1</javancss-plugin-version>
+    <javadoc-plugin-version>2.10.1</javadoc-plugin-version>
+    <jxr-plugin-version>2.5</jxr-plugin-version>
+    <cobertura-plugin-version>2.6</cobertura-plugin-version>
+    <checkstyle-plugin-version>2.13</checkstyle-plugin-version>
+    <jdepend-plugin-version>2.0</jdepend-plugin-version>
+    <versions-plugin-version>2.1</versions-plugin-version>
+    <changelog-plugin-version>2.3</changelog-plugin-version>
   </properties>
 
   <modules>

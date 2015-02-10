@@ -8,7 +8,7 @@
   <fileSets>
     <fileSet>
       <directory>src/main/scripts</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <fileMode>0755</fileMode>
       <directoryMode>0755</directoryMode>
       <excludes>
@@ -17,18 +17,18 @@
     </fileSet>
     <fileSet>
       <directory>src/main/scripts</directory>
-      <outputDirectory>/groovy</outputDirectory>
+      <outputDirectory>groovy</outputDirectory>
       <includes>
         <include>*.groovy</include>
       </includes>
     </fileSet>
     <fileSet>
       <directory>src/main/config</directory>
-      <outputDirectory>/etc</outputDirectory>
+      <outputDirectory>etc</outputDirectory>
     </fileSet>
     <fileSet>
       <directory>..</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <includes>
         <include>README.md</include>
         <include>NOTICE</include>
@@ -38,7 +38,7 @@
   </fileSets>
   <dependencySets>
     <dependencySet>
-      <outputDirectory>/lib</outputDirectory>
+      <outputDirectory>lib</outputDirectory>
       <useTransitiveFiltering>true</useTransitiveFiltering>
     </dependencySet>
   </dependencySets>

@@ -28,12 +28,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -214,19 +216,23 @@ public final class RDFHandlers {
      * Each location is either a file path or a full URL, possibly prefixed with an {@code .ext:}
      * fragment that overrides the file extension used to detect RDF format and compression.
      * Currently, URL different from {@code file://} are not supported, i.e., only local files can
-     * be written. If more locations are specified, statements are divided among them evenly. If
-     * no locations are given, the {@link #NIL} handler is returned. Note that data is written at
-     * each pass, so you may consider filtering out multiple passes to avoid writing the same data
-     * again.
+     * be written. If more locations are specified, statements are divided among them evenly (in
+     * chunks of configurable size). If no locations are given, the {@link #NIL} handler is
+     * returned. Note that data is written at each pass, so you may consider filtering out
+     * multiple passes to avoid writing the same data again.
      *
      * @param config
      *            the optional {@code WriterConfig} for fine tuning the writing process; if null,
      *            a default configuration enabling pretty printing will be used
+     * @param chunkSize
+     *            the number of consecutive statements to write as a block to a single location
+     *            (at least 1)
      * @param locations
      *            the locations of the files to write
      * @return the created {@code RDFHandler}
      */
-    public static RDFHandler write(@Nullable final WriterConfig config, final String... locations) {
+    public static RDFHandler write(@Nullable final WriterConfig config, final int chunkSize,
+            final String... locations) {
         final WriterConfig actualConfig = config != null ? config : DEFAULT_WRITER_CONFIG;
         final RDFHandler[] handlers = new RDFHandler[locations.length];
         for (int i = 0; i < locations.length; ++i) {
@@ -237,7 +243,7 @@ public final class RDFHandlers {
                     : new SequentialWriteHandler(actualConfig, location);
         }
         return handlers.length == 0 ? NIL : handlers.length == 1 ? handlers[0]
-                : dispatchRoundRobin(handlers);
+                : dispatchRoundRobin(chunkSize, handlers);
     }
 
     /**
@@ -397,14 +403,20 @@ public final class RDFHandlers {
      * Returns an {@code RDFHandler} that dispatches calls to one of {@code RDFHandler}s supplied
      * chosen in a round robin fashion. More precisely, calls to methods
      * {@link RDFHandler#handleStatement(Statement)} and {@link RDFHandler#handleComment(String)}
-     * are forwarded in a round robin fashion, while other methods are always forwarded to all the
-     * handlers. If no {@code RDFHandler} is supplied, {@link #NIL} is returned.
+     * are forwarded in a round robin fashion, with each chunk of {@code chunkSize >= 1}
+     * consecutive calls dispatched to a certain handler. Other methods are always forwarded to
+     * all the handlers. If no {@code RDFHandler} is supplied, {@link #NIL} is returned.
      *
+     * @param chunkSize
+     *            the chunk size, greater than or equal to 1; you may use this parameter to keep
+     *            triples that are received consecutively together (as far as possible) when
+     *            propagated to wrapped handlers, e.g., because in this way they compress better
+     *            when written to a file (assuming input triples are somehow sorted)
      * @param handlers
      *            the {@code RDFHandler}s to forward calls to, in a round robin fashion
      * @return the created {@code RDFHandler} dispatcher
      */
-    public static RDFHandler dispatchRoundRobin(final RDFHandler... handlers) {
+    public static RDFHandler dispatchRoundRobin(final int chunkSize, final RDFHandler... handlers) {
         if (Arrays.asList(handlers).contains(null)) {
             throw new NullPointerException();
         }
@@ -413,7 +425,7 @@ public final class RDFHandlers {
         } else if (handlers.length == 1) {
             return handlers[1];
         } else {
-            return new DispatchRoundRobinHandler(handlers);
+            return new DispatchRoundRobinHandler(chunkSize, handlers);
         }
     }
 
@@ -479,7 +491,6 @@ public final class RDFHandlers {
      * @return the (possibly) wrapped handler
      */
     public static RDFHandler decouple(final RDFHandler handler) {
-        // TODO: find a better / more principled way to manage decoupling
         if (handler == NIL || handler instanceof DecoupleHandler) {
             return handler;
         }
@@ -990,11 +1001,14 @@ public final class RDFHandlers {
 
     private static final class DispatchRoundRobinHandler extends AbstractRDFHandler {
 
-        private final AtomicInteger counter = new AtomicInteger(0);
+        private final AtomicLong counter = new AtomicLong(0);
+
+        private final int chunkSize;
 
         private final RDFHandler[] handlers;
 
-        DispatchRoundRobinHandler(final RDFHandler[] handlers) {
+        DispatchRoundRobinHandler(final int chunkSize, final RDFHandler[] handlers) {
+            this.chunkSize = chunkSize;
             this.handlers = handlers;
         }
 
@@ -1055,7 +1069,8 @@ public final class RDFHandlers {
         }
 
         private RDFHandler pickHandler() {
-            return this.handlers[this.counter.getAndIncrement() % this.handlers.length];
+            return this.handlers[(int) (this.counter.getAndIncrement() //
+                    / this.chunkSize % this.handlers.length)];
         }
 
     }
@@ -1263,26 +1278,30 @@ public final class RDFHandlers {
 
         private static final int BUFFER_SIZE = 4 * 1024;
 
+        private final int numCores;
+
         private final Set<Thread> incomingThreads;
 
         private final List<Future<?>> futures;
 
-        private final AtomicInteger index;
-
-        private final AtomicInteger size;
+        private final AtomicInteger counter;
 
         private Throwable exception;
 
         private Statement[] buffer;
 
-        private int fraction;
+        private int size;
+
+        private int mask;
+
+        private boolean disabled;
 
         DecoupleHandler(final RDFHandler handler) {
             super(handler);
+            this.numCores = Environment.getCores();
             this.incomingThreads = new HashSet<Thread>(); // equals/hashCode based on identity
-            this.futures = new ArrayList<Future<?>>();
-            this.index = new AtomicInteger(0);
-            this.size = new AtomicInteger(0);
+            this.futures = new LinkedList<Future<?>>();
+            this.counter = new AtomicInteger(0);
         }
 
         @Override
@@ -1292,110 +1311,100 @@ public final class RDFHandlers {
             this.futures.clear();
             this.exception = null;
             this.buffer = new Statement[BUFFER_SIZE];
-            this.index.set(0);
-            this.size.set(0);
-            this.fraction = 1;
+            this.size = 0;
+            this.mask = 0;
+            this.disabled = false;
         }
 
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            final int i = this.index.getAndIncrement();
-            if (i % this.fraction == 0) {
-                final int index = i / this.fraction;
-                if (index < BUFFER_SIZE) {
-                    this.buffer[index] = statement;
-                    final int size = this.size.incrementAndGet();
-                    if (size == BUFFER_SIZE) {
-                        this.incomingThreads.add(Thread.currentThread());
-                        checkNotFailed();
-                        schedule();
-                    }
-                    return;
-                }
+            // Most compact implementation tackling frequent case decoupler is disabled
+            if (this.disabled) {
+                super.handleStatement(statement);
+            } else {
+                handleStatementHelper(statement);
             }
-            super.handleStatement(statement);
         }
 
-        @Override
-        public void endRDF() throws RDFHandlerException {
-            process(true);
-            List<Future<?>> futuresToWaitFor;
-            synchronized (this.futures) {
-                futuresToWaitFor = new ArrayList<Future<?>>(this.futures);
+        private void handleStatementHelper(final Statement statement) throws RDFHandlerException {
+            if ((this.counter.getAndIncrement() & this.mask) != 0) {
+                super.handleStatement(statement);
+            } else {
+                handleStatementInBackground(statement);
             }
-            for (final Future<?> future : futuresToWaitFor) {
-                while (!future.isDone()) {
-                    try {
-                        future.get();
-                    } catch (final Throwable ex) {
-                        // Ignore
-                    }
-                }
-            }
+        }
+
+        private void handleStatementInBackground(final Statement statement)
+                throws RDFHandlerException {
+
+            Statement[] fullBuffer = null;
             synchronized (this) {
-                checkNotFailed();
+                this.buffer[this.size++] = statement;
+                if (this.size == BUFFER_SIZE) {
+                    fullBuffer = this.buffer;
+                    this.buffer = new Statement[BUFFER_SIZE];
+                    this.size = 0;
+                    this.incomingThreads.add(Thread.currentThread());
+                    checkNotFailed();
+                    calibrateMask();
+                    fullBuffer = handleStatementsInBackground(fullBuffer);
+                }
             }
-            super.endRDF();
-        }
 
-        @Override
-        public void close() {
-            super.close();
-            synchronized (this.futures) {
-                for (final Future<?> future : this.futures) {
-                    future.cancel(false);
+            if (fullBuffer != null) {
+                for (final Statement stmt : fullBuffer) {
+                    super.handleStatement(stmt);
                 }
             }
         }
 
-        private void schedule() throws RDFHandlerException {
-            synchronized (this.futures) {
-                for (final Iterator<Future<?>> i = this.futures.iterator(); i.hasNext();) {
-                    final Future<?> future = i.next();
-                    if (future.isDone()) {
-                        i.remove();
-                    }
-                }
-                this.futures.add(Environment.getPool().submit(new Runnable() {
+        private Statement[] handleStatementsInBackground(final Statement[] buffer) {
 
-                    @Override
-                    public void run() {
-                        try {
-                            process(false);
-                        } catch (final Throwable ex) {
-                            @SuppressWarnings("resource")
-                            final DecoupleHandler h = DecoupleHandler.this;
-                            synchronized (h) {
-                                if (h.exception == null) {
-                                    h.exception = ex;
-                                } else {
-                                    h.exception.addSuppressed(ex);
-                                }
-                                synchronized (h.futures) {
-                                    for (final Future<?> future : h.futures) {
-                                        future.cancel(false);
-                                    }
-                                }
+            // Update the list of pending futures. Abort if too many tasks pending.
+            for (final Iterator<Future<?>> i = this.futures.iterator(); i.hasNext();) {
+                final Future<?> future = i.next();
+                if (future.isDone()) {
+                    i.remove();
+                }
+            }
+
+            // If there are too many tasks (futures) pending, do not use background processing
+            if (this.futures.size() >= this.numCores) {
+                return buffer;
+            }
+
+            // Schedule a background task, properly managing exceptions it may throw
+            this.futures.add(Environment.getPool().submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    try {
+                        for (final Statement statement : buffer) {
+                            DecoupleHandler.super.handleStatement(statement);
+                        }
+                    } catch (final Throwable ex) {
+                        @SuppressWarnings("resource")
+                        final DecoupleHandler h = DecoupleHandler.this;
+                        synchronized (h) {
+                            if (h.exception == null) {
+                                h.exception = ex;
+                            } else {
+                                h.exception.addSuppressed(ex);
+                            }
+                            for (final Future<?> future : h.futures) {
+                                future.cancel(false);
                             }
                         }
                     }
+                }
 
-                }));
-            }
+            }));
+
+            // Nothing left to be processed
+            return null;
         }
 
-        private void process(final boolean force) throws RDFHandlerException {
-            Statement[] statements;
-            int count;
-            synchronized (this) {
-                statements = this.buffer;
-                count = this.size.get();
-                if (count == 0 || count < BUFFER_SIZE && !force) {
-                    return;
-                }
-                this.buffer = new Statement[BUFFER_SIZE];
-                this.size.set(0);
-            }
+        private void calibrateMask() {
 
             // Here we adapt the fraction of incoming statements that are buffered, based on the
             // numbers of threads we detected entered the decoupler. The fraction is chosen so to
@@ -1404,17 +1413,16 @@ public final class RDFHandlers {
             // or to 1 (single thread in).
             final int numCores = Environment.getCores();
             final int numThreads = this.incomingThreads.size();
-            final int newFraction = numThreads >= numCores ? 1000 : numCores
-                    / (numCores - numThreads);
-            this.index.set(BUFFER_SIZE * Math.max(this.fraction, newFraction));
-            synchronized (this) {
-                this.fraction = newFraction;
+            if (numCores > numThreads) {
+                this.mask = Integer.highestOneBit(numCores / (numCores - numThreads)) - 1;
+            } else {
+                this.mask = 0xFFFFFFFF;
+                this.disabled = true;
+                LOGGER.debug("Decoupler disabled");
             }
-            this.index.set(0);
 
-            for (int i = 0; i < count; ++i) {
-                super.handleStatement(statements[i]);
-            }
+            // note: we do not declare mask as volatile, so the change will be picked up by
+            // threads only at a later time, but this is not a problem
         }
 
         private void checkNotFailed() throws RDFHandlerException {
@@ -1427,6 +1435,46 @@ public final class RDFHandlers {
                     throw (Error) this.exception;
                 }
                 throw new RDFHandlerException(this.exception);
+            }
+        }
+
+        @Override
+        public void endRDF() throws RDFHandlerException {
+
+            // Handle remaining buffered statements
+            for (int i = 0; i < this.size; ++i) {
+                super.handleStatement(this.buffer[i]);
+            }
+
+            // Wait for completion of pending tasks
+            List<Future<?>> futuresToWaitFor;
+            synchronized (this) {
+                futuresToWaitFor = new ArrayList<Future<?>>(this.futures);
+            }
+            for (final Future<?> future : futuresToWaitFor) {
+                while (!future.isDone()) {
+                    try {
+                        future.get();
+                    } catch (final Throwable ex) {
+                        // Ignore
+                    }
+                }
+            }
+
+            // Check there were no errors in background processing
+            checkNotFailed();
+
+            // Propagate
+            super.endRDF();
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            synchronized (this) {
+                for (final Future<?> future : this.futures) {
+                    future.cancel(false);
+                }
             }
         }
 

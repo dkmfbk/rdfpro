@@ -210,27 +210,27 @@ public abstract class Sorter<T> implements AutoCloseable {
             this.decodersLatch = new CountDownLatch(decoders);
             this.inputs = new ArrayList<Input>();
             this.readTracker.start();
-            if (!parallelize) {
-                this.inputs.add(new Input(IO.buffer(this.sortIn), this.dictionary));
-                tryDecode(this.inputs.get(0), consumer);
-            } else {
-                for (int i = 0; i < decoders; ++i) {
-                    final InputStream in = IO.parallelBuffer(this.sortIn, (byte) 0);
-                    this.inputs.add(new Input(in, this.dictionary));
-                }
-                for (int i = 1; i < decoders; ++i) {
-                    final Input input = this.inputs.get(i);
-                    Environment.getPool().execute(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            tryDecode(input, consumer);
-                        }
-
-                    });
-                }
-                tryDecode(this.inputs.get(0), consumer);
+            // if (!parallelize) {
+            // this.inputs.add(new Input(IO.buffer(this.sortIn), this.dictionary));
+            // tryDecode(this.inputs.get(0), consumer);
+            // } else {
+            for (int i = 0; i < decoders; ++i) {
+                final InputStream in = IO.parallelBuffer(this.sortIn, (byte) 0);
+                this.inputs.add(new Input(in, this.dictionary));
             }
+            for (int i = 1; i < decoders; ++i) {
+                final Input input = this.inputs.get(i);
+                Environment.getPool().execute(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        tryDecode(input, consumer);
+                    }
+
+                });
+            }
+            tryDecode(this.inputs.get(0), consumer);
+            // }
             this.decodersLatch.await();
             this.readTracker.end();
 

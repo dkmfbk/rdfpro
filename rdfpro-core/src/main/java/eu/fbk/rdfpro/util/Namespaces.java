@@ -24,6 +24,8 @@ import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,14 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
     static {
         try {
-            DEFAULT = Namespaces.load(Namespaces.class.getResource("prefixes"));
+            final List<URL> urls = new ArrayList<>();
+            final ClassLoader cl = Namespaces.class.getClassLoader();
+            for (final String p : new String[] { "META-INF/rdfpro.prefixes", "rdfpro.prefixes" }) {
+                for (final Enumeration<URL> e = cl.getResources(p); e.hasMoreElements();) {
+                    urls.add(e.nextElement());
+                }
+            }
+            DEFAULT = Namespaces.load(urls, true);
         } catch (final IOException ex) {
             throw new Error("Unexpected exception (!): " + ex.getMessage(), ex);
         }
@@ -95,7 +104,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
     private final int neighborhood;
 
-    private Namespaces(final List<URIPrefixPair> pairs) {
+    private Namespaces(final List<URIPrefixPair> pairs, final boolean resolveClashes) {
 
         final int size = pairs.size();
         final int tableSize = size + size / 2; // target fill factor = 0.66
@@ -106,6 +115,18 @@ public final class Namespaces extends AbstractSet<Namespace> {
         this.prefixTable = new int[2 * tableSize];
         this.uriTable = new int[2 * tableSize];
         this.data = new String[size * 2];
+
+        List<URIPrefixPair> filteredPairs = pairs;
+        if (resolveClashes) {
+            final Set<String> prefixes = new HashSet<>();
+            filteredPairs = new ArrayList<URIPrefixPair>(pairs);
+            for (final Iterator<URIPrefixPair> i = filteredPairs.iterator(); i.hasNext();) {
+                final URIPrefixPair pair = i.next();
+                if (!prefixes.add(pair.prefix)) {
+                    i.remove(); // keep only first pair for given prefix
+                }
+            }
+        }
 
         Collections.sort(pairs);
 
@@ -193,54 +214,44 @@ public final class Namespaces extends AbstractSet<Namespace> {
     }
 
     /**
-     * Creates a {@code Namespaces} set by loading the namespace declarations in the file at the
-     * URL specified. The file must be a text file encoded in UTF-8. Each line has the format
+     * Creates a {@code Namespaces} set by loading the namespace declarations in the files at the
+     * URLs specified. The text files must be encoded in UTF-8. Each line has the format
      * {@code namespace_URI prefix_1 ... prefix_N}, where components are separated by whitespaces.
      *
-     * @param url
-     *            the URL identifying the file to load, not null
+     * @param urls
+     *            the URLs identifying the files to load, not null
+     * @param resolveClashes
+     *            true in case a clash caused by the same prefix being mapped to different
+     *            namespace URIs should be silently resolved by keeping only the first mapping in
+     *            the supplied iterable
      * @return the created {@code Namespaces} object
      * @throws IOException
      *             on IO error
      * @throws IllegalArgumentException
-     *             in case a prefix is associated to different namespace URIs
+     *             in case {@code resolveClashes} is false and the {@code Iterable} associates the
+     *             same prefix to different namespace URIs
      */
-    public static Namespaces load(final URL url) throws IOException, IllegalArgumentException {
-        try (final Reader reader = new InputStreamReader(url.openStream(),
-                Charset.forName("UTF-8"))) {
-            return load(reader);
-        }
-    }
-
-    /**
-     * Creates a {@code Namespaces} set by loading the namespace declarations from the char
-     * stream. Each line in the stream must have the format
-     * {@code namespace_URI prefix_1 ... prefix_N}, where components are separated by whitespaces.
-     *
-     * @param reader
-     *            the {@code Reader} where to read from, not null
-     * @return the created {@code Namespaces} object
-     * @throws IOException
-     *             on IO error
-     * @throws IllegalArgumentException
-     *             in case a prefix is associated to different namespace URIs
-     */
-    public static Namespaces load(final Reader reader) throws IOException,
-            IllegalArgumentException {
+    public static Namespaces load(final Iterable<URL> urls, final boolean resolveClashes)
+            throws IOException {
 
         final List<URIPrefixPair> pairs = new ArrayList<>();
-        final BufferedReader in = reader instanceof BufferedReader ? (BufferedReader) reader
-                : new BufferedReader(reader);
 
-        String line;
-        while ((line = in.readLine()) != null) {
-            final String[] tokens = line.split("\\s+");
-            for (int i = 1; i < tokens.length; ++i) {
-                pairs.add(new URIPrefixPair(tokens[0], tokens[i]));
+        for (final URL url : urls) {
+            try (final BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    url.openStream(), Charset.forName("UTF-8")))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    final String[] tokens = line.split("\\s+");
+                    if (tokens.length >= 2 && !tokens[0].startsWith("#")) {
+                        for (int i = 1; i < tokens.length; ++i) {
+                            pairs.add(new URIPrefixPair(tokens[0], tokens[i]));
+                        }
+                    }
+                }
             }
         }
 
-        return new Namespaces(pairs);
+        return new Namespaces(pairs, resolveClashes);
     }
 
     /**
@@ -250,13 +261,17 @@ public final class Namespaces extends AbstractSet<Namespace> {
      *
      * @param iterable
      *            the {@code Iterable} where to load namespaces from, not null
+     * @param resolveClashes
+     *            true in case a clash caused by the same prefix being mapped to different
+     *            namespace URIs should be silently resolved by keeping only the first mapping in
+     *            the supplied iterable
      * @return the corresponding {@code Namespaces} object
      * @throws IllegalArgumentException
-     *             in case the {@code Iterable} associates the same prefix to different namespace
-     *             URIs
+     *             in case {@code resolveClashes} is false and the {@code Iterable} associates the
+     *             same prefix to different namespace URIs
      */
-    public static Namespaces forIterable(final Iterable<? extends Namespace> iterable)
-            throws IllegalArgumentException {
+    public static Namespaces forIterable(final Iterable<? extends Namespace> iterable,
+            final boolean resolveClashes) throws IllegalArgumentException {
         if (iterable instanceof Namespaces) {
             return (Namespaces) iterable;
         }
@@ -265,7 +280,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         for (final Namespace namespace : iterable) {
             pairs.add(new URIPrefixPair(namespace.getName(), namespace.getPrefix()));
         }
-        return new Namespaces(pairs);
+        return new Namespaces(pairs, resolveClashes);
     }
 
     /**
@@ -290,7 +305,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         for (final Map.Entry<String, String> entry : map.entrySet()) {
             pairs.add(new URIPrefixPair(entry.getValue(), entry.getKey()));
         }
-        return new Namespaces(pairs);
+        return new Namespaces(pairs, false); // no clashes possible
     }
 
     /**
@@ -300,12 +315,17 @@ public final class Namespaces extends AbstractSet<Namespace> {
      *
      * @param map
      *            the {@code namespace URI -> prefix} map, not null
+     * @param resolveClashes
+     *            true in case a clash caused by the same prefix being mapped to different
+     *            namespace URIs should be silently resolved by keeping only the first mapping in
+     *            the supplied iterable
      * @return the corresponding {@code Namespaces} object
      * @throws IllegalArgumentException
-     *             in case the map associates the same prefix to multiple namespace URIs
+     *             in case {@code resolveClashes} is false and the {@code Iterable} associates the
+     *             same prefix to different namespace URIs
      */
-    public static Namespaces forPrefixMap(final Map<String, String> map)
-            throws IllegalArgumentException {
+    public static Namespaces forPrefixMap(final Map<String, String> map,
+            final boolean resolveClashes) throws IllegalArgumentException {
 
         if (map instanceof EntryMap) {
             final EntryMap entryMap = (EntryMap) map;
@@ -318,7 +338,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         for (final Map.Entry<String, String> entry : map.entrySet()) {
             pairs.add(new URIPrefixPair(entry.getKey(), entry.getValue()));
         }
-        return new Namespaces(pairs);
+        return new Namespaces(pairs, resolveClashes);
     }
 
     @Override

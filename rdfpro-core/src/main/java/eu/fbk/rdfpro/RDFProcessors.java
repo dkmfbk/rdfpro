@@ -20,6 +20,7 @@ import java.io.PrintStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -137,7 +138,7 @@ public final class RDFProcessors {
         switch (name) {
         case "r":
         case "read": {
-            final Options options = Options.parse("b|p|+", args);
+            final Options options = Options.parse("b!|p|+", args);
             final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
                     new String[0]);
             final boolean preserveBNodes = options.hasOption("p");
@@ -148,10 +149,11 @@ public final class RDFProcessors {
 
         case "w":
         case "write": {
-            final Options options = Options.parse("+", args);
+            final Options options = Options.parse("c!|+", args);
+            final int chunkSize = options.getOptionArg("c", Integer.class, 1);
             final String[] locations = options.getPositionalArgs(String.class).toArray(
                     new String[0]);
-            return write(null, locations);
+            return write(null, chunkSize, locations);
         }
 
         case "t":
@@ -181,7 +183,7 @@ public final class RDFProcessors {
                     } else {
                         url = RDFProcessors.class.getClassLoader().getResource(source);
                     }
-                    namespaces = Namespaces.load(url);
+                    namespaces = Namespaces.load(Collections.singleton(url), false);
                 } catch (final Throwable ex) {
                     throw new IllegalArgumentException(
                             "Cannot load prefix/namespace bindings from " + source + ": "
@@ -319,7 +321,7 @@ public final class RDFProcessors {
                             + ": " + ex.getMessage(), ex);
                 }
             }
-            return query(endpointURL, query, preserveBNodes);
+            return query(true, preserveBNodes, endpointURL, query);
         }
 
         case "update": {
@@ -690,12 +692,14 @@ public final class RDFProcessors {
     /**
      * Creates an {@code RDFProcessor} that retrieves data from a SPARQL endpoint and inject it in
      * the RDF stream at each pass. This is a utility method that relies on
-     * {@link #inject(RDFSource)}, on {@link RDFSources#query(String, String, boolean)} and on
-     * {@link #track(Tracker)} for providing progress information on fetched statements. NOTE: as
-     * SPARQL does not provide any guarantee on the identifiers of returned BNodes, it may happen
-     * that different BNodes are returned in different passes, causing the RDF stream produced by
-     * this {@code RDFProcessor} to change from one pass to another.
+     * {@link #inject(RDFSource)}, on {@link RDFSources#query(boolean, boolean, String, String)}
+     * and on {@link #track(Tracker)} for providing progress information on fetched statements.
+     * NOTE: as SPARQL does not provide any guarantee on the identifiers of returned BNodes, it
+     * may happen that different BNodes are returned in different passes, causing the RDF stream
+     * produced by this {@code RDFProcessor} to change from one pass to another.
      *
+     * @param parallelize
+     *            true if query results should be handled by multiple threads in parallel
      * @param endpointURL
      *            the URL of the SPARQL endpoint, not null
      * @param query
@@ -705,12 +709,12 @@ public final class RDFProcessors {
      *            rewritten on a per-endpoint basis to avoid possible clashes
      * @return the created {@code RDFProcessor}
      */
-    public static RDFProcessor query(final String endpointURL, final String query,
-            final boolean preserveBNodes) {
+    public static RDFProcessor query(final boolean parallelize, final boolean preserveBNodes,
+            final String endpointURL, final String query) {
         final RDFProcessor tracker = track(new Tracker(LOGGER, null,
                 "%d triples queried (%d tr/s avg)", //
                 "%d triples queried (%d tr/s, %d tr/s avg)"));
-        final RDFSource source = RDFSources.query(endpointURL, query, preserveBNodes);
+        final RDFSource source = RDFSources.query(parallelize, preserveBNodes, endpointURL, query);
         return inject(tracker.wrap(source));
     }
 
@@ -752,16 +756,19 @@ public final class RDFProcessors {
      * @param config
      *            the optional {@code WriterConfig} for fine tuning the writing process; if null,
      *            a default configuration enabling pretty printing will be used
+     * @param chunkSize
+     *            the number of consecutive statements to be written as a single chunk to a single
+     *            location (increase it to preserve locality)
      * @param locations
      *            the locations of the files to write
      * @return the created {@code RDFProcessor}
      */
-    public static RDFProcessor write(@Nullable final WriterConfig config,
+    public static RDFProcessor write(@Nullable final WriterConfig config, final int chunkSize,
             final String... locations) {
         if (locations.length == 0) {
             return IDENTITY;
         }
-        final RDFHandler handler = RDFHandlers.write(config, locations);
+        final RDFHandler handler = RDFHandlers.write(config, chunkSize, locations);
         final RDFProcessor tracker = track(new Tracker(LOGGER, null, //
                 "%d triples written (%d tr/s avg)", //
                 "%d triples written (%d tr/s, %d tr/s avg)"));

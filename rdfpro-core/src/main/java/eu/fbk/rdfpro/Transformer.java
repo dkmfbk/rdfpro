@@ -472,18 +472,29 @@ public interface Transformer {
     }
 
     /**
-     * Returns a {@code Transformer} that applies the filtering rules specified by the supplied
-     * string. The string is a sequence of space-separated tokens. Two-chars tokens {@code cs}
-     * identify the statement component {@code c} ({@code s}, {@code p}, {@code o}, {@code c}) and
-     * the its sub-component {@code s} ({@code u} = URI string, {@code n} = namespace, {@code b} =
-     * BNode ID, {@code l} = literal label, {@code @} = literal language, {@code ^} = literal
-     * datatype). Action tokens {@code +X}, {@code -X} and {@code *X} (X = {@code prefix:name},
-     * {@code <uri>}, {@code 'literal'}, {@code langid}) respectively include, exclude or assign
-     * the value of a previously selected component. Their order is irrelevant. Inclusion and
-     * exclusion actions are mutually exclusive: the first require a component to match a value,
-     * otherwise the statement is dropped; the latter drops the statement if the component matches
-     * the given value. Assignment actions are applied to modify a statement if it has been
-     * accepted by other actions.
+     * Returns a {@code Transformer} applying the filtering and assignent rules encoded by the
+     * supplied string. Given {@code X} a quad component (values: {@code s}, {@code p}, {@code o},
+     * {@code c}), the string contains three types of rules:
+     * <ul>
+     * <li>{@code +X value list} - quad is dropped if {@code X} does not belong to {@code list};</li>
+     * <li>{@code -X value list} - quad is dropped if {@code X} belongs to {@code list};</li>
+     * <li>{@code =X value} - quad component {@code X} is replaced with {@code value} (evaluated
+     * after filters).</li>
+     * </ul>
+     * Values must be encoded in Turtle. The following wildcard values are supported:
+     * <ul>
+     * <li>{@code <*>} - any URI;</li>
+     * <li>{@code _:*} - any BNode;</li>
+     * <li>{@code *} - any literal;</li>
+     * <li>{@code *@*} - any literal with a language;</li>
+     * <li>{@code *@xyz} - any literal with language {@code xyz};</li>
+     * <li>{@code *^^*} - any typed literal;</li>
+     * <li>{@code *^^<uri>} - any literal with datatype {@code <uri>};</li>
+     * <li>{@code *^^ns:uri} - any literal with datatype {@code ns:uri};</li>
+     * <li>{@code *^^ns:*} - any typed literal with datatype prefixed with {@code ns:};</li>
+     * <li>{@code ns:*} - any URI prefixed with {@code ns:};</li>
+     * <li>{@code <ns*>} - any URI with namespace URI {@code ns}.</li>
+     * </ul>
      *
      * @param rules
      *            the filtering rules, not null
@@ -538,29 +549,44 @@ final class RuleTransformer implements Transformer {
 
         // Parse the specification string
         char action = 0;
-        int component = 0;
+        final List<Integer> components = new ArrayList<Integer>();
         for (final String token : spec.split("\\s+")) {
             final char ch0 = token.charAt(0);
             if (ch0 == '+' || ch0 == '-' || ch0 == '=') {
-                final char ch1 = token.length() > 1 ? Character.toLowerCase(token.charAt(1)) : '?';
-                component = ch1 == 's' ? 0 : ch1 == 'p' ? 1 : ch1 == 'o' ? 2 : ch1 == 'c' ? 3 : -1;
-                if (component < 0) {
-                    throw new IllegalArgumentException("Invalid component '" + ch1 + "' in '"
-                            + spec + "'");
-                }
                 action = ch0;
+                if (token.length() == 1) {
+                    throw new IllegalArgumentException("No component(s) specified in '" + spec
+                            + "'");
+                }
+                components.clear();
+                for (int i = 1; i < token.length(); ++i) {
+                    final char ch1 = Character.toLowerCase(token.charAt(i));
+                    final int component = ch1 == 's' ? 0 : ch1 == 'p' ? 1 : ch1 == 'o' ? 2
+                            : ch1 == 'c' ? 3 : -1;
+                    if (component < 0) {
+                        throw new IllegalArgumentException("Invalid component '" + ch1 + "' in '"
+                                + spec + "'");
+                    }
+                    components.add(component);
+                }
             } else if (action == 0) {
                 throw new IllegalArgumentException("Missing selector in '" + spec + "'");
             } else if (action == '=') {
-                replacements[component] = Statements.parseValue(token, Namespaces.DEFAULT);
-            } else {
-                ((List<String>) expressions[component]).add(token);
-                final Boolean include = action == '+' ? Boolean.TRUE : Boolean.FALSE;
-                if (includes[component] != null && !Objects.equals(includes[component], include)) {
-                    throw new IllegalArgumentException("Include (+) and exclude (-) rules both "
-                            + "specified for same component in '" + spec + "'");
+                for (final int component : components) {
+                    replacements[component] = Statements.parseValue(token, Namespaces.DEFAULT);
                 }
-                includes[component] = include;
+            } else {
+                for (final int component : components) {
+                    ((List<String>) expressions[component]).add(token);
+                    final Boolean include = action == '+' ? Boolean.TRUE : Boolean.FALSE;
+                    if (includes[component] != null
+                            && !Objects.equals(includes[component], include)) {
+                        throw new IllegalArgumentException(
+                                "Include (+) and exclude (-) rules both "
+                                        + "specified for same component in '" + spec + "'");
+                    }
+                    includes[component] = include;
+                }
             }
         }
 
@@ -774,7 +800,19 @@ final class RuleTransformer implements Transformer {
         }
 
         private static boolean containsNs(final Set<String> set, final URI uri) {
-            return !set.isEmpty() && set.contains(uri.getNamespace());
+            if (set.isEmpty()) {
+                return false;
+            }
+            if (set.contains(uri.getNamespace())) {
+                return true; // exact lookup
+            }
+            final String uriString = uri.stringValue();
+            for (final String elem : set) {
+                if (uriString.startsWith(elem)) {
+                    return true; // prefix match
+                }
+            }
+            return false;
         }
 
     }

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- *
+ * 
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- *
+ * 
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- *
+ * 
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -54,6 +54,7 @@ import org.openrdf.model.datatypes.XMLDatatypeUtil;
 import org.openrdf.model.impl.BNodeImpl;
 import org.openrdf.model.impl.LiteralImpl;
 import org.openrdf.model.impl.URIImpl;
+import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
@@ -71,6 +72,7 @@ import info.aduna.text.ASCIIUtil;
 
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.Hash;
+import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
 final class GroovyProcessor implements RDFProcessor {
@@ -170,11 +172,11 @@ final class GroovyProcessor implements RDFProcessor {
         return oldValue;
     }
 
+    @SuppressWarnings("resource")
     @Override
     public RDFHandler wrap(final RDFHandler handler) {
         final RDFHandler sink = Objects.requireNonNull(handler);
-        return this.scriptPooling ? RDFHandlers.decouple(new PooledHandler(sink))
-                : new SingletonHandler(sink);
+        return this.scriptPooling ? new PooledHandler(sink) : new SingletonHandler(sink);
     }
 
     private HandlerScript newHandlerScript(final String name, final RDFHandler handler) {
@@ -274,13 +276,13 @@ final class GroovyProcessor implements RDFProcessor {
                 } catch (final MalformedURLException ex) {
                     final String message = "Malformed URL: " + root + ", " + name;
                     exception = exception == null ? new ResourceException(message)
-                    : new ResourceException(message, exception);
+                            : new ResourceException(message, exception);
 
                 } catch (final IOException ex) {
                     connection = null;
                     final String message = "Cannot open URL: " + root + name;
                     exception = exception == null ? new ResourceException(message)
-                    : new ResourceException(message, exception);
+                            : new ResourceException(message, exception);
                 }
             }
 
@@ -308,7 +310,7 @@ final class GroovyProcessor implements RDFProcessor {
                         if (end >= 0) {
                             final URI u = (URI) Statements.parseValue(string.substring(i, end));
                             builder.append("__iri(").append(counter.getAndIncrement())
-                            .append(", \"").append(u.stringValue()).append("\")");
+                                    .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
                         } else {
                             builder.append(c);
@@ -318,15 +320,20 @@ final class GroovyProcessor implements RDFProcessor {
                     } else if (isPN_CHARS_BASE(c)) {
                         final int end = parseQName(string, i);
                         if (end >= 0) {
-                            final URI u = (URI) Statements.parseValue(string.substring(i, end));
+                            final URI u = (URI) Statements.parseValue(string.substring(i, end),
+                                    Namespaces.DEFAULT);
                             builder.append("__iri(").append(counter.getAndIncrement())
-                            .append(", \"").append(u.stringValue()).append("\")");
+                                    .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
                         } else {
-                            do {
+                            builder.append(c);
+                            while (++i < length) {
+                                c = string.charAt(i);
+                                if (!Character.isLetterOrDigit(c)) {
+                                    break;
+                                }
                                 builder.append(c);
-                                c = string.charAt(++i);
-                            } while (Character.isLetterOrDigit(c));
+                            }
                         }
 
                     } else if (c == '\'' || c == '\"') {
@@ -388,7 +395,7 @@ final class GroovyProcessor implements RDFProcessor {
                 }
             }
 
-            if (string.charAt(i - 1) == '.' || string.charAt(i) != ':' || i == len - 1) {
+            if (i >= len - 1 || string.charAt(i - 1) == '.' || string.charAt(i) != ':') {
                 return -1;
             }
 
@@ -445,7 +452,7 @@ final class GroovyProcessor implements RDFProcessor {
                     }
                 }
                 conn.connect();
-
+                  
                 final String encoding = conn.getContentEncoding();
                 final Charset charset = Charset.forName(encoding != null ? encoding : "UTF-8");
 
@@ -462,6 +469,8 @@ final class GroovyProcessor implements RDFProcessor {
                 } finally {
                     reader.close();
                 }
+
+                LOGGER.debug("Filtered script is:\n{}", builder);
 
                 this.bytes = builder.toString().getBytes(charset);
                 this.connected = true;
@@ -894,39 +903,39 @@ final class GroovyProcessor implements RDFProcessor {
             final RDFHandler handler = RDFProcessors.read(true, false, null, null,
                     file.getAbsolutePath()).wrap(new RDFHandler() {
 
-                        @Override
-                        public void startRDF() throws RDFHandlerException {
-                        }
+                @Override
+                public void startRDF() throws RDFHandlerException {
+                }
 
-                        @Override
-                        public void endRDF() throws RDFHandlerException {
-                        }
+                @Override
+                public void endRDF() throws RDFHandlerException {
+                }
 
-                        @Override
-                        public void handleNamespace(final String s, final String s2)
-                                throws RDFHandlerException {
-                        }
+                @Override
+                public void handleNamespace(final String s, final String s2)
+                        throws RDFHandlerException {
+                }
 
-                        @Override
-                        public void handleStatement(final Statement statement) throws RDFHandlerException {
-                            if (matchSub) {
-                                hashes.add(valueToHash(statement.getSubject()));
-                            }
-                            if (matchPre) {
-                                hashes.add(valueToHash(statement.getPredicate()));
-                            }
-                            if (matchObj) {
-                                hashes.add(valueToHash(statement.getObject()));
-                            }
-                            if (matchCtx) {
-                                hashes.add(valueToHash(statement.getContext()));
-                            }
-                        }
+                @Override
+                public void handleStatement(final Statement statement) throws RDFHandlerException {
+                    if (matchSub) {
+                        hashes.add(valueToHash(statement.getSubject()));
+                    }
+                    if (matchPre) {
+                        hashes.add(valueToHash(statement.getPredicate()));
+                    }
+                    if (matchObj) {
+                        hashes.add(valueToHash(statement.getObject()));
+                    }
+                    if (matchCtx) {
+                        hashes.add(valueToHash(statement.getContext()));
+                    }
+                }
 
-                        @Override
-                        public void handleComment(final String s) throws RDFHandlerException {
-                        }
-                    });
+                @Override
+                public void handleComment(final String s) throws RDFHandlerException {
+                }
+            });
 
             try {
                 handler.startRDF();

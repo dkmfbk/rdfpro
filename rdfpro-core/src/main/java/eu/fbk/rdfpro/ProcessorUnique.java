@@ -42,8 +42,6 @@ import eu.fbk.rdfpro.util.Statements;
 
 final class ProcessorUnique implements RDFProcessor {
 
-    // FIXME: big problem with sorter
-
     private final boolean mergeContexts;
 
     ProcessorUnique(final boolean mergeContexts) {
@@ -54,7 +52,8 @@ final class ProcessorUnique implements RDFProcessor {
     @Override
     public RDFHandler wrap(final RDFHandler handler) {
         Objects.requireNonNull(handler);
-        return this.mergeContexts ? new MergeHandler(handler) : new Handler(handler, true);
+        return this.mergeContexts ? new MergeHandler(RDFHandlers.decouple(handler)) //
+                : new Handler(handler, true);
     }
 
     private static class Handler extends AbstractRDFHandlerWrapper {

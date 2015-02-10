@@ -371,7 +371,8 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
     public static SetOperator valueOf(final String string) {
         Objects.requireNonNull(string);
         for (final SetOperator operation : new SetOperator[] { UNION, UNION_MULTISET,
-                SUM_MULTISET, INTERSECTION, INTERSECTION_MULTISET, DIFFERENCE, DIFFERENCE_MULTISET }) {
+                SUM_MULTISET, INTERSECTION, INTERSECTION_MULTISET, DIFFERENCE,
+                DIFFERENCE_MULTISET, SYMMETRIC_DIFFERENCE, SYMMETRIC_DIFFERENCE_MULTISET }) {
             if (operation.string.equals(string)) {
                 return operation;
             }

@@ -33,6 +33,8 @@ import javax.script.ScriptEngineManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import info.aduna.text.ASCIIUtil;
+
 public final class JavaScript {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JavaScript.class);
@@ -69,6 +71,9 @@ public final class JavaScript {
         } catch (final Throwable ex) {
             // ignore
         }
+
+        // Rewrite <URI> and QNames in the script
+        scriptText = rewriteScript(scriptText);
 
         try {
             // Try to extract the interface from the script as it is
@@ -151,6 +156,132 @@ public final class JavaScript {
         builder.append(script);
         builder.append("\n}");
         return builder.toString();
+    }
+
+    private static String rewriteScript(final String script) {
+
+        final StringBuilder builder = new StringBuilder();
+        final int length = script.length();
+        int i = 0;
+
+        try {
+            while (i < length) {
+                char c = script.charAt(i);
+                if (c == '<') {
+                    final int end = parseURI(script, i);
+                    if (end >= 0) {
+                        final String uri = script.substring(i, end);
+                        builder.append("(new org.openrdf.model.impl.URIImpl(\"").append(uri)
+                                .append("\"))");
+                        i = end;
+                    } else {
+                        builder.append(c);
+                        ++i;
+                    }
+
+                } else if (isPN_CHARS_BASE(c)) {
+                    final int end = parseQName(script, i);
+                    if (end >= 0) {
+                        final String uri = Statements.parseValue(script.substring(i, end),
+                                Namespaces.DEFAULT).stringValue();
+                        builder.append("(new org.openrdf.model.impl.URIImpl(\"").append(uri)
+                                .append("\"))");
+                        i = end;
+                    } else {
+                        do {
+                            builder.append(c);
+                            c = script.charAt(++i);
+                        } while (Character.isLetterOrDigit(c));
+                    }
+
+                } else if (c == '\'' || c == '\"') {
+                    final char d = c; // delimiter
+                    builder.append(d);
+                    do {
+                        c = script.charAt(++i);
+                        builder.append(c);
+                    } while (c != d || script.charAt(i - 1) == '\\');
+                    ++i;
+
+                } else {
+                    builder.append(c);
+                    ++i;
+                }
+            }
+        } catch (final Exception ex) {
+            throw new IllegalArgumentException("Illegal URI escaping near offset " + i, ex);
+        }
+
+        return builder.toString();
+    }
+
+    // Following code can be factored in Statements
+    // rewriteRDFTerms(String, Function<Value, String>)
+
+    private static int parseURI(final String string, int i) {
+        final int len = string.length();
+        if (string.charAt(i) != '<') {
+            return -1;
+        }
+        for (++i; i < len; ++i) {
+            final char c = string.charAt(i);
+            if (c == '<' || c == '\"' || c == '{' || c == '}' || c == '|' || c == '^' || c == '`'
+                    || c == '\\' || c == ' ') {
+                return -1;
+            }
+            if (c == '>') {
+                return i + 1;
+            }
+        }
+        return -1;
+    }
+
+    private static int parseQName(final String string, int i) {
+        final int len = string.length();
+        char c;
+        if (!isPN_CHARS_BASE(string.charAt(i))) {
+            return -1;
+        }
+        for (; i < len; ++i) {
+            c = string.charAt(i);
+            if (!isPN_CHARS(c) && c != '.') {
+                break;
+            }
+        }
+        if (string.charAt(i - 1) == '.' || string.charAt(i) != ':' || i == len - 1) {
+            return -1;
+        }
+        c = string.charAt(++i);
+        if (!isPN_CHARS_U(c) && c != ':' && c != '%' && !Character.isDigit(c)) {
+            return -1;
+        }
+        for (; i < len; ++i) {
+            c = string.charAt(i);
+            if (!isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
+                break;
+            }
+        }
+        if (string.charAt(i - 1) == '.') {
+            return -1;
+        }
+        return i;
+    }
+
+    private static boolean isPN_CHARS(final int c) {
+        return isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183 || c >= 768
+                && c <= 879 || c >= 8255 && c <= 8256;
+    }
+
+    private static boolean isPN_CHARS_U(final int c) {
+        return isPN_CHARS_BASE(c) || c == 95;
+    }
+
+    private static boolean isPN_CHARS_BASE(final int c) {
+        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246 || c >= 248
+                && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191 || c >= 8204
+                && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271 || c >= 12289
+                && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
+                || c >= 65536 && c <= 983039;
     }
 
 }

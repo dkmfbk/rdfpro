@@ -98,6 +98,7 @@
 
   <properties>
     <parent-path>..</parent-path>
+    <javadoc-skip>true</javadoc-skip>
   </properties>
 
 </project>

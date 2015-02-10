@@ -4,12 +4,13 @@
 #   JAVA_HOME: the defined Java runtime
 #   JAVA_OPTS: JVM options.
 #       Es: export JAVA_OPTS="-Xmx6G -Xms1G -server"
-#   rdfpro.cmd.sort: native command to process sorting.
+#   RDFPRO_CMD_SORT: native command to process sorting.
 #       Es: rdfpro.cmd.sort="sort -S 8192M --batch-size=64 --compress-program=lz4 -T $SW_HOME/tmp"
-#   rdfpro.cmd.gzip: native command to process gzipped streams.
+#   RDFPRO_CMD_GZIP: native command to process gzipped streams.
 #       Es: rdfpro.cmd.gzip="pigz -p 4 -b 4096"
-#   rdfpro.cmd.bzip2: native command to process bzip2 streams.
+#   RDFPRO_CMD_BZIP2: native command to process bzip2 streams.
 #       Es: rdfpro.cmd.bzip2="pbzip2"
+#   RDFPRO_CLASSPATH: additional classpath entries for RDFpro (separated by colon)
 #   RDFPRO_GROOVY_CLASSPATH: the classpath for Groovy scripts
 
 # resolve program name in case it is a symbolic link
@@ -39,7 +40,7 @@ fi
 
 # Build classpath.
 _LIB=$BASEDIR/lib
-_CLASSPATH=$BASEDIR/etc
+_CLASSPATH=$RDFPRO_CLASSPATH:$BASEDIR/etc
 for _JAR in `ls $_LIB/*.jar` ; do
         _CLASSPATH=$_CLASSPATH:$_JAR;
 done

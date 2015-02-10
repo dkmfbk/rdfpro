@@ -312,18 +312,20 @@ public final class RDFSources {
      * context of returned statements; incomplete or invalid bindings (e.g., bindings where the
      * subject is bound to a literal) are silently ignored.
      *
+     * @param parallelize
+     *            true to use multiple threads should for handling parsed triples
+     * @param preserveBNodes
+     *            true if BNodes in the query result should be preserved, false if they should be
+     *            rewritten on a per-endpoint basis to avoid possible clashes
      * @param endpointURL
      *            the URL of the SPARQL endpoint, not null
      * @param query
      *            the SPARQL query (CONSTRUCT or SELECT form) to submit to the endpoint
-     * @param preserveBNodes
-     *            true if BNodes in the query result should be preserved, false if they should be
-     *            rewritten on a per-endpoint basis to avoid possible clashes
      * @return the created {@code RDFSource}
      */
-    public static RDFSource query(final String endpointURL, final String query,
-            final boolean preserveBNodes) {
-        return new SparqlSource(endpointURL, query, preserveBNodes);
+    public static RDFSource query(final boolean parallelize, final boolean preserveBNodes,
+            final String endpointURL, final String query) {
+        return new SparqlSource(parallelize, preserveBNodes, endpointURL, query);
     }
 
     private RDFSources() {
@@ -401,19 +403,19 @@ public final class RDFSources {
 
             Objects.requireNonNull(handler);
 
-            RDFHandler actualHandler = handler;
-            // FIXME NPE with decoupler
-            // if (this.parallelize) {
-            // actualHandler = RDFHandlers.decouple(actualHandler);
-            // }
-            actualHandler = RDFHandlers.ignoreMethods(actualHandler, RDFHandlers.METHOD_START_RDF
-                    | RDFHandlers.METHOD_END_RDF);
+            RDFHandler sink = handler;
+            if (this.parallelize) {
+                sink = RDFHandlers.decouple(sink);
+            }
+
+            final RDFHandler wrappedSink = RDFHandlers.ignoreMethods(sink,
+                    RDFHandlers.METHOD_START_RDF | RDFHandlers.METHOD_END_RDF);
 
             try {
                 for (int i = 0; i < passes; ++i) {
-                    handler.startRDF();
-                    parse(actualHandler);
-                    handler.endRDF();
+                    sink.startRDF();
+                    parse(wrappedSink);
+                    sink.endRDF();
                 }
             } catch (RDFHandlerException | RuntimeException | Error ex) {
                 throw ex;
@@ -620,42 +622,56 @@ public final class RDFSources {
 
     private static class SparqlSource implements RDFSource {
 
+        private final boolean parallelize;
+
+        private final boolean preserveBNodes;
+
         private final String endpointURL;
 
         private final String query;
 
-        private final boolean preserveBNodes;
-
         private final boolean isSelect;
 
-        SparqlSource(final String endpointURL, final String query, final boolean preserveBNodes) {
+        SparqlSource(final boolean parallelize, final boolean preserveBNodes,
+                final String endpointURL, final String query) {
 
+            this.parallelize = parallelize;
+            this.preserveBNodes = preserveBNodes;
             this.endpointURL = Objects.requireNonNull(endpointURL);
             this.query = Objects.requireNonNull(query);
-            this.preserveBNodes = preserveBNodes;
             this.isSelect = isSelectQuery(query);
         }
 
         @Override
         public void emit(final RDFHandler handler, final int passes) throws RDFSourceException,
                 RDFHandlerException {
+
             // different BNodes may be returned each time the query is evaluated;
             // to allow preserving their identities, we should store the query result and
             // read from it from disk the next times
             Objects.requireNonNull(handler);
+
+            RDFHandler actualHandler = handler;
+            if (this.parallelize) {
+                actualHandler = RDFHandlers.decouple(actualHandler);
+            }
+            if (!this.preserveBNodes) {
+                actualHandler = rewriteBNodes(actualHandler, //
+                        Hash.murmur3(this.endpointURL).toString());
+            }
+
             try {
                 for (int i = 0; i < passes; ++i) {
-                    handler.startRDF();
-                    sendQuery(this.preserveBNodes ? handler : rewriteBNodes(handler,
-                            Hash.murmur3(this.endpointURL).toString()));
-                    handler.endRDF();
+                    actualHandler.startRDF();
+                    sendQuery(actualHandler);
+                    actualHandler.endRDF();
                 }
             } catch (RDFHandlerException | RuntimeException | Error ex) {
                 throw ex;
             } catch (final Throwable ex) {
                 throw new RDFSourceException("Sparql query to " + this.endpointURL + " failed", ex);
             } finally {
-                IO.closeQuietly(handler);
+                IO.closeQuietly(actualHandler);
             }
         }
 

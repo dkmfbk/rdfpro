@@ -105,6 +105,7 @@ http://dev.w3.org/cvsweb/2000/quacken/vocab# quak
 http://dig.csail.mit.edu/TAMI/2007/amord/air# air
 http://diplomski.nelakolundzija.org/LTontology.rdf# lt
 http://dkm.fbk.eu/ontologies/knowledgestore# ks
+http://dkm.fbk.eu/ontologies/newsreader# nwr
 http://dkm.fbk.eu/ontologies/voidx# voidx
 http://doc.metalex.eu/id/ mds
 http://dsnotify.org/vocab/eventset/0.1/ evset
@@ -827,6 +828,7 @@ http://www.mygrid.org.uk/mygrid-moby-service# moby
 http://www.mygrid.org.uk/ontology# mygrid
 http://www.nanopub.org/nschema# np
 http://www.newmedialab.at/fcp/ fcp
+http://www.newsreader-project.eu/domain-ontology# eso 
 http://www.oegov.org/core/owl/cc# oecc
 http://www.oegov.org/core/owl/gc# gc
 http://www.ogbd.fr/2012/ontologie# ogbd
