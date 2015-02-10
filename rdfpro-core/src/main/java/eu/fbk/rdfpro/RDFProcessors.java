@@ -138,10 +138,10 @@ public final class RDFProcessors {
         switch (name) {
         case "r":
         case "read": {
-            final Options options = Options.parse("b!|p|+", args);
+            final Options options = Options.parse("b!|w|+", args);
             final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
                     new String[0]);
-            final boolean preserveBNodes = options.hasOption("p");
+            final boolean preserveBNodes = !options.hasOption("w");
             final URI base = parseURI(options.getOptionArg("b", String.class));
             return read(true, preserveBNodes, base == null ? null : base.stringValue(), null,
                     fileSpecs);
@@ -252,9 +252,9 @@ public final class RDFProcessors {
         }
 
         case "rdfs": {
-            final Options options = Options.parse("d|e!|C|c!|b!|t|p|+", args);
+            final Options options = Options.parse("d|e!|C|c!|b!|t|w|+", args);
             final URI base = parseURI(options.getOptionArg("b", String.class));
-            final boolean preserveBNodes = options.hasOption("p");
+            final boolean preserveBNodes = !options.hasOption("w");
             final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
                     new String[0]);
             final RDFSource tbox = RDFProcessors.track(
@@ -289,8 +289,8 @@ public final class RDFProcessors {
         }
 
         case "query": {
-            final Options options = Options.parse("p|q!|f!|!", args);
-            final boolean preserveBNodes = options.hasOption("p");
+            final Options options = Options.parse("w|q!|f!|!", args);
+            final boolean preserveBNodes = !options.hasOption("w");
             final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
                     .stringValue();
             String query = options.getOptionArg("q", String.class);
