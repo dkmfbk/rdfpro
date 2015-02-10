@@ -2,30 +2,34 @@
 RDFpro installation
 ===================
 
-The RDFpro command line tool is packaged as a self-contained, cross-platform Java application. Download it from the following links and unpack in the location you prefer:
+The RDFpro command line tool is packaged as a self-contained, cross-platform Java 8 application. Download it from the following links and unpack in the location you prefer:
 
-  * [rdfpro-dist-${site-version}-bin.tar.gz](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.tar.gz)
-  * [rdfpro-dist-${site-version}-bin.zip](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-dist/${site-version}/rdfpro-dist-${site-version}-bin.zip)
+  * [rdfpro-dist-${project-version}-bin.tar.gz](${repo-path}/eu/fbk/rdfpro/rdfpro-dist/${project-version}/rdfpro-dist-${project-version}-bin.tar.gz)
+  * [rdfpro-dist-${project-version}-bin.zip](${repo-path}/eu/fbk/rdfpro/rdfpro-dist/${project-version}/rdfpro-dist-${project-version}-bin.zip)
 
 You can run RDFpro by executing the `rdfpro` script. For instance, you can test if everything works correctly by executing the following command, which should display the tool version and other relevant system information:
 
     $ rdfpro -v
-    RDF Processor Tool (RDFP) ${site-version}
+    RDF Processor Tool (RDFpro) ${project-version}
     Java 64 bit (Oracle Corporation) 1.8.0_25
     This is free software released into the public domain
 
-RDFpro configuration is performed either editing its configuration file `etc/rdfpro.properties` (syntax `property = value`) or by supplying configuration properties as environment variables (`export property=value`) or as Java system properties (`export JAVA_OPTS="-Dproperty=value"`).
+RDFpro configuration is performed either editing its configuration file `etc/rdfpro.properties` (syntax `property = value`) or by supplying configuration properties as Java system properties (`export JAVA_OPTS="-Dproperty=value"`) or as environment variables (`export PROPERTY=value`, with property name uppercase with dots replaced with underlines).
 
 The following, optional steps are recommended after downloading and extracting RDFpro:
 
-  * Add the rdfpro directory to your PATH variable, so that the `rdfpro` script can be called without specifying its full path.
+  * Add the rdfpro directory to your PATH variable, or add a symlink to the `rdfpro` script in some directory already in your PATH (e.g., symlink `/usr/bin/rdfpro`), so that the `rdfpro` script can be called without specifying its full path.
 
   * Make sure you have the `sort`, `gzip`, `bzip2` utilities (also `xz` and `7za` are useful).
     On a Mac/Linux machine they should be already installed.
     On Windows, you can get them from the [GnuWin](http://gnuwin32.sourceforge.net/) project.
 
-  * For better performances, install the multi-threaded versions of `gzip` and `bzip2`, called [`pigz`](http://zlib.net/pigz/) and [`pbzip2`](http://compression.ca/pbzip2/)
+  * To improve performances, install the multi-threaded versions of `gzip` and `bzip2`, called [`pigz`](http://zlib.net/pigz/) and [`pbzip2`](http://compression.ca/pbzip2/)
     These utilities are available also for Windows (for `pigz` see [here](http://sourceforge.net/projects/pigzforwindows/) and [here](http://blog.kowalczyk.info/software/pigz-for-windows.html)).
-    After their installation, you have to configure RDFpro to use them by setting properties `rdfpro.cmd.gzip = path_to_pigz` and `rdfpro.cmd.bzip2 = path_to_pbzip2`.
+    After their installation, you have to configure RDFpro to use them by setting properties `rdfpro.cmd.gzip = path_to_pigz` and `rdfpro.cmd.bzip2 = path_to_pbzip2` (you can omit the full path if pigz and pbzip2 are already in your PATH).
 
-  * For better performances, it is advised to configure `sort` to use more memory and to compress temporary files, by setting property `rdfpro.cmd.sort = sort -S 1024M --compress-program gzip` (you can use a value larger than 1024M and `pigz` in place of `gzip`). Also make sure that you have enough space under your `/tmp` folder, or configure `sort` to use a specific folder for temporary files (option `-T tmp_directory_path`).
+  * To improve performances, it is advised to configure `sort` to use more memory and to compress temporary files, e.g., by setting property `rdfpro.cmd.sort = sort -S 1024M --compress-program gzip` (you can use a value larger than 1024M and `pigz` in place of `gzip`). Also make sure that you have enough space under your `/tmp` folder, or configure `sort` to use a specific folder for temporary files (option `-T tmp_directory_path`).
+
+  * Custom prefix/namespace bindings can be added (possibly overriding the ones predefined in RDFpro and taken from [prefix.cc](http://prefix.cc/)) by manually modifying the file `etc/rdfpro.prefixes`.
+
+  * JARs with additional RDFpro processors can be placed under `lib`

@@ -1,0 +1,80 @@
+# rdfpro @read freebase.nt.gz @tbox @write tbox.tql.gz
+20:57:35(I) 2788992097 triples read (2112106 tr/s avg)
+20:57:35(I) Found 52415 classes (52413 defined)
+20:57:35(I) Found 781147 properties (0 defined)
+20:57:35(I) Found language classes: owl:FunctionalProperty rdfs:Class
+20:57:35(I) Found language properties: owl:inverseOf rdfs:domain rdfs:range
+20:57:35(I) Found undefined vocabularies:
+- http://rdf.freebase.com/key/
+- http://rdf.freebase.com/ns/
+- http://www.w3.org/2000/01/rdf-schema#
+20:57:35(I) 234018 triples written (177 tr/s avg)
+20:57:35(I) Done in 1321 s
+
+# rdfpro @read freebase.nt.gz @stats -t 100 @write stats.tql.gz
+22:10:40(I) 2788992097 triples read (486905 tr/s avg)
+22:10:41(I) 5327387485 records to sort (930065 rec/s avg)
+22:45:31(I) 3574449180 records from sort (1770610 rec/s avg)
+22:45:31(I) 131222 triples written (273379 tr/s avg)
+22:45:31(I) Done in 7819 s
+
+# rdfpro @read freebase.nt.gz { @tbox @write tbox.tql.gz , @stats -t 100 @write stats.tql.gz }
+14:28:47(I) 2788992097 triples read (497207 tr/s avg)
+14:28:47(I) Found 52415 classes (52413 defined)
+14:28:47(I) Found 781147 properties (0 defined)
+14:28:47(I) Found language classes: owl:FunctionalProperty rdfs:Class
+14:28:47(I) Found language properties: owl:inverseOf rdfs:domain rdfs:range
+14:28:47(I) Found undefined vocabularies:
+- http://rdf.freebase.com/key/
+- http://rdf.freebase.com/ns/
+- http://www.w3.org/2000/01/rdf-schema#
+14:28:47(I) 234018 triples written (41 tr/s avg)
+14:28:50(I) 5327387485 records to sort (949740 rec/s avg)
+15:05:01(I) 3574465794 records from sort (1699194 rec/s avg)
+15:05:01(I) 131222 triples written (272810 tr/s avg)
+15:05:01(I) Done in 7784 s
+
+# rdfpro { @read freebase.nt.gz , @read freebase_old.nt.gz }d @write new-triples.tql.gz
+22:41:27(I) 2623380169 triples read (404063 tr/s avg)
+22:45:22(I) 2788992097 triples read (414598 tr/s avg)
+22:45:22(I) 5412372266 records to sort (804576 rec/s avg)
+00:50:02(I) 5412372266 records from sort (726872 rec/s avg)
+00:50:02(I) 338909781 triples written (45517 tr/s avg)
+00:50:02(I) Done in 14207 s
+
+# SCENARIO
+# -rw-r--r--  1 corcoglio dkm_sec 29842317645 Jan 18 07:24 freebase.nt.gz
+# -rw-r--r--  1 corcoglio dkm_sec 28053498917 Jan 30 20:30 freebase_old.nt.gz
+# -rw-r--r--  1 corcoglio dkm_sec  3062713292 Jan 31 06:08 new-triples.tql.gz
+# -rw-r--r--  1 corcoglio dkm_sec     1391663 Jan 31 01:47 stats.tql.gz
+# -rw-r--r--  1 corcoglio dkm_sec     2757679 Jan 31 00:52 tbox.tql.gz
+
+
+# ------------------------
+
+# rdfpro @read freebase.nt.gz \
+#        { @groovy -p 'emitIf(t == fb:music.musical_group)' , \
+#          @groovy -p 'if(p == fb:music.artist.active_end) emit(s, rdf:type, fb:music.musical_group, null)' }d \
+#        @write entities.tql.gz
+#
+18:10:47(I) 2788992097 triples read (1901089 tr/s avg)
+18:10:47(I) 234575 records to sort (160 rec/s avg)
+18:10:47(I) 234575 records from sort (535559 rec/s avg)
+18:10:47(I) 207758 triples written (474333 tr/s avg)
+18:10:47(I) Done in 1467 s
+
+# rdfpro @read freebase.nt.gz \
+#        @groovy 'def init(args) { instances = loadSet("./entities.tql.gz", "s"); };
+#                 emitIf((p == rdfs:label || p == fb:music.artist.genre || p == fb:music.artist.origin)
+#                        && instances.match(s) );' \
+#        @write output.tql.gz
+#
+18:27:38(I) 207758 triples read (413037 tr/s avg)
+19:12:27(I) 2788992097 triples read (1037168 tr/s avg)
+19:12:27(I) 413908 triples written (154 tr/s avg)
+19:12:27(I) Done in 2689 s
+
+# RESULT
+# -rw-r--r--  1 corcoglio dkm_sec 29842317645 Jan 18 07:24 freebase.nt.gz
+# -rw-r--r--  1 corcoglio dkm_sec      867960 Jan 31 18:10 entities.tql.gz
+# -rw-r--r--  1 corcoglio dkm_sec     5306945 Jan 31 19:12 output.tql.gz

@@ -1,0 +1,62 @@
+08:20:17(I) 7 triples read (7000 tr/s avg)
+08:20:20(I) 1896 triples read (16067 tr/s avg)
+08:50:15(I) 55296272 triples read (30807 tr/s avg)
+08:52:03(I) 56724037 triples read (29804 tr/s avg)
+09:01:31(I) 57993628 triples read (23461 tr/s avg)
+09:19:39(I) 114498016 triples read (32206 tr/s avg)
+09:39:20(I) 236017358 triples read (49786 tr/s avg)
+10:19:15(I) 2788992097 triples read (390699 tr/s avg)
+10:19:15(I) 3309523311 triples written (463619 tr/s avg)
+10:19:15(I) Done in 7139 s
+
+10:53:33(I) 3309523311 triples read (1609235 tr/s avg)
+10:53:33(I) Found 53095 classes (52616 defined)
+10:53:33(I) Found 874724 properties (90660 defined)
+10:53:33(I) Found language classes: owl:AnnotationProperty owl:Class owl:DatatypeProperty owl:FunctionalProperty owl:InverseFunctionalProperty owl:ObjectProperty owl:Ontology owl:Restriction owl:SymmetricProperty owl:TransitiveProperty rdf:Property rdfs:Class rdfs:Datatype
+10:53:33(I) Found language properties: owl:cardinality owl:disjointWith owl:equivalentClass owl:equivalentProperty owl:hasValue owl:inverseOf owl:maxCardinality owl:onProperty owl:propertyChainAxiom owl:unionOf rdf:first rdf:rest rdfs:domain rdfs:range rdfs:subClassOf rdfs:subPropertyOf
+10:53:33(I) Found undefined vocabularies:
+- http://creativecommons.org/ns#
+- http://dbpedia.org/ontology/
+- http://dbpedia.org/property/
+- http://es.dbpedia.org/property/
+- http://id.loc.gov/vocabulary/relators/
+- http://it.dbpedia.org/property/
+- http://nl.dbpedia.org/property/
+- http://nl.dbpedia.org/resource/
+- http://purl.org/dc/dcam/
+- http://purl.org/dc/elements/1.1/
+- http://purl.org/ontology/bibo/
+- http://purl.org/vocab/vann/
+- http://rdf.freebase.com/key/
+- http://rdf.freebase.com/ns/
+- http://schema.org/
+- http://www.w3.org/2000/01/rdf-schema#
+- http://www.w3.org/2002/07/owl#
+- http://www.w3.org/2004/02/skos/core#
+- http://www.w3.org/ns/adms#
+10:53:33(I) 326348 triples written (158 tr/s avg)
+10:53:33(I) Done in 2057 s
+
+10:53:34(I) Pass 1 of 2
+11:20:34(I) 3309523311 triples read (2043097 tr/s avg)
+11:21:08(I) owl:sameAs normalization: 37824897 resource(s), 7947561 cluster(s), 3.959 collisions/lookup, 2070MB buffered
+11:21:08(I) Pass 2 of 2
+13:08:28(I) 3309523311 triples read (513892 tr/s avg)
+13:08:28(I) 3339607280 triples written (518563 tr/s avg)
+13:08:29(I) Done in 8094 s
+
+16:15:55(I) 3339607280 triples read (297133 tr/s avg) 
+16:15:57(I) 5657929231 triples written (503310 tr/s avg) 
+16:15:57(I) Done in 11242 s 
+
+22:06:46(I) 5657929231 triples read (759967 tr/s avg)
+22:06:46(I) 5657929231 records to sort (759967 rec/s avg)
+00:42:00(I) 4138011585 records from sort (563015 rec/s avg)
+00:42:00(I) 4031696400 triples written (548580 tr/s avg)
+00:42:00(I) Done in 16759 s
+
+-rw-r--r--  1 corcoglio dkm_sec 38423094528 Jan 30 12:19 filtered.tql.gz
+-rw-r--r--  1 corcoglio dkm_sec 40456381902 Jan 28 13:08 smushed.tql.gz
+-rw-r--r--  1 corcoglio dkm_sec 52559464635 Jan 28 16:05 inferred.tql.gz
+-rw-r--r--  1 corcoglio dkm_sec 34653266025 Jan 30 00:42 dataset.tql.gz
+-rw-r--r--  1 corcoglio dkm_sec     3512736 Jan 28 10:53 tbox.tql.gz

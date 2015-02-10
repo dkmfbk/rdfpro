@@ -10,25 +10,18 @@ The `rdfpro-tql` module extends Sesame RIO with support for the TQL format. In o
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-tql</artifactId>
-      <version>${site-version}</version>
+      <version>${project-version}</version>
     </dependency>
-
-Then, make sure to include `rdfpro` artifact repository:
-
-    <repository>
-      <id>rdfpro</id>
-      <url>http://fracor.bitbucket.org/rdfpro/mvnrepo</url>
-    </repository>
 
 If you don't use Maven, you have to download and include the following JARs in the classpath:
 
-  * [rdfpro-tql-${site-version}.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-jsonld/${site-version}/rdfpro-tql-${site-version}.jar)
-  * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or newer version)
-  * [sesame-rio-api-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.14/sesame-rio-api-2.7.14.jar) (or newer version)
-  * [sesame-model-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.14/sesame-model-2.7.14.jar) (or newer version)
-  * [sesame-util-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.14/sesame-util-2.7.14.jar) (or newer version)
+  * [rdfpro-tql-${project-version}.jar](${repo-path}/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-tql-${project-version}.jar)
+  * [slf4j-api-${slf4j-version}.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/${slf4j-version}/slf4j-api-${slf4j-version}.jar) (or newer version)
+  * [sesame-rio-api-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/${sesame-version}/sesame-rio-api-${sesame-version}.jar) (or newer version)
+  * [sesame-model-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/${sesame-version}/sesame-model-${sesame-version}.jar) (or newer version)
+  * [sesame-util-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/${sesame-version}/sesame-util-${sesame-version}.jar) (or newer version)
 
-Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-2.7.X-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
+Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-${sesame-version}-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
 
 As TQL is not part of the predefined set of Sesame [`RDFFormat`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFFormat.html)s, it is necessary to register it.
 This can be done either via [`RDFFormat#register()`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFFormat.html#register\(org.openrdf.rio.RDFFormat\)), passing the [`TQL.FORMAT`](apidocs/eu/fbk/rdfpro/tql/TQL.html#FORMAT) constant, or by simply calling method [`TQL.register()`](apidocs/eu/fbk/rdfpro/tql/TQL.html#register--) on the `TQL` class, which ensures that multiple calls will result in a single registration.

@@ -11,28 +11,21 @@ In order to use the `rdfpro-jsonld` library you have to include the following de
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
       <artifactId>rdfpro-jsonld</artifactId>
-      <version>${site-version}</version>
+      <version>${project-version}</version>
     </dependency>
-
-Then, make sure to include `rdfpro` artifact repository:
-
-    <repository>
-      <id>rdfpro</id>
-      <url>http://fracor.bitbucket.org/rdfpro/mvnrepo</url>
-    </repository>
 
 If you don't use Maven, you have to download and include the following JARs in the classpath:
 
-  * [rdfpro-jsonld-${site-version}.jar](http://fracor.bitbucket.org/rdfpro/mvnrepo/eu/fbk/rdfpro/rdfpro-jsonld/${site-version}/rdfpro-jsonld-${site-version}.jar)
-  * [slf4j-api-1.7.7.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/1.7.7/slf4j-api-1.7.7.jar) (or newer version)
-  * [sesame-rio-api-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/2.7.14/sesame-rio-api-2.7.14.jar) (or newer version)
-  * [sesame-model-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/2.7.14/sesame-model-2.7.14.jar) (or newer version)
-  * [sesame-util-2.7.14.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/2.7.14/sesame-util-2.7.14.jar) (or newer version)
-  * [semargl-core-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-core/0.6.1/semargl-core-0.6.1.jar)
-  * [semargl-jsonld-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-jsonld/0.6.1/semargl-jsonld-0.6.1.jar)
-  * [semargl-rdf-0.6.1.jar](http://central.maven.org/maven2/org/semarglproject/semargl-rdf/0.6.1/semargl-rdf-0.6.1.jar)
+  * [rdfpro-jsonld-${project-version}.jar](${repo-path}/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-jsonld-${project-version}.jar)
+  * [slf4j-api-${slf4j-version}.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/${slf4j-version}/slf4j-api-${slf4j-version}.jar) (or newer version)
+  * [sesame-rio-api-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/${sesame-version}/sesame-rio-api-${sesame-version}.jar) (or newer version)
+  * [sesame-model-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/${sesame-version}/sesame-model-${sesame-version}.jar) (or newer version)
+  * [sesame-util-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/${sesame-version}/sesame-util-${sesame-version}.jar) (or newer version)
+  * [semargl-core-${semargl-jsonld-version}.jar](http://central.maven.org/maven2/org/semarglproject/semargl-core/${semargl-jsonld-version}/semargl-core-${semargl-jsonld-version}.jar)
+  * [semargl-jsonld-${semargl-jsonld-version}.jar](http://central.maven.org/maven2/org/semarglproject/semargl-jsonld/${semargl-jsonld-version}/semargl-jsonld-${semargl-jsonld-version}.jar)
+  * [semargl-rdf-${semargl-jsonld-version}.jar](http://central.maven.org/maven2/org/semarglproject/semargl-rdf/${semargl-jsonld-version}/semargl-rdf-${semargl-jsonld-version}.jar)
 
-Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-2.7.X-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
+Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-${sesame-version}-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
 
 No additional action is required to use the JSON-LD parser: just specify [`RDFFormat.JSONLD`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFFormat.html#JSONLD) when creating the parser with Sesame RIO.
 The JSON-LD writer, instead, requires the specification of the `RioSetting` [`JSONLD.ROOT_TYPES`](apidocs/eu/fbk/rdfpro/jsonld/JSONLD.html#ROOT_TYPES).

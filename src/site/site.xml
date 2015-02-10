@@ -21,12 +21,14 @@
     <menu name="About">
       <item name="Home" href="index.html" />
       <item name="Processing Model" href="model.html" />
+      <item name="Publications" href="publications.html" />
     </menu>
 
     <menu name="Tool">
       <item name="Installation" href="install.html" />
       <item name="Usage" href="usage.html" />
-      <item name="Example" href="example.html" />
+      <item name="Example (SemDev)" href="example.html" />
+      <item name="Examples (SAC)" href="examples_sac.html" />
     </menu>
 
     <menu name="Libraries">

@@ -10,8 +10,8 @@ RDFpro usage
     * [@query](#query)
     * [@update](#update)
  * [Transformation processors](#transformprocs)
-    * [@filter (deprecated)](#filter)
     * [@transform](#transform)
+    * [@groovy](#groovy)
     * [@rdfs](#rdfs)
     * [@smush](#smush)
     * [@unique](#unique)
@@ -61,7 +61,7 @@ As an example, the following command invokes `rdfpro` in verbose mode with a pip
 
 ### <a name="ioprocs"></a> I/O processors
 
-The builtin processors `@read`, `@write`, `@download` and `@upload` allow to move data in and out of RDFpro. We describe them below, reporting both long and short name (e.g., `@read` and `@r`) and their arguments.
+The builtin processors `@read`, `@write`, `@query` and `@update` allow to move data in and out of RDFpro. We describe them below, reporting both long and short name (e.g., `@read` and `@r`) and their arguments.
 
 #### <a name="read"></a> @read
 
@@ -111,7 +111,7 @@ CONSTRUCT queries return quads in the default graph (i.e., plain triples).
 Option `-f FILE` provides a file containing the SPARQL query to be submitted.
 This option is mutually exclusive with option `-q`.
 
-Option `-p` causes BNodes in downloaded data to be rewritten so to avoid clashes with BNodes of the input stream.
+Option `-p` causes BNodes in downloaded data to be preserved.
 Note however that BNodes from a SPARQL query may change from execution to execution depending on the endpoint implementation, as in principle they are scoped locally to the query.
 
 Argument `URL` specifies the URL of the SPARQL endpoint.
@@ -134,39 +134,43 @@ The output stream of this processor is the input stream unchanged, thus allowing
 
 ### <a name="transformprocs"></a> Data transformation processors
 
-Processors `@filter` (deprecated), `@transform`, `@infer`, `@smush`, `@unique` implement different forms of data transformation.
-
-#### <a name="filter"></a> @filter
-
-*Deprecated. Use @transform instead*
-
-    @filter|@f [MATCH_EXP] [-r REPLACE_EXP] [-k]
-
-Discards and/or replaces quads in the input stream.
-A match expression `MATCH_EXP` is used to select quads in the input stream (if omitted, all quads are selected).
-Selected quads are optionally rewritten based on a replacement expression `REPLACE_EXP`, while unselected quads are normally discarded unless option `-k` (keep) is specified.
-
-*Match expressions*. `MATCH_EXP` is a sequence of `TARGET` `RULE`... blocks. `TARGET` is a string with:
-  * zero or more letters `s,p,o,c,t` (`t` = class in `rdf:type` quad) that select quad components (if no letter is specified, all component are selected);
-  * one or more letters `u,b,l,@,^` that select URIs, BNodes, literals, literal languages and literal datatypes of a component.
-`RULE` is either `+EXP` or `-EXP`, where expression `EXP` is either `'constant'`, `"constant"`, `<uri>`, `|regex|` or `prefix:name`.
-Regular expressions follow [Java syntax](http://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html) and may contain capturing groups `(...)` that are later reused in the replace expression; these groups are numbered starting from 1 and considering the whole `MATCH_EXP`.
-Evaluation of the match expression on an input quad considers each component in turn. For each component rules are selected (based on `TARGET`) and are evaluated in order. If a `+EXP` rule matches the evaluation moves to the next
-component. A quad is accepted if no `-EXP` rule matches.
-
-*Replace expressions*. `REPLACE_EXP` is a sequence of `TARGET` `EXP` blocks. `TARGET` is defined as for match expressions. `EXP` is either `'constant'`, `"constant"`, `<uri>`, `|pattern|` or `prefix:name`.
-Patterns may contain `\i` references to matched groups, using the numbering criteria described above for `MATCH_EXP`.
-Evaluation of a replace expression on a selected quad considerd each component in turn. For each component the first applicable `EXP` is selected (based on TARGET), if exists, in which case it is evaluated and the produced value used to replace the currently considered quad component.
-
-*Examples*. We report some concrete examples of how to use the filtering mechanism:
-
-  * `rdfpro @filter 'pu +rdf:type -* sobl -* ou -owl:Thing'` -- keeps only `rdf:type` quads whose subject and object are URIs (`sobl -*`) and with the object different from `owl:Thing`
-  * `rdfpro @filter 'pu +rdf:type -*' -r 'cu <http://example.org/mygraph>'` -- extracts `rdf:type` quads, placing them in named graph `<http://example.org/mygraph>`
-  * `rdfpro @filter 'pu +foaf:name -* ol +|(.*)|' -r 'ol |Mr. \1|' -k` -- rewrites `foaf:name` quads, prepending `Mr. ` to their literal object (note the use of `-k` to propagate unselected quads)
+Processors `@transform`, `@groovy`, `@rdfs`, `@smush`, `@unique` implement different forms of data transformation.
 
 #### <a name="transform"></a> @transform
 
-    @transform|@t [-p] SCRIPT [ARG...]
+    @transform|@t [EXP]
+
+Discards and/or replaces quads based on the rules contained in the supplied string.
+Given `X` a quad component (possible values: `s`, `p`, `o`, `c`), the string contains three types of rules:
+
+  * `+X value list` -- quad is dropped if `X` does not belong to `value list`;
+  * `-X value list` -- quad is dropped if `X` belongs to `value list`;
+  * `=X value` -- quad component `X` is replaced with `value` (evaluated after filters).
+
+Note: for a given component `X`, only a rule `+X` or `-X` can appear. If you have more than one of such rules, consider adding multiple @transform processors to your pipeline.
+Values must be encoded in Turtle. The following wildcard values are supported:
+
+  * `<*>` -- any URI;
+  * `_:*` -- any BNode;
+  * `*` -- any literal;
+  * `*@*` -- any literal with a language;
+  * `*@xyz` -- any literal with language `xyz`;
+  * `*^^*` -- any typed literal;
+  * `*^^<uri>` -- any literal with datatype `<uri>`;
+  * `*^^ns:uri` -- any literal with datatype `ns:uri`;
+  * `*^^ns:*` -- any typed literal with datatype prefixed with `ns:`;
+  * `ns:*` -- any URI prefixed with `ns:`;
+  * `<ns*>` -- any URI with namespace URI `ns`.
+
+*Examples*. We report some concrete examples of how to use the filtering mechanism:
+
+  * `@transform '-p foaf:name'` -- removes all `foaf:name` quads;
+  * `@transform '+p rdf:type +s <*> +o <*>'` -- keeps only `rdf:type` quads whose subject and object are URIs;
+  * `@transform '+p rdf:type =c <http://example.org/mygraph>'` -- extracts `rdf:type` quads, placing them in named graph `<http://example.org/mygraph>`.
+
+#### <a name="groovy"></a> @groovy
+
+    @groovy [-p] SCRIPT [ARG...]
 
 Transform the stream using a user-supplied Groovy `SCRIPT`. Extra arguments `ARG...` are passed to the script. Option `-p` enables script pooling, i.e., the execution of multiple script instances in parallel each one on a subset of the input stream; pooling is faster but makes meaningless the use of global variables in the script (there is no such thing as a global state).
 
@@ -179,7 +183,7 @@ The script is executed for each quad (preserving script variables among invocati
 
 In alternative, the script may provide a function `handle(quad)` that is called for each quad in place of executing the whole script. Independently of the use of `handle(quad)`, the following three callback functions can be defined by the script:
 
-  * `init(args)` - called when the script is initialized with the `ARG...` arguments supplied to the @transform processor
+  * `init(args)` - called when the script is initialized with the `ARG...` arguments supplied to the @groovy processor
   * `start(pass)` - called each time a pass on input data is started, supplying the 0-based integer index of the pass
   * `end(pass)` - called each time a pass on input data is completed, supplying the 0-based integer index of the pass
 
@@ -201,7 +205,7 @@ Finally, note that the boolean flag `__rdfpro__` is set to true when the script 
 
 #### <a name="rdfs"></a> @rdfs
 
-    @rdfs [-e RULES] [-d] [-C | -c URI] [-b BASE] [-p] [URL...]
+    @rdfs [-e RULES] [-d] [-t] [-C | -c URI] [-b BASE] [-p] [URL...]
 
 Emits the RDFS deductive closure of input quads.
 One or more TBox files are loaded and their RDFS closure is computed and (possibly) emitted first.
@@ -213,14 +217,16 @@ Rules `rdfs4a`, `rdfs4b` and `rdfs8` generates a lot of quads of the form `<x rd
 
 Option `-d` causes simple OWL axioms in the TBox to be decomposed to their corresponding RDFS axioms, where possible, so that they can affect RDFS reasoning (e.g., `owl:equivalentClass` can be expressed in terms of `rdfs:subClassOf`).
 
+Option `-t` causes uninformative <x rdf:type _:b> statements, with _:b a BNode, to be dropped (default: keep).
+
 Options `-C` and `-c URI` control the graph where the TBox closure is emitted.
-This graph is the default (unnamed) graph if option `-C` is specified, otherwise the URI given by `-c` is used as teh targed graph. \
+This graph is the default (unnamed) graph if option `-C` is specified, otherwise the URI given by `-c` is used as the targed graph.
 If none of these options is specified, the TBox closure is not emitted.
 
 Option `-b BASE` specifies the base URI to be used for resolving relative URIs in the TBox file.
 
 Option `-p` can be used to preserve BNodes in TBox files.
-If not give, BNodes are rewritten on a per-file basis, similarly to `@read` behaviour.
+If not given, BNodes are rewritten on a per-file basis, similarly to `@read` behaviour.
 
 Arguments `URL...` identify the TBox files to be read.
 The same restrictions and explicit extension prefix supported by `@read` can be used.
@@ -234,7 +240,7 @@ The result represents the complete RDFS closure if the TBOX: (i) contains all th
 
 #### <a name="smush"></a> @smush
 
-    @smush|@s [-s SIZE] NAMESPACE...
+    @smush NAMESPACE...
 
 Performs smushing, i.e., identifies `owl:sameAs` equivalence classes and, for each of them, selects a URI as the 'canonical URI' for the class which replaces other alias URIs in input quads.
 
@@ -259,7 +265,7 @@ The remaining processors `@stats`, `@tbox` serve various extraction tasks, while
 
 #### <a name="stats"></a> @stats
 
-    @stats|@x [-n NAMESPACE] [-p URI] [-c URI] [-t NUM] [-o]
+    @stats [-n NAMESPACE] [-p URI] [-c URI] [-t NUM] [-o]
 
 Emits VOID structural statistics for input quads.
 A VOID dataset is associated to the whole input and to each set of graphs associated to the same 'source' URI with a configurable property in a configurable graph.
@@ -280,7 +286,7 @@ This option can be used to reduce the amount of data generated by `@stats`, espe
 Option `-o` enables the computation of `void:classes` and `void:properties`, which is memory-intensive (computation may fail if thousands or more of distinct properties are used in the data).
 
 Internally, `@stats` makes use of the `sort` utility to (conceptually) sort the quad stream twice: first based on the subject to group quads about the same entity and compute entity-based and distinct subjects statistics; then based on the object to compute distinct objects statistics.
-Therefore, computing VOID statistics is quite a slow operation.
+Therefore, computing VOID statistics is a quite slow operation.
 
 #### <a name="tbox"></a> @tbox
 

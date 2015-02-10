@@ -1,8 +1,12 @@
 
-RDFpro usage example
-====================
+RDFpro usage example (SemDev paper)
+===================================
 
-In this example, we show how to use RDFpro to select and integrate RDF data from Freebase, GeoNames and DBpedia in the four languaged EN, ES, IT and NL, performing smushing, inference, deduplication and statistics extraction.
+We describe here an example of using RDFpro for integrating RDF data from Freebase, GeoNames and DBpedia (version 3.9) in the four languaged EN, ES, IT and NL, performing smushing, inference, deduplication and statistics extraction.
+
+This example is taken from the [ISWC SemDev 2014 paper](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2014iswcSemDev01.pdf) and here we provide further details included the concrete RDFpro commands necessary to carry out the integration task.
+Note, however, that the numbers here reported (collected after repeating the processing in January 2015) are different from the ones in the paper, as both the accessed data sources and RDFpro have changed in the meanwhile (more data available, faster RDFpro implementation).
+
 
 ### Data download and selection
 
@@ -55,25 +59,27 @@ Bash script [process_single.sh](example/process_single.sh) can be used to issue 
 
 ##### Step 1 Filtering
 
-    rdfpro { @read -w metadata.trig , \
-             @read -w vocab/* @filter -r "cu '<graph:vocab>'" , \
-             @read -w freebase/* @filter "spou -|http://rdf\.freebase\.com/key/.*|
-                 -|http://rdf\.freebase\.com/ns/common\.(notable_for\|document).*|
-                 -fb:common.topic -fb:common.topic.article -fb:common.topic.notable_for
-                 -fb:common.topic.notable_types -fb:common.topic.topic_equivalent_webpage
-                 -|http://rdf\.freebase\.com/ns/(type\|user\|base\|freebase\|dataworld\|pipeline\|atom\|community)\..*|" \
-                 -r "cu '<graph:freebase>'" , \
-             @read -w geonames/*.rdf geonames:geonames/all-geonames-rdf.zip \
-                 @filter "pu -gn:childrenFeatures -gn:locationMap
-                     -gn:nearbyFeatures -gn:neighbouringFeatures -gn:countryCode
-                     -gn:parentFeature -gn:wikipediaArticle -rdfs:isDefinedBy
-                     -rdf:type" -r "cu '<graph:geonames>'" , \
-             { @read -w dbp_en/* @filter -r "cu '<graph:dbp_en>'" , \
-               @read -w dbp_es/* @filter -r "cu '<graph:dbp_es>'" , \
-               @read -w dbp_it/* @filter -r "cu '<graph:dbp_it>'" , \
-               @read -w dbp_nl/* @filter -r "cu '<graph:dbp_nl>'" } \
-                 @filter "ou -bibo pu -dc:rights -dc:language -foaf:primaryTopic" } \
-           @filter "ol -'' o@ +'en' +'es' +'it' +'nl' -* o^ +xsd -*" \
+    rdfpro { @read metadata.trig , \
+             @read vocab/* @transform '=c <graph:vocab>' , \
+             @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
+                 fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
+                 <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
+                 <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
+                 <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
+                 <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*> <http://rdf.freebase.com/ns/community.*>
+                 =c <graph:freebase>' , \
+             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+                 @transform '-p gn:childrenFeatures gn:locationMap
+                     gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
+                     gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
+                     rdf:type =c <graph:geonames>' , \
+             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+           @transform '-o "" ""@en ""@es ""@it ""@nl' \
            @write filtered.tql.gz
 
 Downloaded dump files are filtered to extract desired RDF quads and place them in separate graphs to track provenance.
@@ -91,7 +97,7 @@ Some notes on the implemented filtering rules:
 
     rdfpro @read filtered.tql.gz \
            @tbox \
-           @filter "spou -bibo -con -owl:Thing -schema:Thing -foaf:Document -dc:subject -foaf:page -dct:relation" \
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
            @write tbox.tql.gz
 
 TBox quads are extracted from filtered data and stored, filtering out unwanted top level classes (`owl:Thing`, `schema:Thing`, `foaf:Document`) and vocabulary alignments (to [`bibo`](http://purl.org/ontology/bibo/) and [`con`](http://www.w3.org/2000/10/swap/pim/contact#) terms and `dc:subject`).
@@ -99,17 +105,17 @@ TBox quads are extracted from filtered data and stored, filtering out unwanted t
 ##### Step 3 Smushing
 
     rdfpro @read filtered.tql.gz \
-           @smush -S 2048M http://dbpedia http://it.dbpedia http://es.dbpedia \
-               http://nl.dbpedia http://rdf.freebase.com http://sws.geonames.org \
+           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
+                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
            @write smushed.tql.gz
 
-Filtered data is smushed so to use canonical URIs for each `owl:sameAs` equivalence class, producing an intermediate smushed file. Note the use of a smush buffer of 2GB and the specification of a ranked list of namespaces for selecting the canonical URIs.
+Filtered data is smushed so to use canonical URIs for each `owl:sameAs` equivalence class, producing an intermediate smushed file. Note the specification of a ranked list of namespaces for selecting the canonical URIs.
 
 ##### Step 4 Inference
 
     rdfpro @read smushed.tql.gz \
-           @infer -c '<graph:vocab>' -r rdfs1,rdfs2,rdfs3,rdfs5,rdfs6,rdfs7,rdfs9,rdfs10,rdfs11,rdfs12,rdfs13 -d tbox.tql.gz \
-           @filter "tu -bibo -con -owl:Thing -schema:Thing -foaf:Document pu -bibo -con -dc:subject -foaf:page -dct:relation" \
+           @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
            @write inferred.tql.gz
 
 The deductive closure of smushed data is computed and saved, using the extracted TBox and excluding RDFS rules `rdfs4a`, `rdfs4b` and `rdfs8` (and keeping the remaining ones) to avoid inferring uninformative `X rdf:type rdfs:Resource` quads.
@@ -125,7 +131,7 @@ Quads with the same subject, predicate and object are merged and placed in a gra
 
 ##### Step 6 Statistics extraction
 
-    rdfpro { @read tbox.tql.gz , @read dataset.tql.gz @stats } @prefix @write statistics.tql.gz
+    rdfpro { @read tbox.tql.gz , @read dataset.tql.gz @stats } @write statistics.tql.gz
 
 VOID statistics are extracted and merged with TBox data, forming an annotated ontology that documents the produced dataset.
 
@@ -135,53 +141,67 @@ VOID statistics are extracted and merged with TBox data, forming an annotated on
 The 6 steps previously listed can be also aggregated to reduce overhead for writing and reading back intermediate files, exploiting RDFpro capability to arbitrarily compose processors and write intermediate results.
 In particular, steps 1-2 can be aggregated as follows:
 
-    rdfpro { @read -w metadata.trig , \
-             @read -w vocab/* @filter -r "cu '<graph:vocab>'" , \
-             @read -w freebase/* @filter "spou -|http://rdf\.freebase\.com/key/.*|
-                 -|http://rdf\.freebase\.com/ns/common\.(notable_for\|document).*|
-                 -fb:common.topic -fb:common.topic.article -fb:common.topic.notable_for
-                 -fb:common.topic.notable_types -fb:common.topic.topic_equivalent_webpage
-                 -|http://rdf\.freebase\.com/ns/(type\|user\|base\|freebase\|dataworld\|pipeline\|atom\|community)\..*|" \
-                 -r "cu '<graph:freebase>'" , \
-             @read -w geonames/*.rdf geonames:geonames/all-geonames-rdf.zip \
-                 @filter "pu -gn:childrenFeatures -gn:locationMap
-                     -gn:nearbyFeatures -gn:neighbouringFeatures -gn:countryCode
-                     -gn:parentFeature -gn:wikipediaArticle -rdfs:isDefinedBy
-                     -rdf:type" -r "cu '<graph:geonames>'" , \
-             { @read -w dbp_en/* @filter -r "cu '<graph:dbp_en>'" , \
-               @read -w dbp_es/* @filter -r "cu '<graph:dbp_es>'" , \
-               @read -w dbp_it/* @filter -r "cu '<graph:dbp_it>'" , \
-               @read -w dbp_nl/* @filter -r "cu '<graph:dbp_nl>'" } \
-                 @filter "ou -bibo pu -dc:rights -dc:language -foaf:primaryTopic" } \
-           @filter "ol -'' o@ +'en' +'es' +'it' +'nl' -* o^ +xsd -*" \
-           @write filtered2.tql.gz \
+    rdfpro { @read metadata.trig , \
+             @read vocab/* @transform '=c <graph:vocab>' , \
+             @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
+                 fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
+                 <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
+                 <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
+                 <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
+                 <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*>  <http://rdf.freebase.com/ns/community.*>
+                 =c <graph:freebase>' , \
+             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+                 @transform '-p gn:childrenFeatures gn:locationMap
+                     gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
+                     gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
+                     rdf:type =c <graph:geonames>' , \
+             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+           @transform '-o "" ""@en ""@es ""@it ""@nl' \
+           @write filtered.tql.gz \
            @tbox \
-           @filter "spou -bibo -con -owl:Thing -schema:Thing -foaf:Document -dc:subject
-               -foaf:page -dct:relation" \
-           @write tbox2.tql.gz
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+           @write tbox.tql.gz
 
 Similarly, steps 3-6 can be aggregated in a single macro-step:
 
     rdfpro @read filtered.tql.gz \
-           @smush -S 2048M http://dbpedia http://it.dbpedia http://es.dbpedia \
-               http://nl.dbpedia http://rdf.freebase.com http://sws.geonames.org \
-           @infer -c '<graph:vocab>' -r rdfs1,rdfs2,rdfs3,rdfs5,rdfs6,rdfs7,rdfs9,rdfs10,rdfs11,rdfs12,rdfs13 -d tbox.tql.gz \
-           @filter "tu -bibo -con -owl:Thing -schema:Thing -foaf:Document pu -bibo -con -dc:subject -foaf:page -dct:relation" \
+           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
+                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
+           @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
            @unique -m \
-           @write dataset2.tql.gz \
+           @write dataset.tql.gz \
            @stats \
            @read tbox.tql.gz \
-           @write statistics2.tql.gz
+           @write statistics.tql.gz
 
 Bash script [process_aggregated.sh](example/process_aggregated.sh) can be used to issue these two commands.
 
 
 ### Results
 
-The table below reports the results of executing the processing steps individually and aggregated on an Intel Core I7 860 machine with 16 GB RAM and a 500GB 7200RPM hard disk.
+The table below reports the results of executing the processing steps individually and aggregated on an Intel Core I7 860 machine with 16 GB RAM and a 500GB 7200RPM hard disk, using `pigz` and `pbzip2` as compressors/decompressors and `sort -S 4096M --batch-size=128 --compress-program=pigz` as the sort command.
 Smushing and inference add duplicates that are removed with merging.
 TBox extraction and filtering are fast, while other steps are slower because complex or due to the need to sort data or process it in multiple passes.
-The aggregation of processing steps leads to a sensible reduction of the total processing time from 18953 s to 13531 s.
+The aggregation of processing steps leads to a sensible reduction of the total processing time from 17500 s to 10905 s (note: times were respectively 18953 s and 13531 s in July 2014 test).
+
+<!--
+                               Input size             Output size            Time
+                               Quads      Size        Quads      Size
+    Step 1 - Filtering         3174641760 33208598528 769671526  10350542495 4194
+    Step 2 - TBox extraction   769671526  10350542495 149650     1335279     412
+    Step 3 - Smushing          769671526  10350542495 799755339  11049733537 2265
+    Step 4 - Inference         799904989  11051068816 1690704128 16655132884 3780
+    Step 5 - Merging           1690704128 16655132884 964179957  9511455269  4254
+    Step 6 - Statistics        964329607  9512790548  297867     3390328     2595
+    Steps 1-2 aggregated       3174641760 33208598528 769821176  10351877774 4315
+    Steps 3-6 aggregated       769821176  10351877774 964477824  9520662330  6590
+-->
 
 <table>
 <thead>
@@ -194,93 +214,93 @@ The aggregation of processing steps leads to a sensible reduction of the total p
 </tr>
 <tr>
 <th>[Mquads]</th>
-<th>[GB]</th>
+<th>[MiB]</th>
 <th>[Mquads]</th>
-<th>[GB]</th>
+<th>[MiB]</th>
 <th>[Mquads/s]</th>
-<th>[MB/s]</th>
+<th>[MiB/s]</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Step 1 - Filtering</td>
-<td>3019.89</td>
-<td>29.31</td>
-<td>750.78</td>
-<td>9.68</td>
-<td>0.57</td>
-<td>5.70</td>
-<td>5266</td>
+<td title="3020 @ 07/2014">3175</td>
+<td title="30013 @ 07/2014">31670</td>
+<td title="751 @ 07/2014">770</td>
+<td title="9912 @ 07/2014">9871</td>
+<td title="0.57 @ 07/2014">0.76</td>
+<td title="5.70 @ 07/2014">7.55</td>
+<td title="5266 @ 07/2014">4194</td>
 </tr>
 <tr>
 <td>Step 2 - TBox extraction</td>
-<td>750.78</td>
-<td>9.68</td>
-<td>0.15</td>
-<td>0.01</td>
-<td>1.36</td>
-<td>18.00</td>
-<td>551</td>
+<td title="751 @ 07/2014">770</td>
+<td title="9912 @ 07/2014">9871</td>
+<td title="&lt;1 @ 07/2014">&lt;1</td>
+<td title="~1 @ 07/2014">~1</td>
+<td title="1.36 @ 07/2014">1.87</td>
+<td title="18.00 @ 07/2014">23.95</td>
+<td title="551 @ 07/2014">412</td>
 </tr>
 <tr>
 <td>Step 3 - Smushing</td>
-<td>750.78</td>
-<td>9.68</td>
-<td>780.86</td>
-<td>10.33</td>
-<td>0.31</td>
-<td>4.04</td>
-<td>2453</td>
+<td title="751 @ 07/2014">770</td>
+<td title="9912 @ 07/2014">9871</td>
+<td title="781 @ 07/2014">800</td>
+<td title="10578 @ 07/2014">10538</td>
+<td title="0.31 @ 07/2014">0.34</td>
+<td title="4.04 @ 07/2014">4.36</td>
+<td title="2453 @ 07/2014">2265</td>
 </tr>
 <tr>
 <td>Step 4 - Inference</td>
-<td>781.01</td>
-<td>10.34</td>
-<td>1693.59</td>
-<td>15.56</td>
-<td>0.22</td>
-<td>2.91</td>
-<td>3630</td>
+<td title="781 @ 07/2014">800</td>
+<td title="10578 @ 07/2014">10539</td>
+<td title="1694 @ 07/2014">1691</td>
+<td title="15933 @ 07/2014">15884</td>
+<td title="0.22 @ 07/2014">0.21</td>
+<td title="2.91 @ 07/2014">2.79</td>
+<td title="3630 @ 07/2014">3780</td>
 </tr>
 <tr>
 <td>Step 5 - Merging</td>
-<td>1693.59</td>
-<td>15.56</td>
-<td>954.91</td>
-<td>7.77</td>
-<td>0.38</td>
-<td>3.61</td>
-<td>4413</td>
+<td title="1694 @ 07/2014">1691</td>
+<td title="15933 @ 07/2014">15884</td>
+<td title="955 @ 07/2014">964</td>
+<td title="7956 @ 07/2014">9071</td>
+<td title="0.38 @ 07/2014">0.40</td>
+<td title="3.61 @ 07/2014">3.73</td>
+<td title="4413 @ 07/2014">4254</td>
 </tr>
 <tr>
 <td>Step 6 - Statistics extraction</td>
-<td>954.91</td>
-<td>7.77</td>
-<td>0.32</td>
-<td>0.01</td>
-<td>0.36</td>
-<td>3.02</td>
-<td>2640</td>
+<td title="955 @ 07/2014">964</td>
+<td title="7956 @ 07/2014">9072</td>
+<td title="&lt;1 @ 07/2014">&lt;1</td>
+<td title="~3 @ 07/2014">~3</td>
+<td title="0.36 @ 07/2014">0.37</td>
+<td title="3.02 @ 07/2014">3.50</td>
+<td title="2640 @ 07/2014">2595</td>
 </tr>
 <tr>
 <td>Steps 1-2 aggregated</td>
-<td>3019.89</td>
-<td>29.31</td>
-<td>750.92</td>
-<td>9.69</td>
-<td>0.56</td>
-<td>5.60</td>
-<td>5363</td>
+<td title="3020 @ 07/2014">3175</td>
+<td title="30013 @ 07/2014">31670</td>
+<td title="751 @ 07/2014">770</td>
+<td title="9913 @ 07/2014">9872</td>
+<td title="0.56 @ 07/2014">0.74</td>
+<td title="5.60 @ 07/2014">7.34</td>
+<td title="5363 @ 07/2014">4315</td>
 </tr>
 <tr>
 <td>Steps 3-6 aggregated</td>
-<td>750.92</td>
-<td>9.69</td>
-<td>955.23</td>
-<td>7.78</td>
-<td>0.09</td>
-<td>1.21</td>
-<td>8168</td>
+<td title="751 @ 07/2014">770</td>
+<td title="9913 @ 07/2014">9872</td>
+<td title="955 @ 07/2014">964</td>
+<td title="7967 @ 07/2014">9080</td>
+<td title="0.09 @ 07/2014">0.12</td>
+<td title="1.21 @ 07/2014">1.50</td>
+<td title="8168 @ 07/2014">6590</td>
 </tr>
 </tbody>
 </table>
