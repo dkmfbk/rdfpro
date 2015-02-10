@@ -749,7 +749,7 @@ public final class RDFProcessors {
     /**
      * Creates an {@code RDFProcessor} that writes data of the RDF stream to the files specified.
      * This is a utility method that relies on {@link #tee(RDFHandler...)}, on
-     * {@link RDFHandlers#write(WriterConfig, String...)} and on {@link #track(Tracker)} for
+     * {@link RDFHandlers#write(WriterConfig, int, String...)} and on {@link #track(Tracker)} for
      * reporting progress information about written statements. Note that data is written only at
      * the first pass.
      *

@@ -16,7 +16,6 @@ package eu.fbk.rdfpro.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
@@ -61,11 +60,10 @@ import org.openrdf.model.impl.NamespaceImpl;
  * Instances of this class can be created from:
  * </p>
  * <ul>
- * <li>a {@code Namespace} iterable, by {@link #forIterable(Iterable)};</li>
+ * <li>a {@code Namespace} iterable, by {@link #forIterable(Iterable, boolean)};</li>
  * <li>a {@code prefix -> namespace URI} map, by {@link #forURIMap(Map)};</li>
- * <li>a {@code namespace URI -> prefix} map, by {@link #forPrefixMap(Map)};</li>
- * <li>a file identified by a {@code URL}, by {@link #load(URL)};</li>
- * <li>a char stream given by a {@code Reader} object, by {@link #load(Reader)};</li>
+ * <li>a {@code namespace URI -> prefix} map, by {@link #forPrefixMap(Map, boolean)};</li>
+ * <li>a list of files identified by {@code URL}s, by {@link #load(Iterable, boolean)};</li>
  * </ul>
  * <p>
  * This class is immutable and thus thread-safe.
