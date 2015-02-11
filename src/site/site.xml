@@ -41,30 +41,14 @@
     <menu name="Maven Reports" ref="reports" inherit="top"/>
 
     <menu name="Links">
-      <item name="BitBucket project" href="http://bitbucket.org/fracor/rdfpro" />
-      <item name="Issue tracker" href="http://bitbucket.org/fracor/rdfpro/issues" />
-      <item name="Contact authors" href="mailto:corcoglioATfbkDOTeu" />
+      <item name="GitHub project" href="https://github.com/dkmfbk/rdfpro" />
+      <item name="Issue tracker" href="https://github.com/dkmfbk/rdfpro/issues" />
+      <item name="Contact authors" href="mailto:rdfproATfbkDOTeu" />
     </menu>
   </body>
 
   <custom>
     <reflowSkin>
-      <!--<absoluteResourceURL>https://knowledgestore.fbk.eu/</absoluteResourceURL>-->
-      <!--<theme>bootswatch-spacelab</theme>-->
-
-      <!--
-      <theme>bootswatch-cerulean</theme>
-      <navbarInverse>true</navbarInverse>
-      -->
-
-      <!--
-      <theme>bootswatch-united</theme>
-      -->
-
-      <!--
-      <theme>bootswatch-flatly</theme>
-      -->
-
       <highlightJs>true</highlightJs>
       <highlightJsTheme>googlecode</highlightJsTheme>
       <imgLightbox>true</imgLightbox>
@@ -78,7 +62,7 @@
       <brand>
         <name>
           <![CDATA[<span class="color-highlight">RDF<sub>pro</sub></span>]]></name>
-        <href>http://fracor.bitbucket.org/rdfpro/</href>
+        <href>https://github.com/dkmfbk/rdfpro</href>
       </brand>
       <titleTemplate>%2$s | %1$s</titleTemplate>
       <toc>none</toc>
