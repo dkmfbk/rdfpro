@@ -62,7 +62,7 @@
       <brand>
         <name>
           <![CDATA[<span class="color-highlight">RDF<sub>pro</sub></span>]]></name>
-        <href>https://github.com/dkmfbk/rdfpro</href>
+        <href>${site-root}</href>
       </brand>
       <titleTemplate>%2$s | %1$s</titleTemplate>
       <toc>none</toc>

@@ -6,3 +6,4 @@ target/
 test/
 *.iml
 .idea/
+**/*.versionsBackup

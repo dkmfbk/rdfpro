@@ -6,7 +6,7 @@
   <groupId>eu.fbk.rdfpro</groupId>
   <artifactId>rdfpro</artifactId>
   <packaging>pom</packaging>
-  <version>0.3-SNAPSHOT</version>
+  <version>0.3</version>
 
   <name>rdfpro</name>
   <description>RDFpro - an extensible tool for building stream-oriented RDF processing pipelines</description>
@@ -900,8 +900,8 @@
     <javadoc-skip>false</javadoc-skip>
     <aggregate>true</aggregate>
     <site-path>file:///${basedir}/${parent-path}/target/website</site-path>
-    <repo-path>file:///${basedir}/${parent-path}/target/mvnrepo</repo-path>
     <project-version>${project.version}</project-version>
+    <site-root>${site.root}</site-root>
 
     <!-- Build configuration -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
