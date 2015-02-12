@@ -8,7 +8,7 @@
 
 	<head>
 		<meta charset="UTF-8" />
-		<title>rdfpro - Home</title>
+		<title>rdfpro - RDFpro processing model</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="description" content="" />
 		<meta http-equiv="content-language" content="en" />
@@ -36,7 +36,7 @@
         p.copyright { display: none }</style>
 	</head>
 
-	<body class="page-index project-rdfpro" data-spy="scroll" data-offset="60" data-target="#toc-scroll-target">
+	<body class="page-model project-rdfpro" data-spy="scroll" data-offset="60" data-target="#toc-scroll-target">
 
 		<div class="navbar navbar-fixed-top">
 			<div class="navbar-inner">
@@ -52,8 +52,8 @@
 							<li class="dropdown active">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
 								<ul class="dropdown-menu">
-									<li class="active"><a href="" title="Home">Home</a></li>
-									<li ><a href="model.html" title="Processing Model">Processing Model</a></li>
+									<li ><a href="index.html" title="Home">Home</a></li>
+									<li class="active"><a href="" title="Processing Model">Processing Model</a></li>
 									<li ><a href="publications.html" title="Publications">Publications</a></li>
 								</ul>
 							</li>
@@ -75,13 +75,13 @@
 									<li ><a href="apidocs/index.html" title="Javadoc">Javadoc</a></li>
 								</ul>
 							</li>
-							<li class="dropdown active">
+							<li class="dropdown">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Maven Reports <b class="caret"></b></a>
 								<ul class="dropdown-menu">
 									<li class="dropdown-submenu ">
 										<a href="project-info.html" title="Project Information">Project Information</a>
 										<ul class="dropdown-menu">
-											<li class="active"><a href="" title="About">About</a></li>
+											<li ><a href="index.html" title="About">About</a></li>
 											<li ><a href="license.html" title="Project License">Project License</a></li>
 											<li ><a href="source-repository.html" title="Source Repository">Source Repository</a></li>
 											<li ><a href="team-list.html" title="Project Team">Project Team</a></li>
@@ -135,61 +135,44 @@
 	<div class="row">
 		<div class="span12">
 			<div class="body-content">
-				<div class="row"> 
- <br /> 
- <br /> 
- <div class="span12"> 
-  <div class="well sidebar" style="text-align: center"> 
-   <h1 style="font-size:400%">RDF<sub>pro</sub></h1> 
-   <br /> 
-   <p style="font-size:200%">An Extensible Tool for Building Stream-Oriented RDF Processing Pipelines</p> 
-   <br /> 
-   <form method="GET" action="install.html"> 
-    <button class="btn btn-primary btn-large" type="submit" style="font-size:150%">Download</button> 
-   </form> 
-  </div> 
- </div> 
-</div>
+<div class="page-header">
+ <h1>RDFpro processing model</h1>
+</div> 
+<p>RDFpro processing model is centred around the concept of <b>RDF processor</b>, a reusable Java component that consumes an input stream of RDF quads (i.e., an RDF triple with a fourth named graph component) in one or more passes, produces an output stream of quads and may have side effect like writing RDF data.</p> 
+<p>Technically, a processor extends the <a href="apidocs/eu/fbk/rdfpro/RDFProcessor.html"><tt>RDFProcessor</tt></a> class as shown below:</p> 
+<div class="source"> 
+ <div class="source"> 
+  <pre>interface RDFProcessor {
+    int getExtraPasses();
+    RDFHandler wrap(RDFHandler sink);
+    // other methods with default implementation
+}
+
+interface RDFHandler {
+    void startRDF();
+    void handleComment(String comment);
+    void handleNamespace(String p, String n);
+    void handleStatement(Statement quad);
+    void endRDF();
+}
+</pre>
+ </div>
+</div> 
+<p>An <tt>RDFProcessor</tt> declares how many extra passes it needs on its input and provides, upon request, an <a class="externalLink" href="http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFHandler.html"><tt>RDFHandler</tt></a> (Sesame interface) where quads, prefix/namespace bindings and comments in RDF data can be fed and handled, with the result sent to a sink <tt>RDFHandler</tt>. Differently from Sesame, that does not specify whether an <tt>RDFHandler</tt> can be simultaneously accessed by multiple threads, here we expect methods <tt>handleComment</tt>, <tt>handleNamespace</tt> and <tt>handleStatement</tt> to be called concurrently by multiple threads to achieve higher throughputs. Thread management is done by RDFpro with the goal of using as many threads as reasonable (~ the number of available cores) to concurrently invoke methods of <tt>RDFProcessor</tt>s.</p> 
+<p>RDFpro offers a number of processors for common tasks that can be easily extended by users (see the <a href="usage.html">tool usage page</a> for their detailed description, or static factory methods in class <a href="apidocs/eu/fbk/rdfpro/RDFProcessors.html"><tt>RDFProcessors</tt></a> for their use in Java code). It is worth noting that some processors make use of the <tt>sort</tt> utility to perform tasks that cannot be done one quad at a time, enabling their execution on arbitrarily large inputs (disk space permitting). In addition to the <tt>sort</tt> utility, RDFpro also exploits the native <tt>gzip</tt>, <tt>bzip2</tt>, <tt>xz</tt> and <tt>7za</tt> utilities (and the multi-threaded version of the first two: <tt>pigz</tt> and <tt>pbzip2</tt>) to efficiently deal with compressed data.</p> 
+<p>Importantly, RDFpro allows to derive new processors by (recursively) applying sequential and parallel compositions, as shown below.</p> 
+<div style="text-align: center; padding-top: 20px; padding-bottom: 20px"> 
+ <img src="model.png" alt="Processor model, sequence and parallel compositions " /> 
+</div> 
+<p>In a sequential composition (second figure), two or more processors <tt>@Pi</tt> are chained so that the output stream of <tt>@Pi</tt> become the input stream of <tt>@Pi+1</tt>. In a parallel composition (third figure), the input stream is sent concurrently to several processors <tt>@Pi</tt>, whose output streams are merged into a resulting stream applying a specific <a href="apidocs/eu/fbk/rdfpro/SetOperator.html"><tt>SetOperator</tt></a>, e.g., set union (<tt>u</tt> flag), set intersection (<tt>i</tt> flag) and set difference (<tt>d</tt> flag) of quads collected from different parallel branches. For both types of composition, RDFpro introduces special buffers in front of each RDF processor that collect a fraction of incoming quads and triggers their processing in separate threads when full; the fraction is adapted at runtime using heuristics trying to ensure that all CPU cores are exploited.</p> 
+<p>An example of composition and the corresponding RDFpro command line syntax are shown below</p> 
+<div style="text-align: center; padding-top: 20px; padding-bottom: 20px"> 
+ <img src="composition.png" alt="Composition example" /> 
+</div> 
+<p>In this example, a Turtle+gzip file <tt>file.ttl.gz</tt> is read, TBox and VOID statistics are extracted in parallel and their union (<tt>U</tt> flag) is written to an RDF/XML file onto.rdf. This example shows how I/O can be done not only using input and output streams but also with specialized <tt>@read</tt> and <tt>@write</tt> processors that augment or dump the current stream at any point of the pipeline. Actually, while input and output streams are a central feature for interconnecting processors and for an application to interact with the RDFpro library, the RDFpro command line tool ignores them: it builds the composite processor as requested, feed it with an empty stream and dumps its final result, relying on the presence of <tt>@read</tt> and <tt>@write</tt> processors for all the I/O.</p> 
+<p>The availability of several builtin processors, the possibility to implement new processors for specific tasks reusing RDFpro infrastructure and the capability to arbitrarily compose processors provide a lot of flexibility, that we hope can help users in addressing a variety of tasks, especially in Linked Data integration scenario where large datasets have to be processed.</p>
 			</div>
 		</div>
-	</div>
-	<div class="row columns columns3">
-		<div class="span4">
-			<h3 id="About">About</h3>
-<p><b>RDFpro</b> (RDF Processor) is a public domain, Java command line tool and library for <b>RDF processing</b>. RDFpro offers a suite of stream-oriented, highly optimized <b>RDF processors</b> for common tasks that can be assembled in complex <b>pipelines</b> to efficiently process RDF data in one or more passes. RDFpro originated from the need of a tool supporting typical <b>Linked Data integration tasks</b>, involving dataset sizes up to few <b>billions triples</b>.</p>
-<p><a href="model.html">learn more…</a></p>
-<div class="section">   
-</div>
-		</div>
-		<div class="span4">
-			<h3 id="Features">Features</h3>
-<ul> 
- <li>RDF quad (triple + graph) filtering and replacement (with <a class="externalLink" href="http://groovy.codehaus.org/">Groovy</a> scripting support)</li> 
- <li>RDFS inference with selectable rules</li> 
- <li>owl:sameAs <a class="externalLink" href="http://patterns.dataincubator.org/book/smushing.html">smushing</a></li> 
- <li>TBox and VOID statistics extraction</li> 
- <li>RDF deduplication and set/multiset operations</li> 
- <li>data upload/download via SPARQL endpoints</li> 
- <li>data read/write in multiple (compressed) formats (rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf)</li> 
- <li>command line <a href="usage.html">tool</a> plus <a href="rdfprolib.html">core</a>, <a href="tql.html">tql</a>, <a href="jsonld.html">jsonld</a> libraries</li> 
- <li>based on <a class="externalLink" href="http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html">Java 8</a> and <a class="externalLink" href="http://www.openrdf.org/">Sesame</a></li> 
- <li>public domain software (<a href="license.html">Creative Commons CC0</a>)</li> 
-</ul>
-<div class="section">   
-</div>
-		</div>
-		<div class="span4">
-			<h3 id="News">News</h3>
-<ul> 
- <li>2015-02-11 Version 0.3 has been released, RDFpro migrates to GitHub</li> 
- <li>2014-12-01 <a class="externalLink" href="https://dkm-static.fbk.eu/people/rospocher/files/pubs/2015sac.pdf">Paper</a> accepted at <a class="externalLink" href="http://www.acm.org/conferences/sac/sac2015/">SAC 2015</a> conference</li> 
- <li>2014-09-01 <a class="externalLink" href="https://dkm-static.fbk.eu/people/rospocher/files/pubs/2014iswcSemDev01.pdf">Paper</a> accepted at <a class="externalLink" href="http://iswc2014.semdev.org/">ISWC 2014 SemDev</a> workshop</li> 
- <li>2014-08-04 Version 0.2 has been released</li> 
- <li>2014-07-24 Version 0.1 has been released</li> 
-</ul>
-		</div>
-	</div>
-	<div class="row">
 	</div>
 	</div>
 
@@ -203,11 +186,11 @@
 				<div class="span2 bottom-nav">
 					<ul class="nav nav-list">
 						<li class="nav-header">About</li>
-						<li class="active">
-							<a href="#" title="Home">Home</a>
-						</li>
 						<li >
-							<a href="model.html" title="Processing Model">Processing Model</a>
+							<a href="index.html" title="Home">Home</a>
+						</li>
+						<li class="active">
+							<a href="#" title="Processing Model">Processing Model</a>
 						</li>
 						<li >
 							<a href="publications.html" title="Publications">Publications</a>

@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>TQL xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../stylesheet.css" />
+</head>
+<body>
+<pre>
+<a class="jxr_linenumber" name="L1" href="#L1">1</a>   <em class="jxr_comment">/*</em>
+<a class="jxr_linenumber" name="L2" href="#L2">2</a>   <em class="jxr_comment"> * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.</em>
+<a class="jxr_linenumber" name="L3" href="#L3">3</a>   <em class="jxr_comment"> * </em>
+<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <em class="jxr_comment"> * Written in 2014 by Francesco Corcoglioniti &lt;francesco.corcoglioniti@gmail.com&gt; with support by</em>
+<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <em class="jxr_comment"> * Marco Rospocher, Marco Amadori and Michele Mostarda.</em>
+<a class="jxr_linenumber" name="L6" href="#L6">6</a>   <em class="jxr_comment"> * </em>
+<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <em class="jxr_comment"> * To the extent possible under law, the author has dedicated all copyright and related and</em>
+<a class="jxr_linenumber" name="L8" href="#L8">8</a>   <em class="jxr_comment"> * neighboring rights to this software to the public domain worldwide. This software is</em>
+<a class="jxr_linenumber" name="L9" href="#L9">9</a>   <em class="jxr_comment"> * distributed without any warranty.</em>
+<a class="jxr_linenumber" name="L10" href="#L10">10</a>  <em class="jxr_comment"> * </em>
+<a class="jxr_linenumber" name="L11" href="#L11">11</a>  <em class="jxr_comment"> * You should have received a copy of the CC0 Public Domain Dedication along with this software.</em>
+<a class="jxr_linenumber" name="L12" href="#L12">12</a>  <em class="jxr_comment"> * If not, see &lt;<a href="http://creativecommons.org/publicdomain/zero/1.0/&gt;" target="alexandria_uri">http://creativecommons.org/publicdomain/zero/1.0/&gt;</a>.</em>
+<a class="jxr_linenumber" name="L13" href="#L13">13</a>  <em class="jxr_comment"> */</em>
+<a class="jxr_linenumber" name="L14" href="#L14">14</a>  <strong class="jxr_keyword">package</strong> eu.fbk.rdfpro.tql;
+<a class="jxr_linenumber" name="L15" href="#L15">15</a>  
+<a class="jxr_linenumber" name="L16" href="#L16">16</a>  <strong class="jxr_keyword">import</strong> java.nio.charset.Charset;
+<a class="jxr_linenumber" name="L17" href="#L17">17</a>  
+<a class="jxr_linenumber" name="L18" href="#L18">18</a>  <strong class="jxr_keyword">import</strong> org.openrdf.rio.RDFFormat;
+<a class="jxr_linenumber" name="L19" href="#L19">19</a>  
+<a class="jxr_linenumber" name="L20" href="#L20">20</a>  <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L21" href="#L21">21</a>  <em class="jxr_javadoccomment"> * Constants for the Turtle Quads (TQL) format.</em>
+<a class="jxr_linenumber" name="L22" href="#L22">22</a>  <em class="jxr_javadoccomment"> * &lt;p&gt;</em>
+<a class="jxr_linenumber" name="L23" href="#L23">23</a>  <em class="jxr_javadoccomment"> * The Turtle Quads {@link RDFFormat} is defined by constant {@link #FORMAT}. As this constant is</em>
+<a class="jxr_linenumber" name="L24" href="#L24">24</a>  <em class="jxr_javadoccomment"> * not part of the predefined set of formats in {@link RDFFormat}, it is necessary to register it.</em>
+<a class="jxr_linenumber" name="L25" href="#L25">25</a>  <em class="jxr_javadoccomment"> * This can be done either via {@link RDFFormat#register(RDFFormat)}, or by simply calling method</em>
+<a class="jxr_linenumber" name="L26" href="#L26">26</a>  <em class="jxr_javadoccomment"> * {@link #register()} on this class, which ensures that multiple calls will result in a single</em>
+<a class="jxr_linenumber" name="L27" href="#L27">27</a>  <em class="jxr_javadoccomment"> * registration.</em>
+<a class="jxr_linenumber" name="L28" href="#L28">28</a>  <em class="jxr_javadoccomment"> * &lt;/p&gt;</em>
+<a class="jxr_linenumber" name="L29" href="#L29">29</a>  <em class="jxr_javadoccomment"> */</em>
+<a class="jxr_linenumber" name="L30" href="#L30">30</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../eu/fbk/rdfpro/tql/TQL.html">TQL</a> {
+<a class="jxr_linenumber" name="L31" href="#L31">31</a>  
+<a class="jxr_linenumber" name="L32" href="#L32">32</a>      <em class="jxr_javadoccomment">/** RDFFormat constant for the Turtle Quads (TQL) format). */</em>
+<a class="jxr_linenumber" name="L33" href="#L33">33</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> RDFFormat FORMAT = <strong class="jxr_keyword">new</strong> RDFFormat(<span class="jxr_string">"Turtle Quads"</span>, <span class="jxr_string">"application/x-tql"</span>,
+<a class="jxr_linenumber" name="L34" href="#L34">34</a>              Charset.forName(<span class="jxr_string">"UTF-8"</span>), <span class="jxr_string">"tql"</span>, false, <strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="L35" href="#L35">35</a>  
+<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <strong class="jxr_keyword">static</strong> {
+<a class="jxr_linenumber" name="L37" href="#L37">37</a>          RDFFormat.register(FORMAT);
+<a class="jxr_linenumber" name="L38" href="#L38">38</a>      }
+<a class="jxr_linenumber" name="L39" href="#L39">39</a>  
+<a class="jxr_linenumber" name="L40" href="#L40">40</a>      <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L41" href="#L41">41</a>  <em class="jxr_javadoccomment">     * Registers the Turtle Quads format in the RIO registry. Calling this method multiple times</em>
+<a class="jxr_linenumber" name="L42" href="#L42">42</a>  <em class="jxr_javadoccomment">     * results in a single registration. Note that registration is also done transparently the</em>
+<a class="jxr_linenumber" name="L43" href="#L43">43</a>  <em class="jxr_javadoccomment">     * first time this class is accessed.</em>
+<a class="jxr_linenumber" name="L44" href="#L44">44</a>  <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L45" href="#L45">45</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> register() {
+<a class="jxr_linenumber" name="L46" href="#L46">46</a>          <em class="jxr_comment">// Calling this method will cause the static initializer to run once</em>
+<a class="jxr_linenumber" name="L47" href="#L47">47</a>      }
+<a class="jxr_linenumber" name="L48" href="#L48">48</a>  
+<a class="jxr_linenumber" name="L49" href="#L49">49</a>      <em class="jxr_comment">// Package protected utility methods</em>
+<a class="jxr_linenumber" name="L50" href="#L50">50</a>  
+<a class="jxr_linenumber" name="L51" href="#L51">51</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L52" href="#L52">52</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_U(c) || isNumber(c) || c == '-' || c == 0x00B7 || c &gt;= 0x0300
+<a class="jxr_linenumber" name="L53" href="#L53">53</a>                  &amp;&amp; c &lt;= 0x036F || c &gt;= 0x203F &amp;&amp; c &lt;= 0x2040;
+<a class="jxr_linenumber" name="L54" href="#L54">54</a>      }
+<a class="jxr_linenumber" name="L55" href="#L55">55</a>  
+<a class="jxr_linenumber" name="L56" href="#L56">56</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_U(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L57" href="#L57">57</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_BASE(c) || c == '_';
+<a class="jxr_linenumber" name="L58" href="#L58">58</a>      }
+<a class="jxr_linenumber" name="L59" href="#L59">59</a>  
+<a class="jxr_linenumber" name="L60" href="#L60">60</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_BASE(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L61" href="#L61">61</a>          <strong class="jxr_keyword">return</strong> isLetter(c) || c &gt;= 0x00C0 &amp;&amp; c &lt;= 0x00D6 || c &gt;= 0x00D8 &amp;&amp; c &lt;= 0x00F6
+<a class="jxr_linenumber" name="L62" href="#L62">62</a>                  || c &gt;= 0x00F8 &amp;&amp; c &lt;= 0x02FF || c &gt;= 0x0370 &amp;&amp; c &lt;= 0x037D || c &gt;= 0x037F
+<a class="jxr_linenumber" name="L63" href="#L63">63</a>                  &amp;&amp; c &lt;= 0x1FFF || c &gt;= 0x200C &amp;&amp; c &lt;= 0x200D || c &gt;= 0x2070 &amp;&amp; c &lt;= 0x218F
+<a class="jxr_linenumber" name="L64" href="#L64">64</a>                  || c &gt;= 0x2C00 &amp;&amp; c &lt;= 0x2FEF || c &gt;= 0x3001 &amp;&amp; c &lt;= 0xD7FF || c &gt;= 0xF900
+<a class="jxr_linenumber" name="L65" href="#L65">65</a>                  &amp;&amp; c &lt;= 0xFDCF || c &gt;= 0xFDF0 &amp;&amp; c &lt;= 0xFFFD || c &gt;= 0x10000 &amp;&amp; c &lt;= 0xEFFFF;
+<a class="jxr_linenumber" name="L66" href="#L66">66</a>      }
+<a class="jxr_linenumber" name="L67" href="#L67">67</a>  
+<a class="jxr_linenumber" name="L68" href="#L68">68</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isLetter(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
+<a class="jxr_linenumber" name="L69" href="#L69">69</a>          <strong class="jxr_keyword">return</strong> c &gt;= 65 &amp;&amp; c &lt;= 90 || c &gt;= 97 &amp;&amp; c &lt;= 122;
+<a class="jxr_linenumber" name="L70" href="#L70">70</a>      }
+<a class="jxr_linenumber" name="L71" href="#L71">71</a>  
+<a class="jxr_linenumber" name="L72" href="#L72">72</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isNumber(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
+<a class="jxr_linenumber" name="L73" href="#L73">73</a>          <strong class="jxr_keyword">return</strong> c &gt;= 48 &amp;&amp; c &lt;= 57;
+<a class="jxr_linenumber" name="L74" href="#L74">74</a>      }
+<a class="jxr_linenumber" name="L75" href="#L75">75</a>  
+<a class="jxr_linenumber" name="L76" href="#L76">76</a>  }
+</pre>
+<hr/>
+<div id="footer">Copyright &#169; 2015 <a href="http://www.fbk.eu">FBK-irst</a>. All rights reserved.</div>
+</body>
+</html>
