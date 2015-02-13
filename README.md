@@ -5,4 +5,4 @@ RDFpro (RDF Processor) is a public domain (Creative Commons CC0) Java command li
 RDFpro processors are extensible by users and can be freely composed to form complex pipelines to efficiently process RDF data in one or more passes.
 RDFpro model and multi-threaded design allow processing billions of triples in few hours in typical Linked Open Data integration scenarios.
 
-[RDFpro Web site](http://fracor.bitbucket.org/rdfpro/)
+[RDFpro Web site](http://rdfpro.fbk.eu/)
