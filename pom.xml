@@ -105,39 +105,30 @@
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
         <site>
-        <id>siterdfpro</id>
-        <url>${site-path}/</url>
+            <id>siterdfpro</id>
+            <url>${site-path}/</url>
         </site>
     </distributionManagement>
 
-    <!--
-    <scm>
-      <connection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</connection>
-      <developerConnection>scm:git:ssh://git@bitbucket.org/fracor/rdfpro.git</developerConnection>
-      <url>https://bitbucket.org/fracor/rdfpro.git</url>
-      <tag>HEAD</tag>
-    </scm>
-    -->
-
     <!--<distributionManagement>-->
-        <!--<repository>-->
-            <!--<id>repordfpro</id>-->
-            <!--<name>Repository for project output artifacts</name>-->
-            <!--<url>${repo-path}</url>-->
-            <!--<layout>default</layout>-->
-            <!--<uniqueVersion>false</uniqueVersion>-->
-        <!--</repository>-->
-        <!--<snapshotRepository>-->
-            <!--<id>repordfpro</id>-->
-            <!--<name>Repository for project output artifacts</name>-->
-            <!--<url>${repo-path}</url>-->
-            <!--<layout>default</layout>-->
-            <!--<uniqueVersion>false</uniqueVersion>-->
-        <!--</snapshotRepository>-->
-        <!--<site>-->
-            <!--<id>siterdfpro</id>-->
-            <!--<url>${site-path}/</url>-->
-        <!--</site>-->
+    <!--<repository>-->
+    <!--<id>repordfpro</id>-->
+    <!--<name>Repository for project output artifacts</name>-->
+    <!--<url>${repo-path}</url>-->
+    <!--<layout>default</layout>-->
+    <!--<uniqueVersion>false</uniqueVersion>-->
+    <!--</repository>-->
+    <!--<snapshotRepository>-->
+    <!--<id>repordfpro</id>-->
+    <!--<name>Repository for project output artifacts</name>-->
+    <!--<url>${repo-path}</url>-->
+    <!--<layout>default</layout>-->
+    <!--<uniqueVersion>false</uniqueVersion>-->
+    <!--</snapshotRepository>-->
+    <!--<site>-->
+    <!--<id>siterdfpro</id>-->
+    <!--<url>${site-path}/</url>-->
+    <!--</site>-->
     <!--</distributionManagement>-->
 
     <dependencyManagement>
@@ -917,7 +908,7 @@
                 </plugins>
             </build>
         </profile>
-        
+
         <profile>
             <id>parent-info</id>
             <activation>
@@ -947,7 +938,7 @@
                 </plugins>
             </reporting>
         </profile>
-        
+
         <profile>
             <id>module-info</id>
             <activation>
@@ -971,7 +962,7 @@
                 </plugins>
             </reporting>
         </profile>
-        
+
         <profile>
             <id>intranet</id>
             <properties>
