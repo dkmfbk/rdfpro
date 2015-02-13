@@ -33,6 +33,15 @@
             </properties>
         </developer>
         <developer>
+            <id>corcoglio</id>
+            <name>Francesco Corcoglioniti</name>
+            <email>corcoglio@fbk.eu</email>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+        </developer>
+        <developer>
             <id>mostarda</id>
             <name>Michele Mostarda</name>
             <email>mostarda@fbk.eu</email>
@@ -73,14 +82,6 @@
                 <picUrl>https://my.fbk.eu/fbk-api/v2/picture/amadori</picUrl>
             </properties>
         </contributor>
-        <!--<contributor>-->
-            <!--<name>Francesco Corcoglioniti</name>-->
-            <!--<email>corcoglio@fbk.eu</email>-->
-            <!--<roles>-->
-                <!--<role>Developer</role>-->
-            <!--</roles>-->
-            <!--<timezone>+1</timezone>-->
-        <!--</contributor>-->
     </contributors>
 
     <licenses>
