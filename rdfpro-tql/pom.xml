@@ -1,52 +1,53 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
-  <parent>
+    <parent>
+        <groupId>eu.fbk.rdfpro</groupId>
+        <artifactId>rdfpro</artifactId>
+        <version>0.4-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <groupId>eu.fbk.rdfpro</groupId>
-    <artifactId>rdfpro</artifactId>
-    <version>0.4-SNAPSHOT</version>
-    <relativePath>../pom.xml</relativePath>
-  </parent>
+    <artifactId>rdfpro-tql</artifactId>
+    <packaging>jar</packaging>
 
-  <groupId>eu.fbk.rdfpro</groupId>
-  <artifactId>rdfpro-tql</artifactId>
-  <packaging>jar</packaging>
+    <name>rdfpro-tql</name>
+    <description>
+        Parser and writer for RDF in Turtle Quads (TQL) format. TQL is N-Quads
+        with the more permissive (and efficient!) Turtle encoding. TQL is used in
+        DBpedia exports and is supported in input by the Virtuoso triple store.
+    </description>
+    <url>http://rdfpro.fbk.eu/rdfpro-tql.html</url>
 
-  <name>rdfpro-tql</name>
-  <description>
-    Parser and writer for RDF in Turtle Quads (TQL) format. TQL is N-Quads
-    with the more permissive (and efficient!) Turtle encoding. TQL is used in
-    DBpedia exports and is supported in input by the Virtuoso triple store.
-  </description>
-  <url>http://fracor.bitbucket.org/rdfpro/rdfpro-tql.html</url>
+    <distributionManagement>
+        <site>
+            <id>siterdfpro</id>
+            <url>${site-path}/rdfpro-tql/</url>
+        </site>
+    </distributionManagement>
 
-  <distributionManagement>
-    <site>
-      <id>siterdfpro</id>
-      <url>${site-path}/rdfpro-tql/</url>
-    </site>
-  </distributionManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-rio-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-model</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-rio-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <properties>
-    <parent-path>..</parent-path>
-  </properties>
+    <properties>
+        <parent-path>..</parent-path>
+    </properties>
 
 </project>

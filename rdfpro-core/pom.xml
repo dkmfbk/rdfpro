@@ -1,78 +1,78 @@
 <?xml version="1.0"?>
 <project
-  xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+        xmlns="http://maven.apache.org/POM/4.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
-  <parent>
+    <parent>
+        <groupId>eu.fbk.rdfpro</groupId>
+        <artifactId>rdfpro</artifactId>
+        <version>0.4-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <groupId>eu.fbk.rdfpro</groupId>
-    <artifactId>rdfpro</artifactId>
-    <version>0.4-SNAPSHOT</version>
-    <relativePath>../pom.xml</relativePath>
-  </parent>
+    <artifactId>rdfpro-core</artifactId>
+    <packaging>jar</packaging>
 
-  <groupId>eu.fbk.rdfpro</groupId>
-  <artifactId>rdfpro-core</artifactId>
-  <packaging>jar</packaging>
+    <name>rdfpro-core</name>
+    <description>
+        RDFpro library reusable in Java applications. Provides the RDFProcessor
+        abstraction, builtin processors and composition capabilities.
+    </description>
+    <url>http://rdfpro.fbk.eu/rdfprolib.html</url>
 
-  <name>rdfpro-core</name>
-  <description>
-    RDFpro library reusable in Java applications. Provides the RDFProcessor
-    abstraction, builtin processors and composition capabilities.
-  </description>
-  <url>http://fracor.bitbucket.org/rdfpro/rdfprolib.html</url>
+    <distributionManagement>
+        <site>
+            <id>siterdfpro</id>
+            <url>${site-path}/rdfpro-core/</url>
+        </site>
+    </distributionManagement>
 
-  <distributionManagement>
-    <site>
-      <id>siterdfpro</id>
-      <url>${site-path}/rdfpro-core/</url>
-    </site>
-  </distributionManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-rio-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-util</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-model</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-rio-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.openrdf.sesame</groupId>
-      <artifactId>sesame-util</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>jcl-over-slf4j</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <properties>
-    <parent-path>..</parent-path>
-  </properties>
+    <properties>
+        <parent-path>..</parent-path>
+    </properties>
 
 </project>

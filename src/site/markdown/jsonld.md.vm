@@ -16,7 +16,7 @@ In order to use the `rdfpro-jsonld` library you have to include the following de
 
 If you don't use Maven, you have to download and include the following JARs in the classpath:
 
-  * [rdfpro-jsonld-${project-version}.jar](${repo-path}/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-jsonld-${project-version}.jar)
+  * [rdfpro-jsonld-${project-version}.jar](http://central.maven.org/maven2/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-jsonld-${project-version}.jar)
   * [slf4j-api-${slf4j-version}.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/${slf4j-version}/slf4j-api-${slf4j-version}.jar) (or newer version)
   * [sesame-rio-api-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/${sesame-version}/sesame-rio-api-${sesame-version}.jar) (or newer version)
   * [sesame-model-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/${sesame-version}/sesame-model-${sesame-version}.jar) (or newer version)

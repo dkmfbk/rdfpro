@@ -1,111 +1,112 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <project>
 
-  <publishDate position="bottom" format="yyyy/MM/dd" />
+    <publishDate position="bottom" format="yyyy/MM/dd"/>
 
-  <skin>
-    <groupId>lt.velykis.maven.skins</groupId>
-    <artifactId>reflow-maven-skin</artifactId>
-    <version>1.1.1</version>
-  </skin>
+    <skin>
+        <groupId>lt.velykis.maven.skins</groupId>
+        <artifactId>reflow-maven-skin</artifactId>
+        <version>1.1.1</version>
+    </skin>
 
-  <body>
-    <head>
-      <style>
-        footer { padding-top: 5px!important; padding-bottom: 5px!important; margin-top: 30px!important }
-        div.subfooter { padding-top: 20px!important; padding-bottom: 10px!important }
-        p.copyright { display: none }
-      </style>
-    </head>
+    <body>
+        <head>
+            <style>
+                footer { padding-top: 5px!important; padding-bottom: 5px!important; margin-top: 30px!important }
+                div.subfooter { padding-top: 20px!important; padding-bottom: 10px!important }
+                p.copyright { display: none }
+            </style>
+        </head>
 
-    <menu name="About">
-      <item name="Home" href="index.html" />
-      <item name="Processing Model" href="model.html" />
-      <item name="Publications" href="publications.html" />
-    </menu>
+        <menu name="About">
+            <item name="Home" href="index.html"/>
+            <item name="Team" href="team-list.html"/>
+            <item name="Processing Model" href="model.html"/>
+            <item name="Publications" href="publications.html"/>
+        </menu>
 
-    <menu name="Tool">
-      <item name="Installation" href="install.html" />
-      <item name="Usage" href="usage.html" />
-      <item name="Example (SemDev)" href="example.html" />
-      <item name="Examples (SAC)" href="examples_sac.html" />
-    </menu>
+        <menu name="Tool">
+            <item name="Installation" href="install.html"/>
+            <item name="Usage" href="usage.html"/>
+            <item name="Example (SemDev)" href="example.html"/>
+            <item name="Examples (SAC)" href="examples_sac.html"/>
+        </menu>
 
-    <menu name="Libraries">
-      <item name="RDFpro" href="rdfprolib.html" />
-      <item name="TQL" href="tql.html" />
-      <item name="JSONLD" href="jsonld.html" />
-      <item name="Javadoc" href="apidocs/index.html" />
-    </menu>
+        <menu name="Libraries">
+            <item name="RDFpro" href="rdfprolib.html"/>
+            <item name="TQL" href="tql.html"/>
+            <item name="JSONLD" href="jsonld.html"/>
+            <item name="Javadoc" href="apidocs/index.html"/>
+        </menu>
 
-    <menu name="Maven Reports" ref="reports" inherit="top"/>
+        <menu name="Maven Reports" ref="reports" inherit="top"/>
 
-    <menu name="Links">
-      <item name="GitHub project" href="https://github.com/dkmfbk/rdfpro" />
-      <item name="Issue tracker" href="https://github.com/dkmfbk/rdfpro/issues" />
-      <item name="Contact authors" href="mailto:rdfproATfbkDOTeu" />
-    </menu>
-  </body>
+        <menu name="Links">
+            <item name="GitHub project" href="https://github.com/dkmfbk/rdfpro"/>
+            <item name="Issue tracker" href="https://github.com/dkmfbk/rdfpro/issues"/>
+            <item name="Contact authors" href="mailto:rdfproATfbkDOTeu"/>
+        </menu>
+    </body>
 
-  <custom>
-    <reflowSkin>
-      <highlightJs>true</highlightJs>
-      <highlightJsTheme>googlecode</highlightJsTheme>
-      <imgLightbox>true</imgLightbox>
-      <smoothScroll>true</smoothScroll>
-      <bootstrapCss>true</bootstrapCss>
-      <bootstrapIcons>true</bootstrapIcons>
-      <html5Anchor>true</html5Anchor>
-      <markPageHeader>true</markPageHeader>
-      <!--<protocolRelativeURLs>true</protocolRelativeURLs>-->
-      <skinAttribution>true</skinAttribution>
-      <brand>
-        <name>
-          <![CDATA[<span class="color-highlight">RDF<sub>pro</sub></span>]]></name>
-        <href>${site-root}</href>
-      </brand>
-      <titleTemplate>%2$s | %1$s</titleTemplate>
-      <toc>none</toc>
-      <!--
-        <toc>top</toc>
-        <tocTopMax>6</tocTopMax>
-        <tocTopFlatten>false</tocTopFlatten>
-      -->
-      <topNav>About|Tool|Libraries|Maven Reports|Links</topNav>
+    <custom>
+        <reflowSkin>
+            <highlightJs>true</highlightJs>
+            <highlightJsTheme>googlecode</highlightJsTheme>
+            <imgLightbox>true</imgLightbox>
+            <smoothScroll>true</smoothScroll>
+            <bootstrapCss>true</bootstrapCss>
+            <bootstrapIcons>true</bootstrapIcons>
+            <html5Anchor>true</html5Anchor>
+            <markPageHeader>true</markPageHeader>
+            <!--<protocolRelativeURLs>true</protocolRelativeURLs>-->
+            <skinAttribution>true</skinAttribution>
+            <brand>
+                <name>
+                    <![CDATA[<span class="color-highlight">RDF<sub>pro</sub></span>]]></name>
+                <href>${site-root}</href>
+            </brand>
+            <titleTemplate>%2$s | %1$s</titleTemplate>
+            <toc>none</toc>
+            <!--
+              <toc>top</toc>
+              <tocTopMax>6</tocTopMax>
+              <tocTopFlatten>false</tocTopFlatten>
+            -->
+            <topNav>About|Tool|Libraries|Maven Reports|Links</topNav>
 
-      <bottomNav maxSpan="8">
-        <column>About</column>
-        <column>Tool</column>
-        <column>Libraries</column>
-        <column>Links</column>
-      </bottomNav>
+            <bottomNav maxSpan="8">
+                <column>About</column>
+                <column>Tool</column>
+                <column>Libraries</column>
+                <column>Links</column>
+            </bottomNav>
 
-      <breadcrumbs>false</breadcrumbs>
-      <bottomDescription quote="false">
-        <![CDATA[
+            <breadcrumbs>false</breadcrumbs>
+            <bottomDescription quote="false">
+                <![CDATA[
         RDFpro is public domain software developed within:<br/><br/>
         <a href="http://dkm.fbk.eu/"><img src="images/fbkdkm.png"/></a>&nbsp;&nbsp;
         <a href="http://www.newsreader-project.eu/"><img src="images/newsreader.png"/></a><br/>
         ]]>
-      </bottomDescription>
-      <!--<shortTitle>generate</shortTitle>-->
-      <titleTemplate>%1$s - %2$s</titleTemplate>
-      <pages>
-        <index>
-          <shortTitle>Home</shortTitle>
-          <markPageHeader>false</markPageHeader>
-          <sections>
-            <body/>
-            <columns>3</columns>
-          </sections>
-        </index>
-        <taglist>
-          <html5Anchor>false</html5Anchor>
-        </taglist>
-        <license>
-          <highlightJs>false</highlightJs>
-        </license>
-      </pages>
-    </reflowSkin>
-  </custom>
+            </bottomDescription>
+            <!--<shortTitle>generate</shortTitle>-->
+            <titleTemplate>%1$s - %2$s</titleTemplate>
+            <pages>
+                <index>
+                    <shortTitle>Home</shortTitle>
+                    <markPageHeader>false</markPageHeader>
+                    <sections>
+                        <body/>
+                        <columns>3</columns>
+                    </sections>
+                </index>
+                <taglist>
+                    <html5Anchor>false</html5Anchor>
+                </taglist>
+                <license>
+                    <highlightJs>false</highlightJs>
+                </license>
+            </pages>
+        </reflowSkin>
+    </custom>
 </project>
