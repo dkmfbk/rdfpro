@@ -45,6 +45,7 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFFormat;
+import org.openrdf.rio.Rio;
 
 public final class Statements {
 
@@ -100,21 +101,32 @@ public final class Statements {
     @Nullable
     public static File toRDFFile(final String fileSpec) {
         final int index = fileSpec.indexOf(':');
-        if (index > 0 && RDFFormat.forFileName("test." + fileSpec.substring(0, index)) != null) {
-            return new File(fileSpec.substring(index + 1));
+        if (index > 0) {
+            final String name = "test." + fileSpec.substring(0, index);
+            if (Rio.getParserFormatForFileName(name) != null
+                    || Rio.getWriterFormatForFileName(name) != null) {
+                return new File(fileSpec.substring(index + 1));
+            }
         }
         return new File(fileSpec);
     }
 
     public static RDFFormat toRDFFormat(final String fileSpec) {
         final int index = fileSpec.indexOf(':');
+        RDFFormat format = null;
         if (index > 0) {
-            final RDFFormat format = RDFFormat.forFileName("test." + fileSpec.substring(0, index));
-            if (format != null) {
-                return format;
+            final String name = "test." + fileSpec.substring(0, index);
+            format = Rio.getParserFormatForFileName(name);
+            if (format == null) {
+                format = Rio.getWriterFormatForFileName(name);
             }
         }
-        final RDFFormat format = RDFFormat.forFileName(fileSpec);
+        if (format == null) {
+            format = Rio.getParserFormatForFileName(fileSpec);
+            if (format == null) {
+                format = Rio.getWriterFormatForFileName(fileSpec);
+            }
+        }
         if (format == null) {
             throw new IllegalArgumentException("Unknown RDF format for " + fileSpec);
         }
@@ -160,10 +172,10 @@ public final class Statements {
                     }
                 }
                 final String newLabel = label.substring(0, offset) + "...";
-                if (datatype != null) {
-                    return VALUE_FACTORY.createLiteral(newLabel, datatype);
-                } else if (language != null) {
+                if (language != null) {
                     return VALUE_FACTORY.createLiteral(newLabel, language);
+                } else if (datatype != null) {
+                    return VALUE_FACTORY.createLiteral(newLabel, datatype);
                 } else {
                     return VALUE_FACTORY.createLiteral(newLabel);
                 }
@@ -380,39 +392,39 @@ public final class Statements {
             }
         }
         out.append('"');
-        final URI datatype = literal.getDatatype();
-        if (datatype != null) {
-            out.append('^');
-            out.append('^');
-            formatURI(datatype, out, namespaces);
-        } else {
-            final String language = literal.getLanguage();
-            if (language != null) {
-                out.append('@');
-                final int len = language.length();
-                boolean minusFound = false;
-                boolean valid = true;
-                for (int i = 0; i < len; ++i) {
-                    final char ch = language.charAt(i);
-                    if (ch == '-') {
-                        minusFound = true;
-                        if (i == 0) {
-                            valid = false;
-                        } else {
-                            final char prev = language.charAt(i - 1);
-                            valid &= isLetter(prev) || isNumber(prev);
-                        }
-                    } else if (isNumber(ch)) {
-                        valid &= minusFound;
+        final String language = literal.getLanguage();
+        if (language != null) {
+            out.append('@');
+            final int len = language.length();
+            boolean minusFound = false;
+            boolean valid = true;
+            for (int i = 0; i < len; ++i) {
+                final char ch = language.charAt(i);
+                if (ch == '-') {
+                    minusFound = true;
+                    if (i == 0) {
+                        valid = false;
                     } else {
-                        valid &= isLetter(ch);
+                        final char prev = language.charAt(i - 1);
+                        valid &= isLetter(prev) || isNumber(prev);
                     }
-                    out.append(ch);
+                } else if (isNumber(ch)) {
+                    valid &= minusFound;
+                } else {
+                    valid &= isLetter(ch);
                 }
-                if (!valid || language.charAt(len - 1) == '-') {
-                    throw new IllegalArgumentException("Invalid language tag '" + language
-                            + "' in '" + literal + "'");
-                }
+                out.append(ch);
+            }
+            if (!valid || language.charAt(len - 1) == '-') {
+                throw new IllegalArgumentException("Invalid language tag '" + language + "' in '"
+                        + literal + "'");
+            }
+        } else {
+            final URI datatype = literal.getDatatype();
+            if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
+                out.append('^');
+                out.append('^');
+                formatURI(datatype, out, namespaces);
             }
         }
     }

@@ -460,7 +460,7 @@ public final class RDFSources {
 
             final List<ParseJob> jobs = new ArrayList<ParseJob>();
             for (final String location : this.locations) {
-                final RDFFormat format = RDFFormat.forFileName("test"
+                final RDFFormat format = Rio.getParserFormatForFileName("test"
                         + IO.extractExtension(location));
                 final int parallelism = !this.parallelize
                         || !Statements.isRDFFormatLineBased(format) ? 1 : Environment.getCores();
@@ -557,7 +557,7 @@ public final class RDFSources {
                     return;
                 }
 
-                final RDFFormat format = RDFFormat.forFileName("test"
+                final RDFFormat format = Rio.getParserFormatForFileName("test"
                         + IO.extractExtension(this.location));
 
                 final String logMsg = "Starting {} {} {} parsing for {}";

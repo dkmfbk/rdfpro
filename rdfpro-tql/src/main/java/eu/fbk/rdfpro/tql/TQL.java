@@ -33,15 +33,16 @@ public final class TQL {
     public static final RDFFormat FORMAT = new RDFFormat("Turtle Quads", "application/x-tql",
             Charset.forName("UTF-8"), "tql", false, true);
 
-    static {
-        RDFFormat.register(FORMAT);
-    }
-
     /**
      * Registers the Turtle Quads format in the RIO registry. Calling this method multiple times
      * results in a single registration. Note that registration is also done transparently the
      * first time this class is accessed.
+     * 
+     * @deprecated as of Sesame 2.8, calling this method is not necessary - it is enough to avoid
+     *             using the deprecated RDFFormat.forFileName() (and other static methods) for
+     *             looking up an RDFFormat, and instead rely on methods in the Rio class
      */
+    @Deprecated
     public static void register() {
         // Calling this method will cause the static initializer to run once
     }

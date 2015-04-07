@@ -54,7 +54,6 @@ import org.openrdf.model.datatypes.XMLDatatypeUtil;
 import org.openrdf.model.impl.BNodeImpl;
 import org.openrdf.model.impl.LiteralImpl;
 import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
@@ -452,7 +451,7 @@ final class GroovyProcessor implements RDFProcessor {
                     }
                 }
                 conn.connect();
-                  
+
                 final String encoding = conn.getContentEncoding();
                 final Charset charset = Charset.forName(encoding != null ? encoding : "UTF-8");
 
@@ -1006,7 +1005,7 @@ final class GroovyProcessor implements RDFProcessor {
             dt = l.getDatatype();
         }
 
-        return lang == null ? new GroovyLiteral(label, lang) : dt != null ? new GroovyLiteral(
+        return lang != null ? new GroovyLiteral(label, lang) : dt != null ? new GroovyLiteral(
                 label, dt) : new GroovyLiteral(label);
     }
 

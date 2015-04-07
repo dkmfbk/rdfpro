@@ -36,13 +36,14 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.helpers.RDFWriterBase;
 
 /**
  * An implementation of the RDFWriter interface that writes RDF documents in the JSON-LD format.
- * 
+ *
  * <p>
  * JSON-LD is a JSON-based format for serializing data in (a superset of) RDF as JSON and
  * interpreting JSON contents as RDF. See http://www.w3.org/TR/json-ld/ for the format
@@ -64,7 +65,7 @@ public class JSONLDWriter extends RDFWriterBase {
     private final Map<String, String> prefixes; // namespace-to-prefix map
 
     private final Map<Resource, Map<Resource, JSONLDWriter.Node>> nodes; // context-to-id-to-node
-                                                                         // map
+    // map
 
     private JSONLDWriter.Node lrsHead; // head of least recently seen (LRS) linked list
 
@@ -83,7 +84,7 @@ public class JSONLDWriter extends RDFWriterBase {
     /**
      * Creates a new JSONLDWriter that will write to the supplied OutputStream. The UTF-8
      * character encoding is used.
-     * 
+     *
      * @param stream
      *            the OutputStream to write to
      */
@@ -93,7 +94,7 @@ public class JSONLDWriter extends RDFWriterBase {
 
     /**
      * Creates a new JSONLDWriter that will write to the supplied Writer.
-     * 
+     *
      * @param writer
      *            the Writer to write to
      */
@@ -352,17 +353,17 @@ public class JSONLDWriter extends RDFWriterBase {
     }
 
     private void emitLiteral(final Literal literal) throws IOException {
-        final URI datatype = literal.getDatatype();
-        if (datatype != null) {
-            this.writer.append("{\"@type\": ");
-            emit(datatype, false);
-            this.writer.append(", \"@value\": \"");
+        final String language = literal.getLanguage();
+        if (language != null) {
+            this.writer.append("{\"@language\": \"");
+            emitString(language);
+            this.writer.append("\", \"@value\": \"");
         } else {
-            final String language = literal.getLanguage();
-            if (language != null) {
-                this.writer.append("{\"@language\": \"");
-                emitString(language);
-                this.writer.append("\", \"@value\": \"");
+            final URI datatype = literal.getDatatype();
+            if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
+                this.writer.append("{\"@type\": ");
+                emit(datatype, false);
+                this.writer.append(", \"@value\": \"");
             } else {
                 this.writer.append("{\"@value\": \"");
             }
@@ -482,16 +483,16 @@ public class JSONLDWriter extends RDFWriterBase {
                     if (result == 0) {
                         final Literal firstLit = (Literal) first;
                         final Literal secondLit = (Literal) second;
-                        final URI firstDt = firstLit.getDatatype();
-                        final URI secondDt = secondLit.getDatatype();
-                        result = firstDt == null ? secondDt == null ? 0 : -1
-                                : secondDt == null ? 1 : firstDt.stringValue().compareTo(
-                                        secondDt.stringValue());
+                        final String firstLang = firstLit.getLanguage();
+                        final String secondLang = secondLit.getLanguage();
+                        result = firstLang == null ? secondLang == null ? 0 : -1
+                                : secondLang == null ? 1 : firstLang.compareTo(secondLang);
                         if (result == 0) {
-                            final String firstLang = firstLit.getLanguage();
-                            final String secondLang = secondLit.getLanguage();
-                            result = firstLang == null ? secondLang == null ? 0 : -1
-                                    : secondLang == null ? 1 : firstLang.compareTo(secondLang);
+                            final URI firstDt = firstLit.getDatatype();
+                            final URI secondDt = secondLit.getDatatype();
+                            result = firstDt == null ? secondDt == null ? 0 : -1
+                                    : secondDt == null ? 1 : firstDt.stringValue().compareTo(
+                                            secondDt.stringValue());
                         }
                     }
                     return result;

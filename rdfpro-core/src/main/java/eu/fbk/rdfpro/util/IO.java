@@ -233,6 +233,10 @@ public final class IO {
             return new FileOutputStream(file);
 
         } else {
+            // FIXME: here we should wrap the returned output stream, making sure that an
+            // invocation to close waits for the process to exit; otherwise, if we immediately try
+            // opening the written file, we may find it unfinished as the process is still
+            // flushing data to it.
             LOGGER.debug("Writing file {} using {}", file, cmd);
             final Process process = new ProcessBuilder(cmd.split("\\s+")) //
                     .redirectOutput(file).redirectError(Redirect.INHERIT).start();

@@ -184,10 +184,10 @@ public interface Mapper {
                     return 0x21;
                 }
                 final Literal l = (Literal) value;
-                if (l.getDatatype() != null) {
-                    return 0x42;
-                } else if (l.getLabel() != null) {
+                if (l.getLanguage() != null) {
                     return 0x52;
+                } else if (l.getDatatype() != null) {
+                    return 0x42;
                 } else {
                     return 0x31;
                 }
@@ -199,10 +199,10 @@ public interface Mapper {
                 } else if (value instanceof Literal) {
                     final Literal l = (Literal) value;
                     strings[index++] = l.getLabel();
-                    if (l.getDatatype() != null) {
-                        strings[index++] = l.getDatatype().stringValue();
-                    } else if (l.getLanguage() != null) {
+                    if (l.getLanguage() != null) {
                         strings[index++] = l.getLanguage();
+                    } else if (l.getDatatype() != null) {
+                        strings[index++] = l.getDatatype().stringValue();
                     }
                 }
                 return index;

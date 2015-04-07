@@ -43,10 +43,6 @@ public class GeonamesRDF implements RDFParserFactory {
     public static final RDFFormat FORMAT = new RDFFormat("Geonames RDF",
             "application/x-geonames-rdf", null, "geonames", true, true);
 
-    static {
-        RDFFormat.register(FORMAT);
-    }
-
     public static void init() {
         // calling this method will cause the static initializer to run once
     }

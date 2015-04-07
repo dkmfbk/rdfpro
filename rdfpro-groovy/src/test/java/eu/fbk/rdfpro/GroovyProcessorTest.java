@@ -93,7 +93,7 @@ public class GroovyProcessorTest {
                 vf.createURI(c));
     }
 
-    private static class Baseline implements RDFHandler {
+    static class Baseline implements RDFHandler {
 
         private final RDFHandler handler;
 
