@@ -294,5 +294,120 @@
 
 	<script src="./js/reflow-skin.js"></script>
 
+            <div id="dkmbar-container">
+                <div id="dkmbar">
+                    <a href='https://www.fbk.eu/'>
+                        <img src='https://knowledgestore.fbk.eu/files/logo_fbk.png' />
+                    </a>
+                    <a href='https://dkm.fbk.eu/'>
+                        <img src='https://knowledgestore.fbk.eu/files/logo_dkm.png' />
+                    </a>
+                    <span id='dkmbar-title'>
+                        <strong>Data and Knowledge Management tools</strong>
+                    </span>
+                    <ul>
+                        <li class="nav-button nav-button-rdfpro"><a href='http://rdfpro.fbk.eu'><span>RDF</span><sub>PRO</sub></a></li>
+                        <li class="nav-button nav-button-ks"><a href='http://knowledgestore.fbk.eu'>KnowledgeStore</a></li>
+                        <li class="nav-button nav-button-texowl"><a href='https://dkm.fbk.eu/technologies/tex-owl'>TeX-OWL</a></li>
+                        <li class="nav-button nav-button-moki"><a href='https://moki.fbk.eu/website/index.php'>MoKi</a></li>
+                        <li class="nav-button nav-button-ckr"><a href='https://dkm.fbk.eu/technologies/ckr'>CKR</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <style>
+
+                @media (max-width: 979px) {
+                    #dkmbar-container {
+                        display: none;
+                    }
+                    .main-body {
+                        margin-top: 0 !important;
+                    }
+                    .jumbotron {
+                        top: 0;
+                    }
+                }
+
+                @media (max-width: 1200px) {
+                    #dkmbar-title {
+                        display: none;
+                    }
+                    #dkmbar {
+                        width: 940px !important;
+                    }
+                }
+
+                #dkmbar-container {
+                    direction: ltr;
+                    color: #333;
+                    font: normal 14px/1.5em 'Droid Sans',sans-serif;
+                    height: 35px;
+                    line-height: 33px;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    z-index: 99999;
+                    background-color: #fff;
+                    border-bottom: 2px solid #ddd;
+                }
+
+                #dkmbar {
+                    width: 1170px;
+                    margin: auto;
+                }
+
+                #dkmbar ul {
+                    margin: 0;
+                    padding: 0;
+                    display: inline;
+                    margin-left: 20px;
+                    float: right;
+                }
+
+                #dkmbar ul li {
+                    display: inline;
+                    margin: 0 10px;
+                    padding: 0;
+                    line-height: 35px;
+                }
+
+                #dkmbar ul li a {
+                    color: #333;
+                    padding: 4px 10px;
+                    -webkit-border-radius: 3px;
+                    -moz-border-radius: 3px;
+                    border-radius: 3px;
+                }
+
+                #dkmbar ul li a:hover {
+                    text-decoration: none;
+                    background-color: #333 !important;
+                    color: #ddd;
+                }
+
+                #dkmbar ul li.nav-button-rdfpro a {
+                    background-color: #ddd;
+                }
+
+                #dkmbar img {
+                    padding-right: 20px;
+                }
+
+                .navbar {
+                    top: 37px;
+                }
+
+                .jumbotron {
+                    position: relative;
+                    top: 37px;
+                }
+
+                .main-body {
+                    margin-top: 37px;
+                }
+            </style>
+
 	</body>
 </html>
