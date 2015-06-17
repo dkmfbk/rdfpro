@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- *
+ * 
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- *
+ * 
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- *
+ * 
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -36,6 +36,7 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
@@ -107,22 +108,31 @@ final class ProcessorRDFS implements RDFProcessor {
 
             @Override
             public void accept(final Statement t) {
-                Resource s = (Resource) interner.get(t.getSubject());
-                if (s == null) {
-                    s = t.getSubject();
-                    interner.put(s, s);
-                }
-                URI p = (URI) interner.get(t.getPredicate());
-                if (p == null) {
-                    p = t.getPredicate();
-                    interner.put(p, p);
-                }
-                Value o = interner.get(t.getObject());
-                if (o == null) {
-                    o = t.getObject();
-                    interner.put(o, o);
-                }
+                final Resource s = normalize(t.getSubject());
+                final URI p = normalize(t.getPredicate());
+                final Value o = normalize(t.getObject());
                 database.add(s, p, o);
+            }
+
+            @SuppressWarnings("unchecked")
+            @Nullable
+            private <T extends Value> T normalize(@Nullable T value) {
+                final Value v = interner.get(value);
+                if (v != null) {
+                    return (T) v;
+                }
+                if (value instanceof Literal) {
+                    final Literal lit = (Literal) value;
+                    final URI dt = lit.getDatatype();
+                    if (dt != null) {
+                        final URI dtn = normalize(dt);
+                        if (dtn != dt) {
+                            value = (T) Statements.VALUE_FACTORY.createLiteral(lit.getLabel(), dtn);
+                        }
+                    }
+                }
+                interner.put(value, value);
+                return value;
             }
 
         });
@@ -216,18 +226,18 @@ final class ProcessorRDFS implements RDFProcessor {
                         : context == null ? Statements.VALUE_FACTORY.createStatement(s, p, o)
                                 : Statements.VALUE_FACTORY.createStatement(s, p, o, context);
 
-                        resources.put(s, s);
-                        resources.put(p, p);
-                        if (o instanceof Resource) {
-                            resources.put((Resource) o, (Resource) o);
-                        }
+                resources.put(s, s);
+                resources.put(p, p);
+                if (o instanceof Resource) {
+                    resources.put((Resource) o, (Resource) o);
+                }
 
-                        if (o instanceof Resource
-                                && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
-                                        || p.equals(RDFS.RANGE) || p.equals(RDFS.SUBPROPERTYOF)
-                                        && o instanceof URI)) {
-                            attributes.add(statement);
-                        }
+                if (o instanceof Resource
+                        && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
+                                || p.equals(RDFS.RANGE) || p.equals(RDFS.SUBPROPERTYOF)
+                                && o instanceof URI)) {
+                    attributes.add(statement);
+                }
             }
 
             Collections.sort(attributes, Sorter.INSTANCE);
@@ -955,7 +965,7 @@ final class ProcessorRDFS implements RDFProcessor {
         private Statement create(final Resource subject, final URI predicate, final Value object) {
             return this.context == null ? Statements.VALUE_FACTORY.createStatement(subject,
                     predicate, object) : Statements.VALUE_FACTORY.createStatement(subject,
-                            predicate, object, this.context);
+                    predicate, object, this.context);
         }
 
     }
@@ -981,6 +991,8 @@ final class ProcessorRDFS implements RDFProcessor {
             }
         }
 
+        // TODO
+        
         boolean add(final Statement statement, final boolean buffer) {
 
             if (buffer || VOC.containsKey(statement.getPredicate())
@@ -1003,6 +1015,7 @@ final class ProcessorRDFS implements RDFProcessor {
                 return false; // possibly not a duplicate
             }
         }
+
     }
 
     private static final class Ruleset {
@@ -1301,8 +1314,7 @@ final class ProcessorRDFS implements RDFProcessor {
 
             public Statement getStatement() {
                 if (this.statement == null) {
-                    this.statement = Statements.VALUE_FACTORY.createStatement(this.subj,
-                            this.pred, this.obj);
+                    this.statement = new StatementImpl(this.subj, this.pred, this.obj);
                 }
                 return this.statement;
             }
