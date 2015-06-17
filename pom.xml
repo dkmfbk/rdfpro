@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -158,6 +157,11 @@
                 <artifactId>rdfpro-dist</artifactId>
                 <version>${project-version}</version>
             </dependency>
+            <dependency>
+                <groupId>eu.fbk.rdfpro</groupId>
+                <artifactId>rdfpro-rules</artifactId>
+                <version>${project-version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.openrdf.sesame</groupId>
@@ -246,7 +250,22 @@
             </dependency>
             <dependency>
                 <groupId>org.openrdf.sesame</groupId>
+                <artifactId>sesame-queryalgebra-model</artifactId>
+                <version>${sesame-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openrdf.sesame</groupId>
                 <artifactId>sesame-queryalgebra-evaluation</artifactId>
+                <version>${sesame-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openrdf.sesame</groupId>
+                <artifactId>sesame-queryparser-api</artifactId>
+                <version>${sesame-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openrdf.sesame</groupId>
+                <artifactId>sesame-queryparser-sparql</artifactId>
                 <version>${sesame-version}</version>
             </dependency>
             <dependency>
@@ -268,6 +287,21 @@
                 <groupId>org.semarglproject</groupId>
                 <artifactId>semargl-sesame</artifactId>
                 <version>${semargl-jsonld-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.drools</groupId>
+                <artifactId>drools-core</artifactId>
+                <version>${drools-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.kie</groupId>
+                <artifactId>kie-api</artifactId>
+                <version>${drools-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.drools</groupId>
+                <artifactId>drools-compiler</artifactId>
+                <version>${drools-version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-httpclient</groupId>
@@ -996,6 +1030,7 @@
         <semargl-jsonld-version>0.6.1</semargl-jsonld-version>
         <httpclient-version>3.1</httpclient-version>
         <groovy-version>2.4.0-beta-4</groovy-version>
+        <drools-version>6.2.0.Final</drools-version>
 
         <!-- Build plugin versions -->
         <release-plugin-version>2.5.1</release-plugin-version>
@@ -1031,6 +1066,7 @@
         <module>rdfpro-jsonld</module>
         <module>rdfpro-tql</module>
         <module>rdfpro-dist</module>
-    </modules>
+    <module>rdfpro-rules</module>
+  </modules>
 
 </project>
