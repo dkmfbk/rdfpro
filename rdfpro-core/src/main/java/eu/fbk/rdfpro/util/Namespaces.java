@@ -126,13 +126,13 @@ public final class Namespaces extends AbstractSet<Namespace> {
             }
         }
 
-        Collections.sort(pairs);
+        Collections.sort(filteredPairs);
 
         int pointer = 0;
         String uri = null;
         int uriCount = 0;
         for (int i = 0; i < size; ++i) {
-            final URIPrefixPair pair = pairs.get(i);
+            final URIPrefixPair pair = filteredPairs.get(i);
             final String prefix = pair.prefix;
             if (!pair.uri.equals(uri)) {
                 uri = pair.uri;
@@ -307,9 +307,9 @@ public final class Namespaces extends AbstractSet<Namespace> {
     }
 
     /**
-     * Returns a {@code Namespaces} set for the {@code namespace URI -> URI} map supplied. In case
-     * the map is the {@link #prefixMap()} of another {@code Namespaces} object, that object will
-     * be directly returned.
+     * Returns a {@code Namespaces} set for the {@code namespace URI -> prefix} map supplied. In
+     * case the map is the {@link #prefixMap()} of another {@code Namespaces} object, that object
+     * will be directly returned.
      *
      * @param map
      *            the {@code namespace URI -> prefix} map, not null
@@ -602,28 +602,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
         @Override
         public int compareTo(final URIPrefixPair other) {
-            int result = this.uri.compareTo(other.uri);
-            if (result == 0) {
-                result = this.prefix.compareTo(other.prefix);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean equals(final Object object) {
-            if (object == this) {
-                return true;
-            }
-            if (!(object instanceof URIPrefixPair)) {
-                return false;
-            }
-            final URIPrefixPair other = (URIPrefixPair) object;
-            return this.uri.equals(other.uri) && this.prefix.equals(other.prefix);
-        }
-
-        @Override
-        public int hashCode() {
-            return this.uri.hashCode() ^ this.prefix.hashCode();
+            return this.uri.compareTo(other.uri);
         }
 
     }
