@@ -59,7 +59,7 @@ public final class Main {
 
         boolean showHelp = false;
         boolean showVersion = false;
-        boolean verbose = false;
+        String logLevel = "INFO";
 
         int index = 0;
         while (index < args.length) {
@@ -69,27 +69,30 @@ public final class Main {
             }
             showHelp |= arg.equals("-h");
             showVersion |= arg.equals("-v");
-            verbose |= arg.equals("-V");
+            if (arg.equals("-V")) {
+                logLevel = "DEBUG";
+            } else if (arg.equals("-VV")) {
+                logLevel = "ALL";
+            }
             ++index;
         }
         showHelp |= index == args.length;
 
-        if (verbose) {
-            try {
-                final Logger root = LoggerFactory.getLogger("eu.fbk.rdfpro");
-                final Class<?> levelClass = Class.forName("ch.qos.logback.classic.Level");
-                final Class<?> loggerClass = Class.forName("ch.qos.logback.classic.Logger");
-                final Object level = levelClass.getDeclaredMethod("valueOf", String.class).invoke(
-                        null, "DEBUG");
-                loggerClass.getDeclaredMethod("setLevel", levelClass).invoke(root, level);
-            } catch (final Throwable ex) {
-                // ignore - no control on logging level
-            }
+        try {
+            final Logger root = LoggerFactory.getLogger("eu.fbk");
+            final Class<?> levelClass = Class.forName("ch.qos.logback.classic.Level");
+            final Class<?> loggerClass = Class.forName("ch.qos.logback.classic.Logger");
+            final Object level = levelClass.getDeclaredMethod("valueOf", String.class).invoke(
+                    null, logLevel);
+            loggerClass.getDeclaredMethod("setLevel", levelClass).invoke(root, level);
+        } catch (final Throwable ex) {
+            // ignore - no control on logging level
         }
 
         if (showVersion) {
-            System.out.println(String.format("RDF Processor Tool (RDFpro) %s\nJava %s bit (%s) %s\n"
-                    + "This is free software released into the public domain",
+            System.out.println(String.format(
+                    "RDF Processor Tool (RDFpro) %s\nJava %s bit (%s) %s\n"
+                            + "This is free software released into the public domain",
                     readVersion("eu.fbk.rdfpro", "rdfpro-core", "unknown version"),
                     System.getProperty("sun.arch.data.model"), System.getProperty("java.vendor"),
                     System.getProperty("java.version")));
