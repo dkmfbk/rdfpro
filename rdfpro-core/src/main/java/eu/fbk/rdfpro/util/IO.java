@@ -96,11 +96,16 @@ public final class IO {
             if (index < 0) {
                 return new File(location).toURI().toURL();
             }
-            final String s = location.charAt(0) != '.' ? location : location.substring(index + 1);
-            try {
-                return new URL(s);
-            } catch (final MalformedURLException ex) {
-                return new File(s).toURI().toURL();
+            String s = location.charAt(0) != '.' ? location : location.substring(index + 1);
+            if (s.startsWith("classpath:")) {
+                s = s.substring("classpath:".length());
+                return Objects.requireNonNull(IO.class.getResource(s));
+            } else {
+                try {
+                    return new URL(s);
+                } catch (final MalformedURLException ex) {
+                    return new File(s).toURI().toURL();
+                }
             }
         } catch (final Throwable ex) {
             throw new IllegalArgumentException("Cannot extract URL from '" + location + "'");
