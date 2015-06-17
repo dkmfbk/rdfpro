@@ -49,8 +49,13 @@ import org.openrdf.rio.Rio;
 
 public final class Statements {
 
-    public static final ValueFactory VALUE_FACTORY = ValueFactoryImpl.getInstance();
+    public static final ValueFactory VALUE_FACTORY;
 
+    static {
+        final boolean hashfactory = Boolean.parseBoolean(Environment.getProperty(
+                "rdfpro.hashfactory", "false"));
+        VALUE_FACTORY = hashfactory ? HashValueFactory.INSTANCE : ValueFactoryImpl.getInstance();
+    }
     public static final DatatypeFactory DATATYPE_FACTORY;
 
     public static final Set<URI> TBOX_CLASSES = Collections.unmodifiableSet(new HashSet<URI>(
@@ -674,6 +679,14 @@ public final class Statements {
 
     private static boolean isNumber(final int c) {
         return c >= 48 && c <= 57;
+    }
+
+    @Nullable
+    public static <T extends Value> T normalize(@Nullable final T value) {
+        if (VALUE_FACTORY instanceof HashValueFactory) {
+            return HashValueFactory.normalize(value);
+        }
+        return value;
     }
 
     /**
