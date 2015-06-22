@@ -1,7 +1,6 @@
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
-@prefix ks:   <http://dkm.fbk.eu/ontologies/knowledgestore#> .
 @prefix sys:  <sys:> .
 @prefix :     <http://dkm.fbk.eu/rdfpro-rules/owl2rl#> .
 

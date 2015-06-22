@@ -379,7 +379,8 @@ public final class Engine extends RuleEngine {
                             throw new IllegalArgumentException("Unsupported body pattern: " + expr);
                         }
                         this.ruleBuilder.append(existsOperator).append('(');
-                        translate(existsArg, Collections.emptySet(), extensionExprs, matchedVars);
+                        translate(existsArg, Collections.emptySet(), extensionExprs,
+                                new HashSet<>()); // existential variables in the filter discarded
                         this.ruleBuilder.append(")").append(emptyArg ? "" : ")");
                     }
                 }

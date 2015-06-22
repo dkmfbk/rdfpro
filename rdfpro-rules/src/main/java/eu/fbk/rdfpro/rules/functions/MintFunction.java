@@ -78,7 +78,7 @@ public class MintFunction implements Function {
         final StringBuilder builder = new StringBuilder();
         builder.append(ns != null ? ns : DEFAULT_NS);
         if (name != null) {
-            builder.append(name).append('_');
+            builder.append(name.replaceAll("\\s+", "_")).append('_');
         }
         builder.append(hash.toString());
 
