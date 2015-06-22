@@ -131,7 +131,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         int pointer = 0;
         String uri = null;
         int uriCount = 0;
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < filteredPairs.size(); ++i) {
             final URIPrefixPair pair = filteredPairs.get(i);
             final String prefix = pair.prefix;
             if (!pair.uri.equals(uri)) {
