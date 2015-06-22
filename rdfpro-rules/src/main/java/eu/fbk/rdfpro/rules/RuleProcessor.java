@@ -1,28 +1,19 @@
 package eu.fbk.rdfpro.rules;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 import javax.annotation.Nullable;
 
 import org.openrdf.model.BNode;
-import org.openrdf.model.Model;
-import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
-import org.openrdf.model.impl.LinkedHashModel;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.query.BindingSet;
-import org.openrdf.query.algebra.Join;
-import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.impl.MapBindingSet;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -38,7 +29,6 @@ import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
 import eu.fbk.rdfpro.Reducer;
 import eu.fbk.rdfpro.rules.RuleEngine.Callback;
-import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
@@ -63,13 +53,24 @@ public final class RuleProcessor implements RDFProcessor {
     static RDFProcessor create(final String name, final String... args) throws RDFHandlerException {
 
         // Validate and parse options
-        final Options options = Options.parse("r!|B!|e|g|p|t|C|c!|b!|w|*", args);
+        final Options options = Options.parse("r!|B!|p!|g!|t|C|c!|b!|w|*", args);
 
         // Read base and preserve BNodes settings
         final boolean preserveBNodes = !options.hasOption("w");
         String base = options.getOptionArg("b", String.class);
         base = base == null ? null : Statements.parseValue(base.contains(":") ? base : base + ":",
                 Namespaces.DEFAULT).stringValue();
+
+        // Read bindings
+        final String parameters = options.getOptionArg("B", String.class, "");
+        final MapBindingSet bindings = new MapBindingSet();
+        for (final String token : parameters.split("\\s+")) {
+            final int index = token.indexOf('=');
+            if (index >= 0) {
+                bindings.addBinding(token.substring(0, index).trim(), Statements.parseValue(token
+                        .substring(index + 1).trim(), Namespaces.DEFAULT));
+            }
+        }
 
         // Read rulesets
         final List<String> rulesetURLs = new ArrayList<>();
@@ -81,39 +82,37 @@ public final class RuleProcessor implements RDFProcessor {
         }
         final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
                 rulesetURLs.toArray(new String[0]));
-        final Model rulesetModel = new LinkedHashModel();
-        rulesetSource.emit(RDFHandlers.wrap(rulesetModel), 1);
+        Ruleset ruleset = Ruleset.fromRDF(rulesetSource);
 
-        // Read ruleset bindings
-        final String parameters = options.getOptionArg("B", String.class, "");
-        final MapBindingSet rulesetBindings = new MapBindingSet();
-        for (final String token : parameters.split("\\s+")) {
-            final int index = token.indexOf('=');
-            if (index >= 0) {
-                rulesetBindings.addBinding(token.substring(0, index).trim(), Statements
-                        .parseValue(token.substring(index + 1).trim(), Namespaces.DEFAULT));
-            }
+        // Transform ruleset
+        ruleset = ruleset.transform(bindings);
+        URI globalURI = null;
+        if (options.hasOption("G")) {
+            final String u = options.getOptionArg("G", String.class);
+            globalURI = (URI) Statements.parseValue(u.contains(":") ? u //
+                    : u + ":", Namespaces.DEFAULT);
+        }
+        final String mode = options.getOptionArg("g", String.class, "none").trim();
+        if ("global".equalsIgnoreCase(mode)) {
+            ruleset = ruleset.transformGlobalGM(globalURI);
+        } else if ("separate".equalsIgnoreCase(mode)) {
+            ruleset = ruleset.transformSeparateGM();
+        } else if ("star".equalsIgnoreCase(mode)) {
+            ruleset = ruleset.transformStarGM(globalURI);
+        } else if (!"none".equalsIgnoreCase(mode)) {
+            throw new IllegalArgumentException("Unknown graph inference mode: " + mode);
         }
 
         // Read static closure settings
-        final List<Statement> staticClosure = new ArrayList<>();
-        RDFHandler staticSink = RDFHandlers.NIL;
+        boolean emitStatic = false;
+        URI staticContext = null;
         if (options.hasOption("C")) {
-            staticSink = RDFHandlers.wrap(staticClosure);
+            emitStatic = true;
         } else if (options.hasOption("c")) {
+            emitStatic = true;
             final String ctx = options.getOptionArg("c", String.class);
-            final URI uri = (URI) Statements.parseValue(ctx.contains(":") ? ctx //
+            staticContext = (URI) Statements.parseValue(ctx.contains(":") ? ctx //
                     : ctx + ":", Namespaces.DEFAULT);
-            final URI actualURI = uri.equals(SESAME.NIL) ? null : uri;
-            staticSink = new AbstractRDFHandlerWrapper(RDFHandlers.wrap(staticClosure)) {
-
-                @Override
-                public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                    super.handleStatement(Statements.VALUE_FACTORY.createStatement(
-                            stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), actualURI));
-                }
-
-            };
         }
 
         // Read bnode types settings
@@ -121,12 +120,15 @@ public final class RuleProcessor implements RDFProcessor {
 
         // Read Mapper for optional partitioning
         Mapper mapper = null;
-        if (options.hasOption("g")) {
-            mapper = Mapper.select("c");
-        } else if (options.hasOption("e")) {
+        final String partitioning = options.getOptionArg("p", String.class, "none").trim();
+        if ("entity".equalsIgnoreCase(partitioning)) {
             mapper = Mapper.concat(Mapper.select("s"), Mapper.select("o"));
-        } else if (options.hasOption("p")) {
+        } else if ("graph".equalsIgnoreCase(partitioning)) {
+            mapper = Mapper.select("c");
+        } else if ("rules".equalsIgnoreCase(partitioning)) {
             throw new UnsupportedOperationException("Rule-based partitioning not yet implemented");
+        } else if (!"none".equals(partitioning)) {
+            throw new IllegalArgumentException("Unknown partitioning scheme: " + partitioning);
         }
 
         // Read static data, if any
@@ -137,63 +139,67 @@ public final class RuleProcessor implements RDFProcessor {
                         "%d static triples read (%d tr/s, %d tr/s avg)")).wrap(
                 RDFSources.read(true, preserveBNodes, base, null, staticSpecs));
 
-        // Perform preprocessing
-        final RuleEngine engine = preprocess(rulesetModel, rulesetBindings, staticData, staticSink);
-
         // Build processor
-        return new RuleProcessor(engine, mapper, staticClosure.isEmpty() ? null
-                : RDFSources.wrap(staticClosure), dropBNodeTypes);
+        return new RuleProcessor(ruleset, mapper, dropBNodeTypes, staticData, emitStatic,
+                staticContext);
     }
 
-    private RuleProcessor(final RuleEngine engine, @Nullable final Mapper mapper,
-            @Nullable final RDFSource staticClosure, final boolean dropBNodeTypes) {
+    public RuleProcessor(final Ruleset ruleset, @Nullable final Mapper mapper,
+            final boolean dropBNodeTypes) {
+        this(ruleset, mapper, dropBNodeTypes, null, false, null);
+    }
 
+    public RuleProcessor(final Ruleset ruleset, @Nullable final Mapper mapper,
+            final boolean dropBNodeTypes, @Nullable final RDFSource staticData,
+            final boolean emitStatic, @Nullable final URI staticContext) {
+
+        // Setup the handler receiving closure of static data, if any.
+        final List<Statement> staticClosure = new ArrayList<>();
+        RDFHandler staticSink = RDFHandlers.NIL;
+        if (staticData != null && emitStatic) {
+            staticSink = RDFHandlers.wrap(staticClosure);
+            if (staticContext != null) {
+                final URI uri = staticContext.equals(SESAME.NIL) ? null : staticContext;
+                staticSink = new AbstractRDFHandlerWrapper(staticSink) {
+
+                    @Override
+                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                        super.handleStatement(Statements.VALUE_FACTORY.createStatement(
+                                stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), uri));
+                    }
+
+                };
+            }
+        }
+
+        // Build the dynamic rule engine by closing static data and proprocessing rules
+        final RuleEngine engine = preprocess(ruleset, staticData, staticSink);
+
+        // Setup object
         this.engine = engine;
         this.mapper = mapper;
-        this.staticClosure = staticClosure;
+        this.staticClosure = RDFSources.wrap(staticClosure);
         this.dropBNodeTypes = dropBNodeTypes;
     }
 
-    private static RuleEngine preprocess(final Model ruleset, @Nullable final BindingSet bindings,
+    private static RuleEngine preprocess(final Ruleset ruleset,
             @Nullable final RDFSource staticData, final RDFHandler staticSink) {
 
-        // Extract heads, static and dynamic bodies from ruleset data
-        final Namespaces namespaces = Namespaces.forIterable(ruleset.getNamespaces(), false);
-        final Map<String, TupleExpr> headMap = parse(ruleset, bindings, RR.HEAD, namespaces);
-        final Map<String, TupleExpr> bodyMap = parse(ruleset, bindings, RR.BODY, namespaces);
-        final Map<String, TupleExpr> dataMap = parse(ruleset, bindings, RR.DATA, namespaces);
-        final Set<String> allIDs = new TreeSet<>();
-        final Set<String> staticIDs = new TreeSet<>();
-        final Set<String> dynamicIDs = new TreeSet<>();
-        allIDs.addAll(headMap.keySet());
-        allIDs.addAll(bodyMap.keySet());
-        allIDs.addAll(dataMap.keySet());
-        for (final Resource subj : ruleset.filter(null, RDF.TYPE, RR.STATIC_RULE).subjects()) {
-            staticIDs.add(subj.stringValue());
-        }
-        for (final Resource subj : ruleset.filter(null, RDF.TYPE, RR.DYNAMIC_RULE).subjects()) {
-            dynamicIDs.add(subj.stringValue());
-        }
-
         // Build the dynamic engine and compute the static closure by handling two cases
-        LOGGER.info("Processing {} rules {} static data", allIDs.size(),
+        LOGGER.info("Processing {} rules {} static data", ruleset.getRules().size(),
                 staticData == null ? "without" : "with");
         final long ts = System.currentTimeMillis();
         if (staticData == null) {
 
             // (1) Static data not provided, use input rules without static/dynamic distinction
+            final Ruleset mergedRuleset = ruleset.transformMergeHeads();
             final RuleEngine.Builder builder = RuleEngine.builder(null);
-            for (final String id : allIDs) {
-                final TupleExpr head = headMap.get(id);
-                final TupleExpr body = bodyMap.get(id);
-                final TupleExpr data = dataMap.get(id);
-                final TupleExpr actualBodyExpr = body == null ? data : data == null ? body
-                        : new Join(data, body);
-                builder.addRule(id, head, actualBodyExpr);
+            for (final Rule rule : mergedRuleset.getRules()) {
+                builder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
             }
             final RuleEngine engine = builder.build();
-            LOGGER.info("Rule engine initialized with {} rules in {} ms", allIDs.size(),
-                    System.currentTimeMillis() - ts);
+            LOGGER.info("Rule engine initialized with {} rules in {} ms", mergedRuleset.getRules()
+                    .size(), System.currentTimeMillis() - ts);
             return engine;
 
         } else {
@@ -201,36 +207,32 @@ public final class RuleProcessor implements RDFProcessor {
             // (2) Static data provided, use dynamic rules obtained by preprocessing.
             // First build the static rule engine
             final RuleEngine.Builder staticBuilder = RuleEngine.builder(null);
-            final Set<String> mixedIDs = new HashSet<>();
-            final Map<TupleExpr, DynamicRule> dynamicRules = new HashMap<>();
-            for (final String id : allIDs) {
-                final TupleExpr head = headMap.get(id);
-                final TupleExpr body = bodyMap.get(id);
-                final TupleExpr data = dataMap.get(id);
-                if (staticIDs.contains(id)) {
-                    staticBuilder.addRule(id + "_static", head, body == null ? data //
-                            : data == null ? body : new Join(data, body));
-                }
-                if (dynamicIDs.contains(id) && data != null) {
-                    staticBuilder.addRule(id, null, data);
-                    mixedIDs.add(id);
-                }
+            for (final Rule rule : ruleset.transformMergeHeads().getRules()) {
+                staticBuilder.addRule(rule.getID().stringValue() + "__static", rule.getHead(),
+                        rule.getBody());
+            }
+            for (final Rule rule : ruleset.getPreprocessingRuleset().getRules()) {
+                staticBuilder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
             }
             final RuleEngine staticEngine = staticBuilder.build();
 
-            // Then run the static engine to compute the closure of static data, populating alo
-            // dynamic rules based on matches found for the static body parts
+            // Then run the static engine to compute the closure of static data and build the
+            // dynamic ruleset based on bindings computed for preprocessing rules.
+            final Map<URI, List<BindingSet>> bindings = new HashMap<>();
+            final Map<String, List<BindingSet>> bindingsHelper = new HashMap<>();
+            for (final Rule rule : ruleset.getPreprocessingRuleset().getRules()) {
+                final List<BindingSet> list = new ArrayList<>();
+                bindings.put(rule.getID(), list);
+                bindingsHelper.put(rule.getID().stringValue(), list);
+            }
             final RDFHandler handler = staticEngine.newSession(staticSink, new Callback() {
 
                 @Override
                 public boolean ruleTriggered(final RDFHandler handler, final String id,
                         final BindingSet bindings) {
-                    if (mixedIDs.contains(id)) {
-                        final TupleExpr head = Algebra.rewrite(headMap.get(id), bindings);
-                        final TupleExpr body = Algebra.rewrite(bodyMap.get(id), bindings);
-                        if (!head.equals(body)) {
-                            DynamicRule.add(id, head, body, dynamicRules);
-                        }
+                    final List<BindingSet> list = bindingsHelper.get(id);
+                    if (list != null) {
+                        list.add(bindings);
                     }
                     return true;
                 }
@@ -241,42 +243,21 @@ public final class RuleProcessor implements RDFProcessor {
             } catch (final RDFHandlerException ex) {
                 throw new RuntimeException(ex);
             }
-
-            // Complete the dynamic rules by adding all rules that are purely dynamic
-            for (final String id : dynamicIDs) {
-                if (!mixedIDs.contains(id)) {
-                    DynamicRule.add(id, headMap.get(id), bodyMap.get(id), dynamicRules);
-                }
-            }
+            final Ruleset dynamicRuleset = ruleset.getDynamicRuleset(bindings)
+                    .transformMergeHeads();
 
             // Build the dynamic engine
-            final List<DynamicRule> sortedRules = new ArrayList<>(dynamicRules.values());
-            Collections.sort(sortedRules);
             final RuleEngine.Builder dynamicBuilder = RuleEngine.builder(null);
-            for (final DynamicRule rule : sortedRules) {
-                dynamicBuilder.addRule(rule.getID(), rule.getHead(), rule.getBody());
+            for (final Rule rule : dynamicRuleset.getRules()) {
+                dynamicBuilder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
             }
             final RuleEngine engine = dynamicBuilder.build();
 
             // Log results
-            LOGGER.info("Rule engine initialized with {} dynamic rules in {} ms",
-                    sortedRules.size(), System.currentTimeMillis() - ts);
+            LOGGER.info("Rule engine initialized with {} dynamic rules in {} ms", dynamicRuleset
+                    .getRules().size(), System.currentTimeMillis() - ts);
             return engine;
         }
-    }
-
-    private static Map<String, TupleExpr> parse(final Model ruleset,
-            @Nullable final BindingSet bindings, final URI property, final Namespaces namespaces) {
-
-        final Map<String, TupleExpr> exprs = new HashMap<>();
-        for (final Statement stmt : ruleset.filter(null, property, null)) {
-            final String id = stmt.getSubject().stringValue();
-            TupleExpr expr = Algebra.parseTupleExpr(stmt.getObject().stringValue(), null,
-                    namespaces.uriMap());
-            expr = Algebra.rewrite(expr, bindings);
-            exprs.put(id, expr);
-        }
-        return exprs;
     }
 
     @Override
@@ -339,61 +320,6 @@ public final class RuleProcessor implements RDFProcessor {
 
         // Return the resulting handler after all the necessary wrappings
         return result;
-    }
-
-    private static final class DynamicRule implements Comparable<DynamicRule> {
-
-        private final TupleExpr body;
-
-        private final Set<TupleExpr> heads;
-
-        private final Set<String> ids;
-
-        private final int num;
-
-        public DynamicRule(final TupleExpr body, final int num) {
-            this.body = body;
-            this.heads = new HashSet<>();
-            this.ids = new HashSet<>();
-            this.num = num;
-        }
-
-        public String getID() {
-            return String.join("_", this.ids) + "_" + Integer.toHexString(this.num);
-        }
-
-        public TupleExpr getHead() {
-            TupleExpr result = null;
-            for (final TupleExpr expr : this.heads) {
-                result = result == null ? expr : new Join(result, expr);
-            }
-            return result;
-        }
-
-        public TupleExpr getBody() {
-            return this.body;
-        }
-
-        @Override
-        public int compareTo(final DynamicRule other) {
-            return getID().compareTo(other.getID());
-        }
-
-        public void add(final String id, final TupleExpr head) {
-            this.ids.add(id);
-            this.heads.add(head);
-        }
-
-        public static void add(final String id, final TupleExpr head, final TupleExpr body,
-                final Map<TupleExpr, DynamicRule> map) {
-            DynamicRule rule = map.get(body);
-            if (rule == null) {
-                rule = new DynamicRule(body, map.size());
-                map.put(body, rule);
-            }
-            rule.add(id, head);
-        }
-
     }
 
 }

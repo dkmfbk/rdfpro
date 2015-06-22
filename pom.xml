@@ -274,6 +274,11 @@
                 <version>${sesame-version}</version>
             </dependency>
             <dependency>
+                <groupId>org.openrdf.sesame</groupId>
+                <artifactId>sesame-queryrender</artifactId>
+                <version>${sesame-version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.semarglproject</groupId>
                 <artifactId>semargl-jsonld</artifactId>
                 <version>${semargl-jsonld-version}</version>

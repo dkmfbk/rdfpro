@@ -21,10 +21,15 @@ public final class RR {
     /** Class rr:Rule. */
     public static final URI RULE = createURI("Rule");
 
+    /** Class rr:StaticTerm. */
+    public static final URI STATIC_TERM = createURI("StaticTerm");
+
     /** Class rr:StaticRule. */
+    @Deprecated
     public static final URI STATIC_RULE = createURI("StaticRule");
 
     /** Class rr:DynamicRule. */
+    @Deprecated
     public static final URI DYNAMIC_RULE = createURI("DynamicRule");
 
     // PROPERTIES
@@ -36,7 +41,22 @@ public final class RR {
     public static final URI BODY = createURI("body");
 
     /** Property rr:data. */
+    @Deprecated
     public static final URI DATA = createURI("data");
+
+    /** Property rr:prefix. */
+    public static final URI PREFIX_PROPERTY = createURI("prefix");
+
+    // FUNCTIONS
+
+    /** Function rr:mint. */
+    public static final URI MINT = createURI("mint");
+
+    /** Function rr:compatibleDatatype. */
+    public static final URI COMPATIBLE_DATATYPE = createURI("compatibleDatatype");
+
+    /** Function rr:starSelectGraph. */
+    public static final URI STAR_SELECT_GRAPH = createURI("starSelectGraph");
 
     // HELPER METHODS
 

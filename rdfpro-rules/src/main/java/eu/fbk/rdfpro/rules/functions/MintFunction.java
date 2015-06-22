@@ -11,20 +11,16 @@ import org.openrdf.model.ValueFactory;
 import org.openrdf.query.algebra.evaluation.ValueExprEvaluationException;
 import org.openrdf.query.algebra.evaluation.function.Function;
 
+import eu.fbk.rdfpro.rules.RR;
 import eu.fbk.rdfpro.util.Hash;
-import eu.fbk.rdfpro.util.Namespaces;
-import eu.fbk.rdfpro.util.Statements;
 
 public class MintFunction implements Function {
-
-    private static final String URI = Statements.parseValue("ks:mint", Namespaces.DEFAULT)
-            .stringValue();
 
     private static final String DEFAULT_NS = "urn:hash:";
 
     @Override
     public String getURI() {
-        return URI;
+        return RR.MINT.stringValue();
     }
 
     @Override

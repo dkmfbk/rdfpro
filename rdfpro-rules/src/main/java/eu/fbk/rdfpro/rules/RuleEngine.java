@@ -16,6 +16,7 @@ import org.openrdf.model.Model;
 import org.openrdf.model.Statement;
 import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.Join;
 import org.openrdf.query.algebra.QueryModelNode;
@@ -103,12 +104,16 @@ public abstract class RuleEngine {
         public final Builder addRule(final String id, @Nullable final String head,
                 @Nullable final String body, @Nullable final Namespaces namespaces,
                 @Nullable final Map<BindingSet, Iterable<BindingSet>> mappings) {
-            final TupleExpr headExpr = head == null ? null : Algebra.parseTupleExpr(head, null,
-                    namespaces.uriMap());
-            final TupleExpr bodyExpr = body == null ? null : Algebra.parseTupleExpr(body, null,
-                    namespaces.uriMap());
-            addRule(id, headExpr, bodyExpr);
-            return this;
+            try {
+                final TupleExpr headExpr = head == null ? null : Algebra.parseTupleExpr(head,
+                        null, namespaces.uriMap());
+                final TupleExpr bodyExpr = body == null ? null : Algebra.parseTupleExpr(body,
+                        null, namespaces.uriMap());
+                addRule(id, headExpr, bodyExpr);
+                return this;
+            } catch (final MalformedQueryException ex) {
+                throw new IllegalArgumentException(ex);
+            }
         }
 
         public final Builder addRule(final String ruleID, @Nullable final TupleExpr head,

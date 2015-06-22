@@ -14,13 +14,9 @@ import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.query.algebra.evaluation.ValueExprEvaluationException;
 import org.openrdf.query.algebra.evaluation.function.Function;
 
-import eu.fbk.rdfpro.util.Namespaces;
-import eu.fbk.rdfpro.util.Statements;
+import eu.fbk.rdfpro.rules.RR;
 
-public class CompatibleFunction implements Function {
-
-    private static final String URI = Statements.parseValue("ks:compatible", Namespaces.DEFAULT)
-            .stringValue();
+public class CompatibleDatatypeFunction implements Function {
 
     private static final Set<Pair> COMPATIBILITIES;
 
@@ -105,7 +101,7 @@ public class CompatibleFunction implements Function {
 
     @Override
     public String getURI() {
-        return URI;
+        return RR.COMPATIBLE_DATATYPE.stringValue();
     }
 
     @Override

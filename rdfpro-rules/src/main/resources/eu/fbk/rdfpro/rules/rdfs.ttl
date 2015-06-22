@@ -3,7 +3,16 @@
 @prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
 @prefix :     <http://dkm.fbk.eu/rdfpro-rules/rdfs#> .
 
-:axioms a rr:StaticRule ;
+rdfs:Class a rr:StaticTerm.
+rdfs:Datatype a rr:StaticTerm.
+rdf:Property a rr:StaticTerm.
+rdfs:ContainerMembershipProperty a rr:StaticTerm.
+rdfs:domain a rr:StaticTerm.
+rdfs:range a rr:StaticTerm.
+rdfs:subClassOf a rr:StaticTerm.
+rdfs:subPropertyOf a rr:StaticTerm.
+
+:axioms a rr:Rule;
     rr:head """ rdf:type rdf:type rdf:Property.
                 rdf:subject rdf:type rdf:Property.
                 rdf:predicate rdf:type rdf:Property.
@@ -55,64 +64,60 @@
                 rdfs:isDefinedBy rdfs:range rdfs:Resource.
                 rdf:value rdfs:range rdfs:Resource.
                 rdf:_1 rdfs:domain rdfs:Resource.
-                rdf:_1 rdfs:range rdfs:Resource. """ .
+                rdf:_1 rdfs:range rdfs:Resource. """.
 
-:rdf1 a rr:StaticRule ;
-    rr:head """ ?p rdf:type rdf:Property """ ;
-    rr:body """ ?s ?p ?o """ .
+:rdf1 a rr:Rule;
+    rr:head """ ?p rdf:type rdf:Property. """;
+    rr:body """ ?s ?p ?o. """.
 
-:rdfs2 a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?s rdf:type ?x } """ ;
-    rr:data """ ?p rdfs:domain ?x  FILTER (?x != rdfs:Resource) """ ;
-    rr:body """ GRAPH ?g { ?s ?p ?o } """ .
+:rdfs2 a rr:Rule;
+    rr:head """ ?s rdf:type ?x. """;
+    rr:body """ ?s ?p ?o. ?p rdfs:domain ?x. FILTER (?x != rdfs:Resource) """.
 
-:rdfs3 a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?o rdf:type ?x } """ ;
-    rr:data """ ?p rdfs:range ?x  FILTER (?x != rdfs:Resource) """ ;
-    rr:body """ GRAPH ?g { ?s ?p ?o } """ .
+:rdfs3 a rr:Rule;
+    rr:head """ ?o rdf:type ?x """;
+    rr:body """ ?s ?p ?o. ?p rdfs:range ?x. FILTER (?x != rdfs:Resource) """.
 
-:rdfs4a a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?s rdf:type rdfs:Resource } """ ;
-    rr:body """ GRAPH ?g { ?s ?p ?o } """ .
+:rdfs4a a rr:Rule;
+    rr:head """ ?s rdf:type rdfs:Resource. """;
+    rr:body """ ?s ?p ?o. """.
 
-:rdfs4b a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?o rdf:type rdfs:Resource } """ ;
-    rr:body """ GRAPH ?g { ?s ?p ?o } """ .
+:rdfs4b a rr:Rule;
+    rr:head """ ?o rdf:type rdfs:Resource. """;
+    rr:body """ ?s ?p ?o. """.
 
-:rdfs5 a rr:StaticRule ;
-    rr:head """ ?p rdfs:subPropertyOf ?r """ ;
-    rr:body """ ?p rdfs:subPropertyOf ?q .  ?q rdfs:subPropertyOf ?r """ .
+:rdfs5 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?r. """;
+    rr:body """ ?p rdfs:subPropertyOf ?q. ?q rdfs:subPropertyOf ?r. """.
 
-:rdfs6 a rr:StaticRule ;
-    rr:head """ ?p rdfs:subPropertyOf ?p """ ;
-    rr:body """ ?p rdf:type rdf:Property """ .
+:rdfs6 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?p. """;
+    rr:body """ ?p rdf:type rdf:Property. """.
 
-:rdfs7 a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?s ?q ?o } """ ;
-    rr:data """ ?p rdfs:subPropertyOf ?q  FILTER (?p != ?q) """ ;
-    rr:body """ GRAPH ?g { ?s ?p ?o } """ .
+:rdfs7 a rr:Rule;
+    rr:head """ ?s ?q ?o. """;
+    rr:body """ ?s ?p ?o. ?p rdfs:subPropertyOf ?q. FILTER (?p != ?q) """.
 
-:rdfs8 a rr:StaticRule ;
-    rr:head """ ?s rdfs:subClassOf rdfs:Resource """ ;
-    rr:body """ ?s rdf:type rdfs:Class """ .
+:rdfs8 a rr:Rule;
+    rr:head """ ?s rdfs:subClassOf rdfs:Resource. """;
+    rr:body """ ?s rdf:type rdfs:Class. """.
 
-:rdfs9 a rr:StaticRule , rr:DynamicRule ;
-    rr:head """ GRAPH ?g { ?s rdf:type ?y } """ ;
-    rr:data """ ?x rdfs:subClassOf ?y  FILTER (?x != ?y) """ ;
-    rr:body """ GRAPH ?g { ?s rdf:type ?x } """ .
+:rdfs9 a rr:Rule;
+    rr:head """ ?s rdf:type ?y. """;
+    rr:body """ ?s rdf:type ?x. ?x rdfs:subClassOf ?y. FILTER (?x != ?y) """.
 
-:rdfs10 a rr:StaticRule ;
-    rr:head """ ?s rdfs:subClassOf ?s """ ;
-    rr:body """ ?s rdf:type rdfs:Class """ .
+:rdfs10 a rr:Rule;
+    rr:head """ ?s rdfs:subClassOf ?s. """;
+    rr:body """ ?s rdf:type rdfs:Class. """.
 
-:rdfs11 a rr:StaticRule ;
-    rr:head """ ?x rdfs:subClassOf ?z """ ;
-    rr:body """ ?x rdfs:subClassOf ?y .  ?y rdfs:subClassOf ?z """ .
+:rdfs11 a rr:Rule;
+    rr:head """ ?x rdfs:subClassOf ?z. """;
+    rr:body """ ?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z. """.
 
-:rdfs12 a rr:StaticRule ;
-    rr:head """ ?p rdfs:subPropertyOf rdfs:member """ ;
-    rr:body """ ?p rdf:type rdfs:ContainerMembershipProperty """ .
+:rdfs12 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf rdfs:member. """;
+    rr:body """ ?p rdf:type rdfs:ContainerMembershipProperty. """.
 
-:rdfs13 a rr:StaticRule ;
-    rr:head """ ?o rdfs:subClassOf rdfs:Literal """ ;
-    rr:body """ ?o rdf:type rdfs:Datatype """ .
+:rdfs13 a rr:Rule;
+    rr:head """ ?o rdfs:subClassOf rdfs:Literal. """;
+    rr:body """ ?o rdf:type rdfs:Datatype. """.
