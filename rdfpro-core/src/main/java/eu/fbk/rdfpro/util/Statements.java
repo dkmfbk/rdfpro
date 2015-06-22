@@ -19,9 +19,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,6 +37,7 @@ import com.sun.prism.impl.Disposer.Record;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -95,11 +98,31 @@ public final class Statements {
                     OWL.SOMEVALUESFROM, OWL.UNIONOF, OWL.VERSIONIRI,
                     VALUE_FACTORY.createURI(OWL.NAMESPACE, "withRestrictions"))));
 
+    private static final Comparator<Value> DEFAULT_VALUE_ORDERING = new ValueComparator();
+
+    private static final Comparator<Statement> DEFAULT_STATEMENT_ORDERING = new StatementComparator(
+            "spoc", new ValueComparator(RDF.NAMESPACE));
     static {
         try {
             DATATYPE_FACTORY = DatatypeFactory.newInstance();
         } catch (final Throwable ex) {
             throw new Error("Unexpected exception (!): " + ex.getMessage(), ex);
+        }
+    }
+
+    public static Comparator<Value> valueComparator(final String... rankedNamespaces) {
+        return rankedNamespaces == null || rankedNamespaces.length == 0 ? DEFAULT_VALUE_ORDERING
+                : new ValueComparator(rankedNamespaces);
+    }
+
+    public static Comparator<Statement> statementComparator(@Nullable final String components,
+            @Nullable final Comparator<? super Value> valueComparator) {
+        if (components == null) {
+            return valueComparator == null ? DEFAULT_STATEMENT_ORDERING //
+                    : new StatementComparator("spoc", valueComparator);
+        } else {
+            return new StatementComparator(components,
+                    valueComparator == null ? DEFAULT_VALUE_ORDERING : valueComparator);
         }
     }
 
@@ -1114,6 +1137,107 @@ public final class Statements {
     }
 
     private Statements() {
+    }
+
+    private static final class ValueComparator implements Comparator<Value> {
+
+        private final List<String> rankedNamespaces;
+
+        public ValueComparator(@Nullable final String... rankedNamespaces) {
+            this.rankedNamespaces = Arrays.asList(rankedNamespaces);
+        }
+
+        @Override
+        public int compare(final Value v1, final Value v2) {
+            if (v1 instanceof URI) {
+                if (v2 instanceof URI) {
+                    final int rank1 = this.rankedNamespaces.indexOf(((URI) v1).getNamespace());
+                    final int rank2 = this.rankedNamespaces.indexOf(((URI) v2).getNamespace());
+                    if (rank1 >= 0 && (rank1 < rank2 || rank2 < 0)) {
+                        return -1;
+                    } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
+                        return 1;
+                    }
+                    final String string1 = Statements.formatValue(v1, Namespaces.DEFAULT);
+                    final String string2 = Statements.formatValue(v2, Namespaces.DEFAULT);
+                    return string1.compareTo(string2);
+                } else {
+                    return -1;
+                }
+            } else if (v1 instanceof BNode) {
+                if (v2 instanceof BNode) {
+                    return ((BNode) v1).getID().compareTo(((BNode) v2).getID());
+                } else if (v2 instanceof URI) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            } else if (v1 instanceof Literal) {
+                if (v2 instanceof Literal) {
+                    return ((Literal) v1).getLabel().compareTo(((Literal) v2).getLabel());
+                } else if (v2 instanceof Resource) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            } else {
+                if (v1 == v2) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            }
+        }
+
+    }
+
+    private static final class StatementComparator implements Comparator<Statement> {
+
+        private final String components;
+
+        private final Comparator<? super Value> valueComparator;
+
+        public StatementComparator(final String components,
+                final Comparator<? super Value> valueComparator) {
+            this.components = components.trim().toLowerCase();
+            this.valueComparator = Objects.requireNonNull(valueComparator);
+            for (int i = 0; i < this.components.length(); ++i) {
+                final char c = this.components.charAt(i);
+                if (c != 's' && c != 'p' && c != 'o' && c != 'c') {
+                    throw new IllegalArgumentException("Invalid components: " + components);
+                }
+            }
+        }
+
+        @Override
+        public int compare(final Statement s1, final Statement s2) {
+            for (int i = 0; i < this.components.length(); ++i) {
+                final char c = this.components.charAt(i);
+                final Value v1 = getValue(s1, c);
+                final Value v2 = getValue(s2, c);
+                final int result = this.valueComparator.compare(v1, v2);
+                if (result != 0) {
+                    return result;
+                }
+            }
+            return 0;
+        }
+
+        private Value getValue(final Statement statement, final char component) {
+            switch (component) {
+            case 's':
+                return statement.getSubject();
+            case 'p':
+                return statement.getPredicate();
+            case 'o':
+                return statement.getObject();
+            case 'c':
+                return statement.getContext();
+            default:
+                throw new Error();
+            }
+        }
+
     }
 
 }
