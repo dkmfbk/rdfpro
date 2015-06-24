@@ -34,12 +34,16 @@ import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
 public final class Ruleset {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Ruleset.class);
 
     private final Set<Rule> rules;
 
@@ -49,6 +53,12 @@ public final class Ruleset {
     private transient Map<URI, Rule> ruleIndex;
 
     private transient int hash;
+
+    @Nullable
+    private transient Map<URI, TupleExpr> staticHeads;
+
+    @Nullable
+    private transient Map<URI, TupleExpr> dynamicHeads;
 
     @Nullable
     private transient Map<URI, TupleExpr> staticBodies;
@@ -73,20 +83,36 @@ public final class Ruleset {
         this.preprocessingRuleset = null;
     }
 
-    private void splitBodies() {
+    private void split() {
+        final Map<URI, TupleExpr> staticHeads = new HashMap<>();
+        final Map<URI, TupleExpr> dynamicHeads = new HashMap<>();
         final Map<URI, TupleExpr> staticBodies = new HashMap<>();
         final Map<URI, TupleExpr> dynamicBodies = new HashMap<>();
         for (final Rule rule : this.rules) {
             try {
-                TupleExpr body = rule.getBody();
-                body = Algebra.explodeFilters(body);
-                final TupleExpr[] exprs = Algebra.splitTupleExpr(body, this.staticTerms, 1);
-                staticBodies.put(rule.getID(), exprs[0]);
-                dynamicBodies.put(rule.getID(), exprs[1]);
+                final TupleExpr head = Algebra.explodeFilters(rule.getHead());
+                final TupleExpr body = Algebra.explodeFilters(rule.getBody());
+                final TupleExpr[] headExprs = Algebra.splitTupleExpr(head, this.staticTerms, -1);
+                final TupleExpr[] bodyExprs = Algebra.splitTupleExpr(body, this.staticTerms, 1);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Splitting of rule {}:"
+                            + "\n  head original: {}\n  head static:   {}\n  head dynamic:  {}"
+                            + "\n  body original: {}\n  body static:   {}\n  body dynamic:  {}",
+                            rule.getID(), Algebra.format(rule.getHead()),
+                            Algebra.format(headExprs[0]), Algebra.format(headExprs[1]),
+                            Algebra.format(rule.getBody()), Algebra.format(bodyExprs[0]),
+                            Algebra.format(bodyExprs[1]));
+                }
+                staticHeads.put(rule.getID(), headExprs[0]);
+                dynamicHeads.put(rule.getID(), headExprs[1]);
+                staticBodies.put(rule.getID(), bodyExprs[0]);
+                dynamicBodies.put(rule.getID(), bodyExprs[1]);
             } catch (final Throwable ex) {
                 throw new IllegalArgumentException("Cannot split rule " + rule.getID(), ex);
             }
         }
+        this.staticHeads = staticHeads;
+        this.dynamicHeads = dynamicHeads;
         this.staticBodies = staticBodies;
         this.dynamicBodies = dynamicBodies;
     }
@@ -108,17 +134,17 @@ public final class Ruleset {
     }
 
     @Nullable
-    public TupleExpr getDynamicBody(final Resource ruleID) {
-        if (this.dynamicBodies == null) {
-            splitBodies();
+    public TupleExpr getStaticHead(final Resource ruleID) {
+        if (this.staticHeads == null) {
+            split();
         }
-        return this.dynamicBodies.get(ruleID);
+        return this.staticHeads.get(ruleID);
     }
 
     @Nullable
     public TupleExpr getStaticBody(final Resource ruleID) {
         if (this.staticBodies == null) {
-            splitBodies();
+            split();
         }
         return this.staticBodies.get(ruleID);
     }
@@ -127,33 +153,20 @@ public final class Ruleset {
         return this.staticTerms;
     }
 
-    public Ruleset getStaticRuleset() {
-        if (this.staticRuleset == null) {
-            final List<Rule> staticRules = new ArrayList<>();
-            for (final Rule rule : this.rules) {
-                if (getDynamicBody(rule.getID()) == null) {
-                    staticRules.add(rule);
-                }
-            }
-            this.staticRuleset = staticRules.size() == this.rules.size() ? this //
-                    : new Ruleset(staticRules, this.staticTerms);
+    @Nullable
+    public TupleExpr getDynamicHead(final Resource ruleID) {
+        if (this.dynamicHeads == null) {
+            split();
         }
-        return this.staticRuleset;
+        return this.dynamicHeads.get(ruleID);
     }
 
-    public Ruleset getPreprocessingRuleset() {
-        if (this.preprocessingRuleset == null) {
-            final List<Rule> preprocessingRules = new ArrayList<>();
-            for (final Rule rule : this.rules) {
-                final TupleExpr staticBody = getStaticBody(rule.getID());
-                final TupleExpr dynamicBody = getDynamicBody(rule.getID());
-                if (dynamicBody != null && staticBody != null) {
-                    preprocessingRules.add(new Rule(rule.getID(), null, staticBody));
-                }
-            }
-            this.preprocessingRuleset = new Ruleset(preprocessingRules, this.staticTerms);
+    @Nullable
+    public TupleExpr getDynamicBody(final Resource ruleID) {
+        if (this.dynamicBodies == null) {
+            split();
         }
-        return this.preprocessingRuleset;
+        return this.dynamicBodies.get(ruleID);
     }
 
     public Ruleset getDynamicRuleset(
@@ -162,18 +175,18 @@ public final class Ruleset {
         final ValueFactory vf = Statements.VALUE_FACTORY;
         final List<Rule> rules = new ArrayList<>();
         for (final Rule rule : this.rules) {
+            final TupleExpr dynamicHead = getDynamicHead(rule.getID());
             final TupleExpr staticBody = getStaticBody(rule.getID());
             final TupleExpr dynamicBody = getDynamicBody(rule.getID());
-            if (dynamicBody != null) {
-                final TupleExpr head = rule.getHead();
+            if (dynamicHead != null) {
                 if (staticBody == null) {
                     final URI id = vf.createURI(rule.getID() + "_" + rules.size());
-                    rules.add(new Rule(id, rule.getHead(), rule.getBody()));
+                    rules.add(new Rule(id, dynamicHead, dynamicBody));
                 } else {
                     final Iterable<? extends BindingSet> list = staticBindings.get(rule.getID());
                     if (list != null) {
                         for (final BindingSet bindings : list) {
-                            final TupleExpr rewrittenHead = Algebra.rewrite(head, bindings);
+                            final TupleExpr rewrittenHead = Algebra.rewrite(dynamicHead, bindings);
                             final TupleExpr rewrittenBody = Algebra.rewrite(dynamicBody, bindings);
                             if (!Objects.equals(rewrittenHead, rewrittenBody)) {
                                 final URI id = vf.createURI(rule.getID() + "_" + rules.size());
@@ -185,6 +198,21 @@ public final class Ruleset {
             }
         }
         return new Ruleset(rules, this.staticTerms);
+    }
+
+    public Ruleset getPreprocessingRuleset() {
+        if (this.preprocessingRuleset == null) {
+            final List<Rule> preprocessingRules = new ArrayList<>();
+            for (final Rule rule : this.rules) {
+                final TupleExpr dynamicHead = getDynamicHead(rule.getID());
+                final TupleExpr staticBody = getStaticBody(rule.getID());
+                if (dynamicHead != null && staticBody != null) {
+                    preprocessingRules.add(new Rule(rule.getID(), null, staticBody));
+                }
+            }
+            this.preprocessingRuleset = new Ruleset(preprocessingRules, this.staticTerms);
+        }
+        return this.preprocessingRuleset;
     }
 
     public Ruleset transform(@Nullable final BindingSet bindings) {

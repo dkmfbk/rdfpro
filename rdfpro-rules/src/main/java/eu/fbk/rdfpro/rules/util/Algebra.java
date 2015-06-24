@@ -74,6 +74,7 @@ import org.openrdf.query.parser.sparql.ast.VisitorException;
 import info.aduna.iteration.CloseableIteration;
 import info.aduna.iteration.EmptyIteration;
 
+import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
 public final class Algebra {
@@ -263,11 +264,15 @@ public final class Algebra {
     @Nullable
     public static <T extends QueryModelNode> T rewrite(@Nullable final T node,
             @Nullable final BindingSet bindings) {
+
         if (node == null || bindings == null) {
             return node;
         }
+
         @SuppressWarnings("unchecked")
         final T result = (T) node.clone();
+        result.setParentNode(null);
+
         result.visit(new QueryModelVisitorBase<RuntimeException>() {
 
             @Override
@@ -278,7 +283,7 @@ public final class Algebra {
                         var.setValue(binding.getValue());
                         var.setName("_const-" + var.getName());
                     } else {
-                        replaceNode(node, var, new ValueConstant(binding.getValue()));
+                        replaceNode(result, var, new ValueConstant(binding.getValue()));
                     }
                 }
             }
@@ -289,11 +294,15 @@ public final class Algebra {
 
     @Nullable
     public static TupleExpr normalizeVars(@Nullable TupleExpr expr) {
+
         if (expr == null) {
             return null;
         }
-        final List<Filter> filtersToDrop = new ArrayList<>();
+
         expr = expr.clone();
+        expr.setParentNode(null);
+
+        final List<Filter> filtersToDrop = new ArrayList<>();
         expr.visit(new QueryModelVisitorBase<RuntimeException>() {
 
             @Override
@@ -304,7 +313,8 @@ public final class Algebra {
                     final String rightName = ((Var) same.getRightArg()).getName();
                     if (leftName.startsWith(rightName + "-")
                             || rightName.startsWith(leftName + "-")) {
-                        filtersToDrop.add((Filter) same.getParentNode());
+                        final Filter filter = (Filter) same.getParentNode();
+                        filtersToDrop.add(filter);
                     }
                 }
             }
@@ -312,7 +322,18 @@ public final class Algebra {
             @Override
             public void meet(final Var var) throws RuntimeException {
                 if (!var.hasValue()) {
-                    if (var.getName().startsWith("-anon-")) {
+                    if (var.getName().startsWith("_const-")) {
+                        if (var.getParentNode() instanceof StatementPattern) {
+                            for (final Var var2 : ((StatementPattern) var.getParentNode())
+                                    .getVarList()) {
+                                if (var2.hasValue() && var.getName().startsWith(var2.getName())) {
+                                    var.setValue(var2.getValue());
+                                }
+                            }
+                        }
+                    } else if (var.getName().startsWith("-anon-")) {
+                        var.setName(var.getName().replace('-', '_'));
+                    } else {
                         final int index = var.getName().indexOf('-');
                         if (index >= 0) {
                             var.setName(var.getName().substring(0, index));
@@ -323,24 +344,20 @@ public final class Algebra {
 
         });
         for (final Filter filter : filtersToDrop) {
-            final QueryModelNode parent = filter.getParentNode();
-            filter.getArg().setParentNode(parent);
-            if (parent == null) {
-                expr = filter.getArg();
-            } else if (parent instanceof UnaryTupleOperator) {
-                ((UnaryTupleOperator) parent).setArg(filter.getArg());
-            } else {
-                parent.replaceChildNode(filter, filter.getArg());
-            }
+            expr = (TupleExpr) replaceNode(expr, filter, filter.getArg());
         }
         return expr;
     }
 
     public static TupleExpr rewriteGraph(final TupleExpr expr, final Var graphVar) {
+
         if (expr == null) {
             return null;
         }
+
         final TupleExpr result = expr.clone();
+        result.setParentNode(null);
+
         result.visit(new QueryModelVisitorBase<RuntimeException>() {
 
             @Override
@@ -368,6 +385,13 @@ public final class Algebra {
     @Nullable
     public static TupleExpr explodeFilters(@Nullable TupleExpr expr) {
 
+        if (expr == null) {
+            return null;
+        }
+
+        expr = expr.clone();
+        expr.setParentNode(null);
+
         final List<Filter> filters = extractNodes(expr, Filter.class, (final Filter filter) -> {
             return filter.getCondition() instanceof And;
         }, null);
@@ -376,7 +400,6 @@ public final class Algebra {
             return expr;
         }
 
-        expr = expr.clone();
         for (final Filter filter : filters) {
             TupleExpr arg = filter.getArg();
             for (final ValueExpr condition : extractNodes(filter.getCondition(), ValueExpr.class,
@@ -397,6 +420,7 @@ public final class Algebra {
         }
 
         expr = expr.clone();
+        expr.setParentNode(null);
 
         boolean dirty = true;
         while (dirty) {
@@ -440,6 +464,7 @@ public final class Algebra {
         }
 
         expr = expr.clone();
+        expr.setParentNode(null);
 
         boolean dirty = true;
         while (dirty) {
@@ -502,6 +527,7 @@ public final class Algebra {
         }
 
         final TupleExpr clonedExpr = expr.clone();
+        clonedExpr.setParentNode(null);
 
         final AtomicReference<TupleExpr> unsplittable = new AtomicReference<>(null);
         try {
@@ -552,7 +578,8 @@ public final class Algebra {
             final List<List<TupleExpr>> exprs = Arrays.asList(matching, nonMatching);
             for (int i = 0; i < 2; ++i) {
                 for (final TupleExpr e : exprs.get(i)) {
-                    result[i] = result[i] == null ? e.clone() : new Join(result[i], e.clone());
+                    final TupleExpr clone = e.clone();
+                    result[i] = result[i] == null ? clone : new Join(result[i], clone);
                 }
             }
             return result;
@@ -602,6 +629,11 @@ public final class Algebra {
             }
             throw ex;
         }
+    }
+
+    public static String format(final TupleExpr expr) {
+        return expr == null ? "null" : new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
+                .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
     }
 
     private static class QNameProcessor extends ASTVisitorBase {

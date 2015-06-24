@@ -11,6 +11,7 @@ rdfs:domain a rr:StaticTerm.
 rdfs:range a rr:StaticTerm.
 rdfs:subClassOf a rr:StaticTerm.
 rdfs:subPropertyOf a rr:StaticTerm.
+rdf:List a rr:StaticTerm.
 
 :axioms a rr:Rule;
     rr:head """ rdf:type rdf:type rdf:Property.
@@ -88,7 +89,8 @@ rdfs:subPropertyOf a rr:StaticTerm.
 
 :rdfs5 a rr:Rule;
     rr:head """ ?p rdfs:subPropertyOf ?r. """;
-    rr:body """ ?p rdfs:subPropertyOf ?q. ?q rdfs:subPropertyOf ?r. """.
+    rr:body """ ?p rdfs:subPropertyOf ?q. ?q rdfs:subPropertyOf ?r.
+                FILTER (?p != ?q && ?q != ?r && ?p != ?r) """.
 
 :rdfs6 a rr:Rule;
     rr:head """ ?p rdfs:subPropertyOf ?p. """;
@@ -112,7 +114,8 @@ rdfs:subPropertyOf a rr:StaticTerm.
 
 :rdfs11 a rr:Rule;
     rr:head """ ?x rdfs:subClassOf ?z. """;
-    rr:body """ ?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z. """.
+    rr:body """ ?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z.
+                FILTER (?x != ?y && ?y != ?z && ?x != ?z) """.
 
 :rdfs12 a rr:Rule;
     rr:head """ ?p rdfs:subPropertyOf rdfs:member. """;
