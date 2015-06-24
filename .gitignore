@@ -7,3 +7,5 @@ test/
 *.iml
 .idea/
 **/*.versionsBackup
+sync-demo.sh
+
