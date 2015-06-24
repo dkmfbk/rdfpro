@@ -1,17 +1,24 @@
 <?php
 
-error_reporting(E_NOTICE);
-ini_set("display_errors", "On");
-putenv("JAVA_HOME=/data/software/jdk8");
+$rdfpro_path = "/data/software/bin/rdfpro";
+$java_home = "/data/software/jdk8";
+
+$customFiles = array(
+    "eso" => "ESO.owl"
+);
+
+$customFilesDesc = array(
+    "eso" => "The <a href='https://github.com/newsreader/eso'>Event and Situation Ontology</a>"
+);
+
+// ---
+
+// error_reporting(E_NOTICE);
+// ini_set("display_errors", "On");
+putenv("JAVA_HOME=$java_home");
 
 $F = dirname(__FILE__);
-$eso_path = "$F/ESO.owl";
-$rdfpro_path = "/data/software/bin/rdfpro";
-// $java_path = "/data/software/bin/java";
-// $html_jar_path = "$F/eso-reasoner-1.0-SNAPSHOT.jar";
-
-// $rdfp_command = "$rdfpro_path @read %s @esoreasoner $eso_path @write %s";
-// $html_command = "$java_path -Xmx10G -cp $html_jar_path eu.fbk.eso.ReasonerAPI -i %s -w %s";
+$customFolder = "$F/custom";
 
 class UploadException extends Exception {
     public function __construct($code) { 

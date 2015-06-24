@@ -130,7 +130,7 @@
 						</div>
 						<p class="help-block">
 							These additional files can be included in the commands using the labels #file1, #file2, #file3, #file4.<br />
-							You can also use #eso for the <a href='https://github.com/newsreader/eso'>ESO ontology</a>.
+							Some other pre-loaded files are available, too (<a href="#" data-toggle="modal" data-target="#myModal">see list</a>).
 						</p>
 					</div>
 
@@ -289,6 +289,32 @@ S ::=
 			</div>
 		</div>
 	</div>
+
+	<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="myModalLabel">List of pre-loaded files</h4>
+				</div>
+
+				<div class="modal-body">
+					<ul>
+					<?php
+						foreach ($customFilesDesc as $key => $value) {
+							echo "<li><strong>#$key</strong> - $value</li>\n";
+						}
+					?>
+					</ul>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 	<script type="text/javascript" src="js/bootstrap/js/bootstrap.min.js"></script>

@@ -2,6 +2,7 @@
 
 require "config.inc.php";
 
+// Debug stuff
 // if (isset($_REQUEST['inputRadio']) && $_REQUEST['inputRadio']) {
 // 	echo "<pre>";
 // 	print_r($_REQUEST);
@@ -65,7 +66,10 @@ if ($go) {
 		}
 	}
 
-	$pars['commands'] = str_replace("#eso", $eso_path, $pars['commands']);
+	foreach ($customFiles as $key => $value) {
+		$key = preg_replace("/[^a-z0-9]/i", "", $key);
+		$pars['commands'] = str_replace("#".$key, "$customFolder/$value", $pars['commands']);
+	}
 
 	$outExt = $pars['fileType'];
 	if ($pars['fileCompression'] && !$pars['showResults']) {
@@ -77,6 +81,7 @@ if ($go) {
 
 	$rdfp_command = "$rdfpro_path @read $in {$pars['commands']} @write $out";
 
+	// Debug stuff
 	// echo $rdfp_command;
 	// exit(1);
 
@@ -101,6 +106,7 @@ if ($go) {
 	    exit(1);
 	}
 
+	// Debug stuff
 	// $log = "$rdfp_command\n\n$log";
 
 	echo '<div class="alert alert-danger" role="alert">', nl2br($log), '</div>';
