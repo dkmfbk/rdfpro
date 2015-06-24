@@ -25,6 +25,7 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.helpers.RDFWriterBase;
@@ -41,7 +42,7 @@ public class TQLWriter extends RDFWriterBase {
     /**
      * Creates a new TQLWriter that will write to the supplied OutputStream. The UTF-8 character
      * encoding is used.
-     * 
+     *
      * @param stream
      *            the OutputStream to write to
      */
@@ -51,7 +52,7 @@ public class TQLWriter extends RDFWriterBase {
 
     /**
      * Creates a new TurtleWriter that will write to the supplied Writer.
-     * 
+     *
      * @param writer
      *            the Writer to write to
      */
@@ -265,43 +266,43 @@ public class TQLWriter extends RDFWriterBase {
             }
         }
         this.writer.write('"');
-        final URI datatype = literal.getDatatype();
-        if (datatype != null) {
-            this.writer.write('^');
-            this.writer.write('^');
-            emitURI(datatype);
-        } else {
-            final String language = literal.getLanguage();
-            if (language != null) {
-                this.writer.write('@');
-                final int len = language.length();
-                boolean minusFound = false;
-                for (int i = 0; i < len; ++i) {
-                    final char ch = language.charAt(i);
-                    boolean valid = true;
-                    if (ch == '-') {
-                        minusFound = true;
-                        if (i == 0) {
-                            valid = false;
-                        } else {
-                            final char prev = language.charAt(i - 1);
-                            valid = TQL.isLetter(prev) || TQL.isNumber(prev);
-                        }
-                    } else if (TQL.isNumber(ch)) {
-                        valid = minusFound;
+        final String language = literal.getLanguage();
+        if (language != null) {
+            this.writer.write('@');
+            final int len = language.length();
+            boolean minusFound = false;
+            for (int i = 0; i < len; ++i) {
+                final char ch = language.charAt(i);
+                boolean valid = true;
+                if (ch == '-') {
+                    minusFound = true;
+                    if (i == 0) {
+                        valid = false;
                     } else {
-                        valid = TQL.isLetter(ch);
+                        final char prev = language.charAt(i - 1);
+                        valid = TQL.isLetter(prev) || TQL.isNumber(prev);
                     }
-                    if (!valid) {
-                        throw new RDFHandlerException("Cannot serialize language tag '" + language
-                                + "' in TQL: invalid char '" + ch + "' (see Turtle specs)");
-                    }
-                    this.writer.write(ch);
+                } else if (TQL.isNumber(ch)) {
+                    valid = minusFound;
+                } else {
+                    valid = TQL.isLetter(ch);
                 }
-                if (language.charAt(len - 1) == '-') {
+                if (!valid) {
                     throw new RDFHandlerException("Cannot serialize language tag '" + language
-                            + "' in TQL: invalid final char '-' (see Turtle specs)");
+                            + "' in TQL: invalid char '" + ch + "' (see Turtle specs)");
                 }
+                this.writer.write(ch);
+            }
+            if (language.charAt(len - 1) == '-') {
+                throw new RDFHandlerException("Cannot serialize language tag '" + language
+                        + "' in TQL: invalid final char '-' (see Turtle specs)");
+            }
+        } else {
+            final URI datatype = literal.getDatatype();
+            if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
+                this.writer.write('^');
+                this.writer.write('^');
+                emitURI(datatype);
             }
         }
     }

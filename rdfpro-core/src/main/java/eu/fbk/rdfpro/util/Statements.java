@@ -19,9 +19,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,6 +37,7 @@ import com.sun.prism.impl.Disposer.Record;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -45,11 +48,17 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFFormat;
+import org.openrdf.rio.Rio;
 
 public final class Statements {
 
-    public static final ValueFactory VALUE_FACTORY = ValueFactoryImpl.getInstance();
+    public static final ValueFactory VALUE_FACTORY;
 
+    static {
+        final boolean hashfactory = Boolean.parseBoolean(Environment.getProperty(
+                "rdfpro.hashfactory", "false"));
+        VALUE_FACTORY = hashfactory ? HashValueFactory.INSTANCE : ValueFactoryImpl.getInstance();
+    }
     public static final DatatypeFactory DATATYPE_FACTORY;
 
     public static final Set<URI> TBOX_CLASSES = Collections.unmodifiableSet(new HashSet<URI>(
@@ -89,6 +98,10 @@ public final class Statements {
                     OWL.SOMEVALUESFROM, OWL.UNIONOF, OWL.VERSIONIRI,
                     VALUE_FACTORY.createURI(OWL.NAMESPACE, "withRestrictions"))));
 
+    private static final Comparator<Value> DEFAULT_VALUE_ORDERING = new ValueComparator();
+
+    private static final Comparator<Statement> DEFAULT_STATEMENT_ORDERING = new StatementComparator(
+            "spoc", new ValueComparator(RDF.NAMESPACE));
     static {
         try {
             DATATYPE_FACTORY = DatatypeFactory.newInstance();
@@ -97,24 +110,51 @@ public final class Statements {
         }
     }
 
+    public static Comparator<Value> valueComparator(final String... rankedNamespaces) {
+        return rankedNamespaces == null || rankedNamespaces.length == 0 ? DEFAULT_VALUE_ORDERING
+                : new ValueComparator(rankedNamespaces);
+    }
+
+    public static Comparator<Statement> statementComparator(@Nullable final String components,
+            @Nullable final Comparator<? super Value> valueComparator) {
+        if (components == null) {
+            return valueComparator == null ? DEFAULT_STATEMENT_ORDERING //
+                    : new StatementComparator("spoc", valueComparator);
+        } else {
+            return new StatementComparator(components,
+                    valueComparator == null ? DEFAULT_VALUE_ORDERING : valueComparator);
+        }
+    }
+
     @Nullable
     public static File toRDFFile(final String fileSpec) {
         final int index = fileSpec.indexOf(':');
-        if (index > 0 && RDFFormat.forFileName("test." + fileSpec.substring(0, index)) != null) {
-            return new File(fileSpec.substring(index + 1));
+        if (index > 0) {
+            final String name = "test." + fileSpec.substring(0, index);
+            if (Rio.getParserFormatForFileName(name) != null
+                    || Rio.getWriterFormatForFileName(name) != null) {
+                return new File(fileSpec.substring(index + 1));
+            }
         }
         return new File(fileSpec);
     }
 
     public static RDFFormat toRDFFormat(final String fileSpec) {
         final int index = fileSpec.indexOf(':');
+        RDFFormat format = null;
         if (index > 0) {
-            final RDFFormat format = RDFFormat.forFileName("test." + fileSpec.substring(0, index));
-            if (format != null) {
-                return format;
+            final String name = "test." + fileSpec.substring(0, index);
+            format = Rio.getParserFormatForFileName(name);
+            if (format == null) {
+                format = Rio.getWriterFormatForFileName(name);
             }
         }
-        final RDFFormat format = RDFFormat.forFileName(fileSpec);
+        if (format == null) {
+            format = Rio.getParserFormatForFileName(fileSpec);
+            if (format == null) {
+                format = Rio.getWriterFormatForFileName(fileSpec);
+            }
+        }
         if (format == null) {
             throw new IllegalArgumentException("Unknown RDF format for " + fileSpec);
         }
@@ -160,10 +200,10 @@ public final class Statements {
                     }
                 }
                 final String newLabel = label.substring(0, offset) + "...";
-                if (datatype != null) {
-                    return VALUE_FACTORY.createLiteral(newLabel, datatype);
-                } else if (language != null) {
+                if (language != null) {
                     return VALUE_FACTORY.createLiteral(newLabel, language);
+                } else if (datatype != null) {
+                    return VALUE_FACTORY.createLiteral(newLabel, datatype);
                 } else {
                     return VALUE_FACTORY.createLiteral(newLabel);
                 }
@@ -380,39 +420,39 @@ public final class Statements {
             }
         }
         out.append('"');
-        final URI datatype = literal.getDatatype();
-        if (datatype != null) {
-            out.append('^');
-            out.append('^');
-            formatURI(datatype, out, namespaces);
-        } else {
-            final String language = literal.getLanguage();
-            if (language != null) {
-                out.append('@');
-                final int len = language.length();
-                boolean minusFound = false;
-                boolean valid = true;
-                for (int i = 0; i < len; ++i) {
-                    final char ch = language.charAt(i);
-                    if (ch == '-') {
-                        minusFound = true;
-                        if (i == 0) {
-                            valid = false;
-                        } else {
-                            final char prev = language.charAt(i - 1);
-                            valid &= isLetter(prev) || isNumber(prev);
-                        }
-                    } else if (isNumber(ch)) {
-                        valid &= minusFound;
+        final String language = literal.getLanguage();
+        if (language != null) {
+            out.append('@');
+            final int len = language.length();
+            boolean minusFound = false;
+            boolean valid = true;
+            for (int i = 0; i < len; ++i) {
+                final char ch = language.charAt(i);
+                if (ch == '-') {
+                    minusFound = true;
+                    if (i == 0) {
+                        valid = false;
                     } else {
-                        valid &= isLetter(ch);
+                        final char prev = language.charAt(i - 1);
+                        valid &= isLetter(prev) || isNumber(prev);
                     }
-                    out.append(ch);
+                } else if (isNumber(ch)) {
+                    valid &= minusFound;
+                } else {
+                    valid &= isLetter(ch);
                 }
-                if (!valid || language.charAt(len - 1) == '-') {
-                    throw new IllegalArgumentException("Invalid language tag '" + language
-                            + "' in '" + literal + "'");
-                }
+                out.append(ch);
+            }
+            if (!valid || language.charAt(len - 1) == '-') {
+                throw new IllegalArgumentException("Invalid language tag '" + language + "' in '"
+                        + literal + "'");
+            }
+        } else {
+            final URI datatype = literal.getDatatype();
+            if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
+                out.append('^');
+                out.append('^');
+                formatURI(datatype, out, namespaces);
             }
         }
     }
@@ -662,6 +702,14 @@ public final class Statements {
 
     private static boolean isNumber(final int c) {
         return c >= 48 && c <= 57;
+    }
+
+    @Nullable
+    public static <T extends Value> T normalize(@Nullable final T value) {
+        if (VALUE_FACTORY instanceof HashValueFactory) {
+            return HashValueFactory.normalize(value);
+        }
+        return value;
     }
 
     /**
@@ -1089,6 +1137,107 @@ public final class Statements {
     }
 
     private Statements() {
+    }
+
+    private static final class ValueComparator implements Comparator<Value> {
+
+        private final List<String> rankedNamespaces;
+
+        public ValueComparator(@Nullable final String... rankedNamespaces) {
+            this.rankedNamespaces = Arrays.asList(rankedNamespaces);
+        }
+
+        @Override
+        public int compare(final Value v1, final Value v2) {
+            if (v1 instanceof URI) {
+                if (v2 instanceof URI) {
+                    final int rank1 = this.rankedNamespaces.indexOf(((URI) v1).getNamespace());
+                    final int rank2 = this.rankedNamespaces.indexOf(((URI) v2).getNamespace());
+                    if (rank1 >= 0 && (rank1 < rank2 || rank2 < 0)) {
+                        return -1;
+                    } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
+                        return 1;
+                    }
+                    final String string1 = Statements.formatValue(v1, Namespaces.DEFAULT);
+                    final String string2 = Statements.formatValue(v2, Namespaces.DEFAULT);
+                    return string1.compareTo(string2);
+                } else {
+                    return -1;
+                }
+            } else if (v1 instanceof BNode) {
+                if (v2 instanceof BNode) {
+                    return ((BNode) v1).getID().compareTo(((BNode) v2).getID());
+                } else if (v2 instanceof URI) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            } else if (v1 instanceof Literal) {
+                if (v2 instanceof Literal) {
+                    return ((Literal) v1).getLabel().compareTo(((Literal) v2).getLabel());
+                } else if (v2 instanceof Resource) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            } else {
+                if (v1 == v2) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            }
+        }
+
+    }
+
+    private static final class StatementComparator implements Comparator<Statement> {
+
+        private final String components;
+
+        private final Comparator<? super Value> valueComparator;
+
+        public StatementComparator(final String components,
+                final Comparator<? super Value> valueComparator) {
+            this.components = components.trim().toLowerCase();
+            this.valueComparator = Objects.requireNonNull(valueComparator);
+            for (int i = 0; i < this.components.length(); ++i) {
+                final char c = this.components.charAt(i);
+                if (c != 's' && c != 'p' && c != 'o' && c != 'c') {
+                    throw new IllegalArgumentException("Invalid components: " + components);
+                }
+            }
+        }
+
+        @Override
+        public int compare(final Statement s1, final Statement s2) {
+            for (int i = 0; i < this.components.length(); ++i) {
+                final char c = this.components.charAt(i);
+                final Value v1 = getValue(s1, c);
+                final Value v2 = getValue(s2, c);
+                final int result = this.valueComparator.compare(v1, v2);
+                if (result != 0) {
+                    return result;
+                }
+            }
+            return 0;
+        }
+
+        private Value getValue(final Statement statement, final char component) {
+            switch (component) {
+            case 's':
+                return statement.getSubject();
+            case 'p':
+                return statement.getPredicate();
+            case 'o':
+                return statement.getObject();
+            case 'c':
+                return statement.getContext();
+            default:
+                throw new Error();
+            }
+        }
+
     }
 
 }

@@ -1,0 +1,271 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
+@prefix :     <http://dkm.fbk.eu/rdfpro-rules/horst#> .
+
+
+rr: rr:prefix "rr".
+rdf: rr:prefix "rdf".
+rdfs: rr:prefix "rdfs".
+owl: rr:prefix "owl".
+
+
+rdf:Property a rr:StaticTerm.
+rdf:List a rr:StaticTerm.
+rdfs:Datatype a rr:StaticTerm.
+rdfs:ContainerMembershipProperty a rr:StaticTerm.
+rdfs:subClassOf a rr:StaticTerm.
+rdfs:subPropertyOf a rr:StaticTerm.
+rdfs:domain a rr:StaticTerm.
+rdfs:range a rr:StaticTerm.
+owl:Class a rr:StaticTerm.
+owl:FunctionalProperty a rr:StaticTerm.
+owl:InverseFunctionalProperty a rr:StaticTerm.
+owl:SymmetricFunctionalProperty a rr:StaticTerm.
+owl:TransitiveFunctionalProperty a rr:StaticTerm.
+owl:inverseOf a rr:StaticTerm.
+owl:equivalentClass a rr:StaticTerm.
+owl:equivalentProperty a rr:StaticTerm.
+owl:hasValue a rr:StaticTerm.
+owl:onProperty a rr:StaticTerm.
+owl:someValuesFrom a rr:StaticTerm.
+owl:allValuesFrom a rr:StaticTerm.
+
+
+:axioms-rdfs a rr:Rule;
+    rr:head """ rdf:type rdf:type rdf:Property.
+                rdf:subject rdf:type rdf:Property.
+                rdf:predicate rdf:type rdf:Property.
+                rdf:object rdf:type rdf:Property.
+                rdf:first rdf:type rdf:Property.
+                rdf:rest rdf:type rdf:Property.
+                rdf:value rdf:type rdf:Property.
+                rdf:_1 rdf:type rdf:Property.
+                rdf:nil rdf:type rdf:List.
+                rdf:type rdfs:range rdfs:Class.
+                rdfs:domain rdfs:range rdfs:Class.
+                rdfs:range rdfs:range rdfs:Class.
+                rdfs:subClassOf rdfs:range rdfs:Class.
+                rdfs:subClassOf rdfs:domain rdfs:Class.
+                rdf:first rdfs:domain rdf:List.
+                rdf:rest rdfs:domain rdf:List.
+                rdf:rest rdfs:range rdf:List.
+                rdfs:comment rdfs:range rdfs:Literal.
+                rdfs:label rdfs:range rdfs:Literal.
+                rdf:subject rdfs:domain rdf:Statement.
+                rdf:predicate rdfs:domain rdf:Statement.
+                rdf:object rdfs:domain rdf:Statement.
+                rdf:Alt rdfs:subClassOf rdfs:Container.
+                rdf:Bag rdfs:subClassOf rdfs:Container.
+                rdf:Seq rdfs:subClassOf rdfs:Container.
+                rdfs:Datatype rdfs:subClassOf rdfs:Class.
+                rdf:XMLLiteral rdfs:subClassOf rdfs:Literal.
+                rdf:XMLLiteral rdf:type rdfs:Datatype.
+                rdfs:isDefinedBy rdfs:subPropertyOf rdfs:seeAlso.
+                rdfs:ContainerMembershipProperty rdfs:subClassOf rdf:Property.
+                rdf:_1 rdf:type rdfs:ContainerMembershipProperty.
+                rdfs:domain rdfs:domain rdf:Property.
+                rdfs:range rdfs:domain rdf:Property.
+                rdfs:subPropertyOf rdfs:domain rdf:Property.
+                rdfs:subPropertyOf rdfs:range rdf:Property.
+                rdf:type rdfs:domain rdfs:Resource.
+                rdfs:member rdfs:domain rdfs:Resource.
+                rdfs:seeAlso rdfs:domain rdfs:Resource.
+                rdfs:isDefinedBy rdfs:domain rdfs:Resource.
+                rdfs:comment rdfs:domain rdfs:Resource.
+                rdfs:label rdfs:domain rdfs:Resource.
+                rdf:value rdfs:domain rdfs:Resource.
+                rdf:subject rdfs:range rdfs:Resource.
+                rdf:predicate rdfs:range rdfs:Resource.
+                rdf:object rdfs:range rdfs:Resource.
+                rdfs:member rdfs:range rdfs:Resource.
+                rdf:first rdfs:range rdfs:Resource.
+                rdfs:seeAlso rdfs:range rdfs:Resource.
+                rdfs:isDefinedBy rdfs:range rdfs:Resource.
+                rdf:value rdfs:range rdfs:Resource.
+                rdf:_1 rdfs:domain rdfs:Resource.
+                rdf:_1 rdfs:range rdfs:Resource. """.
+                
+:axioms-owl a rr:Rule;
+    rr:head """ owl:FunctionalProperty rdfs:subClassOf rdf:Property.
+                owl:InverseFunctionalProperty rdfs:subClassOf rdf:Property .
+                owl:SymmetricProperty rdfs:subClassOf rdf:Property .
+                owl:TransitiveProperty rdfs:subClassOf rdf:Property .
+                owl:sameAs rdf:type rdf:Property .
+                owl:inverseOf rdf:type rdf:Property .
+                owl:inverseOf rdfs:domain rdf:Property .
+                owl:inverseOf rdfs:range rdf:Property .
+                owl:equivalentClass rdf:type rdf:Property .
+                owl:equivalentProperty rdf:type rdf:Property .
+                owl:equivalentClass rdfs:domain owl:Class .
+                owl:equivalentClass rdfs:range owl:Class .
+                owl:equivalentProperty rdfs:domain rdf:Property .
+                owl:equivalentProperty rdfs:range rdf:Property .
+                owl:Restriction rdfs:subClassOf owl:Class .
+                owl:onProperty rdfs:domain owl:Restriction .
+                owl:onProperty rdfs:range rdf:Property .
+                owl:hasValue rdfs:domain owl:Restriction .
+                owl:someValuesFrom rdfs:domain owl:Restriction .
+                owl:someValuesFrom rdfs:range owl:Class .
+                owl:allValuesFrom rdfs:domain owl:Restriction .
+                owl:allValuesFrom rdfs:range owl:Class .
+                owl:differentFrom rdf:type rdf:Property .
+                owl:disjointWith rdfs:domain owl:Class .
+                owl:disjointWith rdfs:range owl:Class . """.
+
+:rdf1 a rr:Rule;
+    rr:head """ ?p rdf:type rdf:Property. """;
+    rr:body """ ?s ?p ?o. """.
+    
+:rdfs2 a rr:Rule;
+    rr:head """ ?s rdf:type ?x. """;
+    rr:body """ ?s ?p ?o. ?p rdfs:domain ?x. FILTER (?x != rdfs:Resource) """.
+
+:rdfs3 a rr:Rule;
+    rr:head """ ?o rdf:type ?x """;
+    rr:body """ ?s ?p ?o. ?p rdfs:range ?x. FILTER (?x != rdfs:Resource) """.
+
+:rdfs4a a rr:Rule;
+    rr:head """ ?s rdf:type rdfs:Resource. """;
+    rr:body """ ?s ?p ?o. """.
+
+:rdfs4b a rr:Rule;
+    rr:head """ ?o rdf:type rdfs:Resource. """;
+    rr:body """ ?s ?p ?o. """.
+
+:rdfs5 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?r. """;
+    rr:body """ ?p rdfs:subPropertyOf ?q. ?q rdfs:subPropertyOf ?r.
+                FILTER (?p != ?q && ?q != ?r && ?p != ?r) """.
+
+:rdfs6 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?p. """;
+    rr:body """ ?p rdf:type rdf:Property. """.
+
+:rdfs7x a rr:Rule;
+    rr:head """ ?s ?q ?o. """;
+    rr:body """ ?s ?p ?o. ?p rdfs:subPropertyOf ?q. FILTER (?p != ?q) """.
+
+:rdfs8 a rr:Rule;
+    rr:head """ ?s rdfs:subClassOf rdfs:Resource. """;
+    rr:body """ ?s rdf:type owl:Class. """.
+
+:rdfs9 a rr:Rule;
+    rr:head """ ?s rdf:type ?y. """;
+    rr:body """ ?s rdf:type ?x. ?x rdfs:subClassOf ?y. FILTER (?x != ?y) """.
+
+:rdfs10 a rr:Rule;
+    rr:head """ ?s rdfs:subClassOf ?s. """;
+    rr:body """ ?s rdf:type owl:Class. """.
+
+:rdfs11 a rr:Rule;
+    rr:head """ ?x rdfs:subClassOf ?z. """;
+    rr:body """ ?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z.
+                FILTER (?x != ?y && ?y != ?z && ?x != ?z) """.
+
+:rdfs12 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf rdfs:member. """;
+    rr:body """ ?p rdf:type rdfs:ContainerMembershipProperty. """.
+
+:rdfs13 a rr:Rule;
+    rr:head """ ?o rdfs:subClassOf rdfs:Literal. """;
+    rr:body """ ?o rdf:type rdfs:Datatype. """.
+
+:rdfp1 a rr:Rule;
+    rr:head """ ?o1 owl:sameAs ?o2. """;
+    rr:body """ ?p rdf:type owl:FunctionalProperty. ?s ?p ?o1, ?o2.
+                FILTER (?o1 != ?o2) """.
+
+:rdfp2 a rr:Rule;
+    rr:head """ ?s1 owl:sameAs ?s2. """;
+    rr:body """ ?p rdf:type owl:InverseFunctionalProperty. ?s1 ?p ?o. ?s2 ?p ?o.
+                FILTER (?s1 != ?s2) """.
+
+:rdfp3 a rr:Rule;
+    rr:head """ ?o ?p ?s. """;
+    rr:body """ ?p rdf:type owl:SymmetricProperty. ?s ?p ?o.
+                FILTER (?s != ?o) """.
+
+:rdfp4 a rr:Rule;
+    rr:head """ ?s ?p ?t. """;
+    rr:body """ ?p rdf:type owl:TransitiveProperty. ?s ?p ?o. ?o ?p ?t. 
+                FILTER (?s != ?o && ?o != ?t) """.
+
+:rdfp5a a rr:Rule;
+    rr:head """ ?s owl:sameAs ?s. """;
+    rr:body """ ?s ?p ?o. """.
+
+:rdfp5b a rr:Rule;
+    rr:head """ ?o owl:sameAs ?o. """;
+    rr:body """ ?s ?p ?o. """.
+
+:rdfp6 a rr:Rule;
+    rr:head """ ?o owl:sameAs ?s. """;
+    rr:body """ ?s owl:sameAs ?o. FILTER (?s != ?o) """.
+
+:rdfp7 a rr:Rule;
+    rr:head """ ?s owl:sameAs ?t. """;
+    rr:body """ ?s owl:sameAs ?o. ?o owl:sameAs ?t.
+                FILTER (?s != ?o && ?o != ?t && ?s != ?t) """.
+
+:rdfp8ax a rr:Rule;
+    rr:head """ ?o ?q ?s. """;
+    rr:body """ ?p owl:inverseOf ?q. ?s ?p ?o. FILTER (?s != ?o) """.
+
+:rdfp8bx a rr:Rule;
+    rr:head """ ?o ?p ?s. """;
+    rr:body """ ?p owl:inverseOf ?q. ?s ?q ?o. FILTER (?s != ?o) """.
+
+:rdfp9 a rr:Rule;
+    rr:head """ ?c rdfs:subClassOf ?d. """;
+    rr:body """ ?c rdf:type owl:Class. ?c owl:sameAs ?d. """.
+
+:rdfp10 a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?q. """;
+    rr:body """ ?p rdf:type rdf:Property. ?p owl:sameAs ?q. """.
+
+:rdfp11 a rr:Rule;
+    rr:head """ ?sp ?p ?op. """;
+    rr:body """ ?s ?p ?o. ?s owl:sameAs ?sp. ?o owl:sameAs ?op.
+                FILTER (?s != ?sp || ?o != ?op) """.
+
+:rdfp12a a rr:Rule;
+    rr:head """ ?c rdfs:subClassOf ?d. """;
+    rr:body """ ?c owl:equivalentClass ?d. """.
+
+:rdfp12b a rr:Rule;
+    rr:head """ ?d rdfs:subClassOf ?c. """;
+    rr:body """ ?c owl:equivalentClass ?d. """.
+
+:rdfp12c a rr:Rule;
+    rr:head """ ?c owl:equivalentClass ?d. """;
+    rr:body """ ?c rdfs:subClassOf ?d. ?d rdfs:subClassOf ?c. """.
+
+:rdfp13a a rr:Rule;
+    rr:head """ ?p rdfs:subPropertyOf ?q. """;
+    rr:body """ ?p owl:equivalentProperty ?q. """.
+
+:rdfp13b a rr:Rule;
+    rr:head """ ?q rdfs:subPropertyOf ?p. """;
+    rr:body """ ?p owl:equivalentProperty ?q. """.
+
+:rdfp13c a rr:Rule;
+    rr:head """ ?p owl:equivalentClass ?q. """;
+    rr:body """ ?p rdfs:subPropertyOf ?q. ?q rdfs:subPropertyOf ?p. """.
+
+:rdfp14a a rr:Rule;
+    rr:head """ ?s rdf:type ?r. """;
+    rr:body """ ?r owl:hasValue ?v; owl:onProperty ?p. ?s ?p ?v. """.
+
+:rdfp14bx a rr:Rule;
+    rr:head """ ?s ?p ?v. """;
+    rr:body """ ?r owl:hasValue ?v; owl:onProperty ?p. ?s rdf:type ?r. """.
+
+:rdfp15 a rr:Rule;
+    rr:head """ ?s rdf:type ?r. """;
+    rr:body """ ?r owl:someValuesFrom ?c; owl:onProperty ?p. ?s ?p ?o. ?o rdf:type ?c. """.
+
+:rdfp16 a rr:Rule;
+    rr:head """ ?o rdf:type ?c. """;
+    rr:body """ ?r owl:allValuesFrom ?c; owl:onProperty ?p. ?s rdf:type ?r; ?p ?o. """.

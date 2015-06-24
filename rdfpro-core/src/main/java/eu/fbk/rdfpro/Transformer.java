@@ -32,6 +32,7 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.vocabulary.SESAME;
+import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
@@ -781,7 +782,8 @@ final class RuleTransformer implements Transformer {
                 final Literal lit = (Literal) value;
                 final String lang = lit.getLanguage();
                 final URI dt = lit.getDatatype();
-                return lang == null && dt == null
+                return lang == null
+                        && (dt == null || XMLSchema.STRING.equals(dt))
                         && this.matchAnyPlainLiteral //
                         || lang != null //
                         && (this.matchAnyLangLiteral || contains(this.matchedLanguages, lang)) //

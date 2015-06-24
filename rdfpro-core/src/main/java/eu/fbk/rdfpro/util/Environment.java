@@ -24,11 +24,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -235,8 +238,8 @@ public final class Environment {
             }
         }
 
-        throw new IllegalArgumentException("Unknown plugin " + name + " for class "
-                + baseClass.getSimpleName());
+        throw new IllegalArgumentException("Unknown " + baseClass.getSimpleName() + " plugin '"
+                + name + "'");
     }
 
     @SuppressWarnings("unchecked")
@@ -245,19 +248,41 @@ public final class Environment {
             if (frozenPlugins != null) {
                 return;
             }
+            final Set<String> disabledNames = new HashSet<>();
             final List<Plugin> plugins = new ArrayList<>();
             for (final Map<String, String> map : new Map[] { loadedProperties,
                     configuredProperties }) {
                 for (final Map.Entry<String, String> entry : map.entrySet()) {
                     final String name = entry.getKey();
                     final String value = entry.getValue();
-                    if (name.startsWith("plugin,")) {
+                    if (name.startsWith("plugin.enable.") || name.startsWith("plugin,enable,")) {
+                        final List<String> names = Arrays.asList(name.substring(
+                                "plugin.enable.".length()).split("[.,]"));
+                        if (value.equalsIgnoreCase("true")) {
+                            disabledNames.removeAll(names);
+                        } else {
+                            disabledNames.addAll(names);
+                        }
+                    } else if (name.startsWith("plugin,") || name.startsWith("plugin.")) {
                         try {
-                            final String[] tokens = name.toString().split(",");
-                            final String className = tokens[1];
-                            final String methodName = tokens[2];
+                            final String s = name.substring("plugin.".length());
+                            String[] tokens = s.split(",");
+                            if (tokens.length == 1) {
+                                final String[] allTokens = s.split("\\.");
+                                for (int i = 0; i < allTokens.length; ++i) {
+                                    if (Character.isUpperCase(allTokens[i].charAt(0))) {
+                                        tokens = new String[allTokens.length - i];
+                                        tokens[0] = String.join(".",
+                                                Arrays.copyOfRange(allTokens, 0, i + 1));
+                                        System.arraycopy(allTokens, i + 1, tokens, 1,
+                                                allTokens.length - i - 1);
+                                    }
+                                }
+                            }
+                            final String className = tokens[0];
+                            final String methodName = tokens[1];
                             final List<String> pluginNames = Arrays.asList(Arrays.copyOfRange(
-                                    tokens, 3, tokens.length));
+                                    tokens, 2, tokens.length));
                             final Class<?> clazz = Class.forName(className);
                             final Method method = clazz.getDeclaredMethod(methodName,
                                     String.class, String[].class);
@@ -267,6 +292,15 @@ public final class Environment {
                             LOGGER.warn("Invalid plugin definition " + name
                                     + " in file - ignoring", ex);
                         }
+                    }
+                }
+            }
+            for (final Iterator<Plugin> i = plugins.iterator(); i.hasNext();) {
+                final List<String> names = i.next().names;
+                for (final String name : names) {
+                    if (disabledNames.contains(name)) {
+                        i.remove();
+                        break;
                     }
                 }
             }

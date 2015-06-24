@@ -58,6 +58,7 @@ public class ScriptTest {
         engine.getContext().setAttribute("logger", LOGGER, ScriptContext.ENGINE_SCOPE);
         engine.eval("var pippo=\"ouch\";\n");
         engine.eval(SCRIPT);
+        @SuppressWarnings("unchecked")
         final Filter<Statement> filter = ((Invocable) engine).getInterface(Filter.class);
         final RDFHandler handler = RDFProcessors.track(
                 new Tracker(LOGGER, "Started", "Done %d %d", "%d %d %d")).wrap(RDFHandlers.NIL);

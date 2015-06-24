@@ -848,6 +848,7 @@ http://www.ontologydesignpatterns.org/ont/lmm/LMM_L1.owl# lmm1
 http://www.ontologydesignpatterns.org/ont/lmm/LMM_L2.owl# lmm2
 http://www.ontologydesignpatterns.org/ont/web/irw.owl# irw
 http://www.ontologydesignpatterns.org/schemas/cpannotationschema.owl# cpa
+http://www.ontologyportal.org/SUMO.owl# sumo
 http://www.ontologyportal.org/WordNet.owl# opwn
 http://www.ontotext.com/proton/protonext# pext
 http://www.ontotext.com/proton/protontop# ptop

@@ -1234,10 +1234,10 @@ final class ProcessorStats implements RDFProcessor {
                 hi = hi | 0x1000000000000000L;
                 final Literal literal = (Literal) value;
                 int index = 0;
-                if (literal.getDatatype() != null) {
-                    index = DATATYPE_INDEX.put(literal.getDatatype());
-                } else if (literal.getLanguage() != null) {
+                if (literal.getLanguage() != null) {
                     index = LANGUAGE_INDEX.put(literal.getLanguage()) | 0x40000000;
+                } else if (literal.getDatatype() != null) {
+                    index = DATATYPE_INDEX.put(literal.getDatatype());
                 }
                 index = index & 0x7FFFFFFF;
                 lo = (lo ^ index) & 0xFFFFFFFF7F7F7F7FL;

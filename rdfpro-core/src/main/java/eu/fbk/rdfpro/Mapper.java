@@ -13,6 +13,9 @@
  */
 package eu.fbk.rdfpro;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
@@ -67,6 +70,34 @@ public interface Mapper {
      *             on error
      */
     Value[] map(Statement statement) throws RDFHandlerException;
+
+    /**
+     * Returns a {@code Mapper} returning a concatenation of all the keys produced by the
+     * {@code Mapper}s supplied for the input statement. Duplicate keys for the same statement are
+     * merged.
+     *
+     * @param mappers
+     *            the mappers whose output has to be concatenated
+     * @return the created {@code Mapper}
+     */
+    public static Mapper concat(final Mapper... mappers) {
+        return new Mapper() {
+
+            @Override
+            public Value[] map(final Statement statement) throws RDFHandlerException {
+                final List<Value> keys = new ArrayList<>(mappers.length);
+                for (int i = 0; i < mappers.length; ++i) {
+                    for (final Value key : mappers[i].map(statement)) {
+                        if (!keys.contains(key)) {
+                            keys.add(key);
+                        }
+                    }
+                }
+                return keys.toArray(new Value[keys.size()]);
+            }
+
+        };
+    }
 
     /**
      * Returns a {@code Mapper} returning a single key based on one or more selected components of
@@ -184,10 +215,10 @@ public interface Mapper {
                     return 0x21;
                 }
                 final Literal l = (Literal) value;
-                if (l.getDatatype() != null) {
-                    return 0x42;
-                } else if (l.getLabel() != null) {
+                if (l.getLanguage() != null) {
                     return 0x52;
+                } else if (l.getDatatype() != null) {
+                    return 0x42;
                 } else {
                     return 0x31;
                 }
@@ -199,10 +230,10 @@ public interface Mapper {
                 } else if (value instanceof Literal) {
                     final Literal l = (Literal) value;
                     strings[index++] = l.getLabel();
-                    if (l.getDatatype() != null) {
-                        strings[index++] = l.getDatatype().stringValue();
-                    } else if (l.getLanguage() != null) {
+                    if (l.getLanguage() != null) {
                         strings[index++] = l.getLanguage();
+                    } else if (l.getDatatype() != null) {
+                        strings[index++] = l.getDatatype().stringValue();
                     }
                 }
                 return index;

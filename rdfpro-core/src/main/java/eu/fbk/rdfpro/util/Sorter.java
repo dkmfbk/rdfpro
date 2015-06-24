@@ -36,6 +36,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
+import org.openrdf.model.vocabulary.XMLSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -366,28 +367,28 @@ public abstract class Sorter<T> implements AutoCloseable {
                 writeStringHelper(((BNode) value).getID(), 0, 1);
             } else if (value instanceof Literal) {
                 final Literal lit = (Literal) value;
-                final URI dt = lit.getDatatype();
-                if (dt == null) {
-                    final String lang = lit.getLanguage();
-                    if (lang == null) {
+                final String lang = lit.getLanguage();
+                if (lang == null) {
+                    final URI dt = lit.getDatatype();
+                    if (dt == null || XMLSchema.STRING.equals(dt)) {
                         writeStringHelper(lit.getLabel(), 0, 2);
                     } else {
-                        final int key = !compress ? -1 : this.dictionary.encodeLanguage(lang);
+                        final int key = !compress ? -1 : this.dictionary.encodeDatatype(dt);
                         if (key < 0) {
                             writeStringHelper(lit.getLabel(), 0, 3);
-                            writeStringHelper(lang, 0, 2);
+                            writeStringHelper(dt.stringValue(), 0, 1);
                         } else {
-                            writeStringHelper(lit.getLabel(), 0, 5);
+                            writeStringHelper(lit.getLabel(), 0, 4);
                             writeNumber(key);
                         }
                     }
                 } else {
-                    final int key = !compress ? -1 : this.dictionary.encodeDatatype(dt);
+                    final int key = !compress ? -1 : this.dictionary.encodeLanguage(lang);
                     if (key < 0) {
                         writeStringHelper(lit.getLabel(), 0, 3);
-                        writeStringHelper(dt.stringValue(), 0, 1);
+                        writeStringHelper(lang, 0, 2);
                     } else {
-                        writeStringHelper(lit.getLabel(), 0, 4);
+                        writeStringHelper(lit.getLabel(), 0, 5);
                         writeNumber(key);
                     }
                 }

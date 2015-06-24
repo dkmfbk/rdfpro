@@ -29,6 +29,19 @@ public final class Hash implements Serializable, Comparable<Hash> {
         this.low = low;
     }
 
+    public static Hash combine(final Hash... hashes) {
+        if (hashes.length == 1) {
+            return hashes[0];
+        }
+        long hi = 0;
+        long lo = 0;
+        for (final Hash hash : hashes) {
+            hi ^= hash.getHigh() + 0x9e3779b9 + (hi << 6) + (hi >> 2);
+            lo ^= hash.getLow() + 0x9e3779b9 + (lo << 6) + (lo >> 2);
+        }
+        return fromLongs(hi, lo);
+    }
+
     public static Hash fromLongs(final long high, final long low) {
         return new Hash(high, low);
     }
