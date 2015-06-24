@@ -5,7 +5,7 @@ ini_set("display_errors", "On");
 putenv("JAVA_HOME=/data/software/jdk8");
 
 $F = dirname(__FILE__);
-// $eso_path = "$F/ESO.owl";
+$eso_path = "$F/ESO.owl";
 $rdfpro_path = "/data/software/bin/rdfpro";
 // $java_path = "/data/software/bin/java";
 // $html_jar_path = "$F/eso-reasoner-1.0-SNAPSHOT.jar";

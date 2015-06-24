@@ -129,7 +129,8 @@
 							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
 						</div>
 						<p class="help-block">
-							These additional files can be included in the commands using the labels #file1, #file2, #file3, #file4.
+							These additional files can be included in the commands using the labels #file1, #file2, #file3, #file4.<br />
+							You can also use #eso for the <a href='https://github.com/newsreader/eso'>ESO ontology</a>.
 						</p>
 					</div>
 
@@ -191,6 +192,12 @@ AVAILABLE PROCESSORS:
 @count          Counts the number of triples for each distinct subject
   [-p] URI      the predicate URI denoting the number of triples (def. void:triples)
   [-c] URI      the context URI where to emit count triples (def. sesame:nil)
+
+@esoreasoner    Performs reasoning according to the ESO ontology supplied
+  [-i]          emits only inferences (default: emit also explicit statements)
+  [-b BASE]     use BASE to resolve URIs in the ESO ontology files (default: empty)
+  [-w]          rewrites BNodes in the ESO ontology file to avoid clashes
+  FILE...       the file(s) of the ESO ontology (you can use #eso in this DEMO)
 
 @groovy         Transform the stream using a user-supplied Groovy script
   [-p]          use multiple script instances in parallel (script pooling)

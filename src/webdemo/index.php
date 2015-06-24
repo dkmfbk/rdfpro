@@ -65,6 +65,8 @@ if ($go) {
 		}
 	}
 
+	$pars['commands'] = str_replace("#eso", $eso_path, $pars['commands']);
+
 	$outExt = $pars['fileType'];
 	if ($pars['fileCompression'] && !$pars['showResults']) {
 		$outExt .= ".{$pars['fileCompression']}";
