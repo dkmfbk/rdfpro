@@ -15,6 +15,7 @@ ob_start();
 $in = $out = "";
 $go = false;
 
+// Security stuff
 $pars = array();
 $pars['inputRadio'] = isset($_REQUEST['inputRadio']) ? $_REQUEST['inputRadio'] : null;
 $pars['readText'] = isset($_REQUEST['readText']) ? $_REQUEST['readText'] : "";
@@ -22,7 +23,7 @@ $pars['readTextType'] = isset($_REQUEST['readTextType']) ? preg_replace("/[^a-z0
 $pars['fileType'] = isset($_REQUEST['fileType']) ? preg_replace("/[^a-z0-9]/i", "", $_REQUEST['fileType']) : "";
 $pars['fileCompression'] = isset($_REQUEST['fileCompression']) ? preg_replace("/[^a-z0-9]/i", "", $_REQUEST['fileCompression']) : "";
 $pars['showResults'] = isset($_REQUEST['showResults']) && $_REQUEST['showResults'];
-$pars['commands'] = isset($_REQUEST['commands']) ? escapeshellcmd($_REQUEST['commands']) : "";
+$pars['commands'] = isset($_REQUEST['commands']) ? $_REQUEST['commands'] : "";
 
 if ($pars['inputRadio'] != null) {
 	if ($pars['inputRadio'] == "file") {
@@ -58,11 +59,19 @@ if ($pars['inputRadio'] != null) {
 
 if ($go) {
 
+	for ($i = 1; $i <= 4; $i++) {
+		if (isset($_FILES['additionalFile'.$i]) && $_FILES['additionalFile'.$i]['error'] === UPLOAD_ERR_OK) {
+			$pars['commands'] = str_replace("#file".$i, $_FILES['additionalFile'.$i]['tmp_name'], $pars['commands']);
+		}
+	}
+
 	$outExt = $pars['fileType'];
 	if ($pars['fileCompression'] && !$pars['showResults']) {
 		$outExt .= ".{$pars['fileCompression']}";
 	}
 	$out .= ".$outExt";
+
+	$pars['commands'] = escapeshellcmd($pars['commands']);
 
 	$rdfp_command = "$rdfpro_path @read $in {$pars['commands']} @write $out";
 
@@ -89,6 +98,8 @@ if ($go) {
 
 	    exit(1);
 	}
+
+	// $log = "$rdfp_command\n\n$log";
 
 	echo '<div class="alert alert-danger" role="alert">', nl2br($log), '</div>';
 

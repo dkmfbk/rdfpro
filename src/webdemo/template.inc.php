@@ -40,11 +40,11 @@
 					<div id="input-radio">
 						<div class="radio">
 							<label>
-								<input type="radio" name="inputRadio" id="inputRadio_file" value="file" checked="checked">
+								<input type="radio" name="inputRadio" id="inputRadio_file" value="file" checked="checked" />
 								Upload an input RDF file in any popular serialization format
 							</label>
 							<div class="form-group form-radio">
-								<input id="upload_readFile" type="file" name="readFile" id="readFile">
+								<input id="upload_readFile" type="file" name="readFile" id="readFile" />
 								<p class="help-block">
 									File must be in one of the following format: rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf.<br />
 									File may be compressed using: gz, bz2, xz, 7z.
@@ -53,7 +53,7 @@
 						</div>
 						<div class="radio">
 							<label>
-								<input type="radio" name="inputRadio" id="inputRadio_text" value="text">
+								<input type="radio" name="inputRadio" id="inputRadio_text" value="text" />
 								Insert data manually
 							</label>
 							<div class="form-group form-radio">
@@ -88,12 +88,48 @@
 
 					<h4>
 						<span class="label label-success">2</span>
-						Combine processors from the right side window
+						Combine processors
 					</h4>
 					<div class="form-group">
 						<textarea class="form-control" rows="3" name="commands" id="commandsArea"></textarea>
 						<p class="help-block">
 							Insert here the commands you want to use for the RDFpro processing.
+							The list of the available commands is documented in the right side window.
+						</p>
+					</div>
+
+					<h5>Additional files</h5>
+					<div class="form-inline" id="form-additional-file">
+						<div class="form-group">
+							<label for="upload_additionalFile1">
+								#file1
+							</label>
+							<input id="upload_additionalFile1" type="file" name="additionalFile1" id="additionalFile1" />
+							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
+						</div>
+						<div class="form-group">
+							<label for="upload_additionalFile2">
+								#file2
+							</label>
+							<input id="upload_additionalFile2" type="file" name="additionalFile2" id="additionalFile2" />
+							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
+						</div>
+						<div class="form-group">
+							<label for="upload_additionalFile3">
+								#file3
+							</label>
+							<input id="upload_additionalFile3" type="file" name="additionalFile3" id="additionalFile3" />
+							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
+						</div>
+						<div class="form-group">
+							<label for="upload_additionalFile4">
+								#file4
+							</label>
+							<input id="upload_additionalFile4" type="file" name="additionalFile4" id="additionalFile4" />
+							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
+						</div>
+						<p class="help-block">
+							These additional files can be included in the commands using the labels #file1, #file2, #file3, #file4.
 						</p>
 					</div>
 

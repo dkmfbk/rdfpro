@@ -46,7 +46,7 @@ span.post-situation {
 }
 
 #documentation pre {
-	height: 500px;
+	height: 600px;
 }
 
 #form-output label {
@@ -75,3 +75,15 @@ span.post-situation {
 	margin-top: 15px !important;
 }
 
+#form-additional-file input {
+	display: inline;
+	width: 200px;
+}
+
+#form-additional-file .form-group {
+	margin-right: 20px;
+}
+
+#form-additional-file label {
+	font-weight: normal !important;
+}

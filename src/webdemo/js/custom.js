@@ -14,6 +14,13 @@ $(document).ready(function() {
 		showCorrectRadioDiv();
 	});
 
+	$(".cancel-file").on('click', function() {
+		// See: http://stackoverflow.com/questions/1043957/clearing-input-type-file-using-jquery
+		$(this).closest('.form-group').find('input').wrap('<form>').closest('form').get(0).reset();
+		$(this).closest('.form-group').find('input').unwrap();
+		return false;
+	});
+
 	$("#show-hide-button").on('click', function() {
 		if ($("#documentation pre").is(":visible")) {
 			$("#documentation pre").hide();
