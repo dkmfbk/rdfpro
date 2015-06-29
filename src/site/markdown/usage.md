@@ -21,7 +21,7 @@ RDFpro usage
     * [@prefix](#prefix)
 
 
-### <a name="invocation"></a> RDFpro invocation
+### <a class="anchor" id="invocation"></a> RDFpro invocation
 
 The command line tool can be invoked using the `rdfpro` script. Its syntax is:
 
@@ -30,7 +30,7 @@ The command line tool can be invoked using the `rdfpro` script. Its syntax is:
 where options -v and -h display respectively the tool version and its online help text, while `SPEC` is the specification of the RDF processing pipeline that is built and executed by the tool; option -V enables the 'verbose' mode where additional debugging information is logged.
 
 
-### <a name="pipeline"></a> Pipeline specification
+### <a class="anchor" id="pipeline"></a> Pipeline specification
 
 The pipeline specification `SPEC` is based on the recursive application of the following rules:
 
@@ -59,11 +59,11 @@ As an example, the following command invokes `rdfpro` in verbose mode with a pip
     rdfpro -V @read file.ttl { @stats , @tbox }u @write onto.rdf
 
 
-### <a name="ioprocs"></a> I/O processors
+### <a class="anchor" id="ioprocs"></a> I/O processors
 
 The builtin processors `@read`, `@write`, `@query` and `@update` allow to move data in and out of RDFpro. We describe them below, reporting both long and short name (e.g., `@read` and `@r`) and their arguments.
 
-#### <a name="read"></a> @read
+#### <a class="anchor" id="read"></a> @read
 
     @read|@r [-b BASE] [-p] URL...
 
@@ -83,7 +83,7 @@ The following RDF formats are detected and supported: `rdf`, `rj`, `jsonld`, `nt
 The following compression schemes are detected and supported (provided the corresponding native compression/decompression utility is available): `gz`, `bz2`, `xz`, `7z`.
 Shell expansion can be exploited to list multiple files.
 
-#### <a name="write"></a> @write
+#### <a class="anchor" id="write"></a> @write
 
     @write|@w URL...
 
@@ -98,7 +98,7 @@ RDF formats and compression schemes are detected from the file extensions, or (s
 The same RDF formats (except `geonames`) and compression schemes of `@read` are supported.
 The output stream of this processor is the input stream unchanged, thus allowing to chain `@write` with other downstream processors.
 
-#### <a name="query"></a> @query
+#### <a class="anchor" id="query"></a> @query
 
     @query [-q QUERY] [-f FILE] [-p] URL
 
@@ -119,7 +119,7 @@ Argument `URL` specifies the URL of the SPARQL endpoint.
 Downloaded quads are emitted in the output stream together with quads from the input stream.
 
 
-#### <a name="update"></a> @update
+#### <a class="anchor" id="update"></a> @update
 
     @update [-s SIZE] URL
 
@@ -132,11 +132,11 @@ Argument `URL` specifies the URL of the SPARQL endpoint.
 The output stream of this processor is the input stream unchanged, thus allowing to chain `@update` with other downstream processors.
 
 
-### <a name="transformprocs"></a> Data transformation processors
+### <a class="anchor" id="transformprocs"></a> Data transformation processors
 
 Processors `@transform`, `@groovy`, `@rdfs`, `@smush`, `@unique` implement different forms of data transformation.
 
-#### <a name="transform"></a> @transform
+#### <a class="anchor" id="transform"></a> @transform
 
     @transform|@t [EXP]
 
@@ -168,7 +168,7 @@ Values must be encoded in Turtle. The following wildcard values are supported:
   * `@transform '+p rdf:type +s <*> +o <*>'` -- keeps only `rdf:type` quads whose subject and object are URIs;
   * `@transform '+p rdf:type =c <http://example.org/mygraph>'` -- extracts `rdf:type` quads, placing them in named graph `<http://example.org/mygraph>`.
 
-#### <a name="groovy"></a> @groovy
+#### <a class="anchor" id="groovy"></a> @groovy
 
     @groovy [-p] SCRIPT [ARG...]
 
@@ -203,7 +203,7 @@ Groovy implementation of SPARQL 1.1 functions are available to the script (just 
 
 Finally, note that the boolean flag `__rdfpro__` is set to true when the script is run inside RDFpro (to distinguish from other forms of script invocation, e.g. from the command line).
 
-#### <a name="rdfs"></a> @rdfs
+#### <a class="anchor" id="rdfs"></a> @rdfs
 
     @rdfs [-e RULES] [-d] [-t] [-C | -c URI] [-b BASE] [-p] [URL...]
 
@@ -217,7 +217,7 @@ Rules `rdfs4a`, `rdfs4b` and `rdfs8` generates a lot of quads of the form `<x rd
 
 Option `-d` causes simple OWL axioms in the TBox to be decomposed to their corresponding RDFS axioms, where possible, so that they can affect RDFS reasoning (e.g., `owl:equivalentClass` can be expressed in terms of `rdfs:subClassOf`).
 
-Option `-t` causes uninformative <x rdf:type _:b> statements, with _:b a BNode, to be dropped (default: keep).
+Option `-t` causes uninformative <x rdf:type \_:b> statements, with \_:b a BNode, to be dropped (default: keep).
 
 Options `-C` and `-c URI` control the graph where the TBox closure is emitted.
 This graph is the default (unnamed) graph if option `-C` is specified, otherwise the URI given by `-c` is used as the targed graph.
@@ -238,7 +238,7 @@ The result represents the complete RDFS closure if the TBOX: (i) contains all th
   * `X {rdf:type|rdfs:domain|rdfs:range|rdfs:subClassOf} rdfs:ContainerMembershipProperty`
   * `X {rdf:type|rdfs:domain|rdfs:range|rdfs:subClassOf} rdfs:Datatype`
 
-#### <a name="smush"></a> @smush
+#### <a class="anchor" id="smush"></a> @smush
 
     @smush NAMESPACE...
 
@@ -249,7 +249,7 @@ At least a namespace must be supplied.
 
 Aliases are not discarded but are emitted using `owl:sameAs` quads that link them to canonical URIs.
 
-#### <a name="unique"></a> @unique
+#### <a class="anchor" id="unique"></a> @unique
 
     @unique|@u [-m]
 
@@ -259,11 +259,11 @@ Option `-m` causes quads with the same `s,p,o` components but different graphs t
 The fusion graph is described with (i.e., it is the subject of) all the quads that describe the associated source graphs.
 
 
-### <a name="otherprocs"></a> Other processors
+### <a class="anchor" id="otherprocs"></a> Other processors
 
 The remaining processors `@stats`, `@tbox` serve various extraction tasks, while `@prefix` can be used to improve the serialization of produced RDF.
 
-#### <a name="stats"></a> @stats
+#### <a class="anchor" id="stats"></a> @stats
 
     @stats [-n NAMESPACE] [-p URI] [-c URI] [-t NUM] [-o]
 
@@ -288,14 +288,14 @@ Option `-o` enables the computation of `void:classes` and `void:properties`, whi
 Internally, `@stats` makes use of the `sort` utility to (conceptually) sort the quad stream twice: first based on the subject to group quads about the same entity and compute entity-based and distinct subjects statistics; then based on the object to compute distinct objects statistics.
 Therefore, computing VOID statistics is a quite slow operation.
 
-#### <a name="tbox"></a> @tbox
+#### <a class="anchor" id="tbox"></a> @tbox
 
     @tbox
 
 Filters the input stream by emitting only quads belonging to RDFS or OWL TBox axioms (no check is done on the graph component).
 Note that OWL TBox axioms are not used for inference by RDFpro (only RDFS is supported).
 
-#### <a name="prefix"></a> @prefix
+#### <a class="anchor" id="prefix"></a> @prefix
 
     @prefix|@p [-f FILE]
 

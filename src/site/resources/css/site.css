@@ -34,3 +34,11 @@
 h1[id]:before, h2[id]:before, h3[id]:before, h4[id]:before, h5[id]:before, h6[id]:before, a[name]:before {
     display: none !important;
 }
+
+a.anchor {
+    border-top: 75px solid transparent;
+    margin-top: -75px;
+    -webkit-background-clip: padding-box;
+    -moz-background-clip: padding;
+    background-clip: padding-box;
+}
