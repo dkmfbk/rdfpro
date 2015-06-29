@@ -1,14 +1,18 @@
-
-<div class="row">
-<br/>
-<br/>
-<div class="span12">
-<div class="well sidebar" style="text-align: center">
-<h1 style="font-size:400%">RDF<sub>pro</sub></h1><br/>
-<p style="font-size:200%">An Extensible Tool for Building Stream-Oriented RDF Processing Pipelines</p><br/>
-<form method="GET" action="install.html"><button class="btn btn-primary btn-large" type="submit" style="font-size:150%">Download</button></form>
-</div>
-</div>
+<div class="well sidebar" id="well-home">
+    <h1>
+        <img src='images/rdfpro-150.png' />
+        RDF<sub>pro</sub>
+    </h1>
+    
+    <p class='title2'>
+        The Swiss-Army tool for RDF and Named Graph manipulation
+    </p>
+                
+    <p class='title2'>
+        <a class="btn btn-primary btn-large" href="install.html">Download</a>
+        <a class="btn btn-primary btn-large" href="https://knowledgestore2.fbk.eu/rdfpro-demo/">Online demo</a>
+        <a class="btn btn-primary btn-large" href="install.html">Video tour</a>
+    </p>
 </div>
 
 ---------------------------------------
