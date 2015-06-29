@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -43,6 +44,7 @@ import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Options;
+import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
 import eu.fbk.rdfpro.util.Tracker;
 import eu.fbk.rdfpro.vocab.VOIDX;
@@ -160,7 +162,9 @@ public final class RDFProcessors {
         case "transform": {
             final Options options = Options.parse("+", args);
             final String spec = String.join(" ", options.getPositionalArgs(String.class));
-            return transform(Transformer.rules(spec));
+            final Transformer transformer = Scripting.isScript(spec) ? Scripting.compile(
+                    Transformer.class, spec, "q", "h") : Transformer.rules(spec);
+            return transform(transformer);
         }
 
         case "u":
@@ -329,6 +333,30 @@ public final class RDFProcessors {
             final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
                     .stringValue();
             return update(endpointURL);
+        }
+
+        case "mapreduce": {
+            final Options options = Options.parse("b!|r!|e!|a!|u|+", args);
+            final boolean deduplicate = options.hasOption("u");
+            final String bypassExp = options.getOptionArg("b", String.class);
+            final String existsExp = options.getOptionArg("e", String.class);
+            final String forallExp = options.getOptionArg("a", String.class);
+            final String reducerExp = options.getOptionArg("r", String.class);
+            final Predicate<Statement> bypassPred = Statements.statementMatcher(bypassExp);
+            final Predicate<Statement> existsPred = Statements.statementMatcher(existsExp);
+            final Predicate<Statement> forallPred = Statements.statementMatcher(forallExp);
+            Reducer reducer = reducerExp == null ? Reducer.IDENTITY //
+                    : Scripting.compile(Reducer.class, reducerExp, "k", "p", "h");
+            reducer = Reducer.filter(reducer, existsPred, forallPred);
+            final List<Mapper> mappers = new ArrayList<>();
+            for (final String mapperExp : options.getPositionalArgs(String.class)) {
+                mappers.add(Mapper.parse(mapperExp));
+            }
+            Mapper mapper = Mapper.concat(mappers.toArray(new Mapper[mappers.size()]));
+            if (bypassPred != null) {
+                mapper = Mapper.bypass(mapper, bypassPred);
+            }
+            return mapReduce(mapper, reducer, deduplicate);
         }
 
         default:

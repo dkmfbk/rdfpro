@@ -13,12 +13,16 @@
  */
 package eu.fbk.rdfpro;
 
+import java.util.function.Predicate;
+
 import javax.annotation.Nullable;
 
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+
+import eu.fbk.rdfpro.util.Scripting;
 
 /**
  * Reduce function in a MapReduce job.
@@ -36,6 +40,134 @@ import org.openrdf.rio.RDFHandlerException;
  */
 @FunctionalInterface
 public interface Reducer {
+
+    /**
+     * The identity reducer that emits all the quads of a partition unchanged.
+     */
+    Reducer IDENTITY = new Reducer() {
+
+        @Override
+        public void reduce(final Value key, final Statement[] statements, final RDFHandler handler)
+                throws RDFHandlerException {
+            for (final Statement statement : statements) {
+                handler.handleStatement(statement);
+            }
+        }
+
+    };
+
+    /**
+     * Returns a filtered version of the input reducer that operates only on partitions satisfying
+     * the existential and forall predicates supplied.
+     *
+     * @param reducer
+     *            the reducer to filter
+     * @param existsPredicate
+     *            the exists predicate, that must be satisfied by at least a partition quad in
+     *            order for the partition to be processed; if null no existential filtering is
+     *            done
+     * @param forallPredicate
+     *            the forall predicate, that must be satisfied by all the quads of a partition in
+     *            order for it to be processed; if null, no forall filtering is applied
+     * @return the resulting filtered reducer
+     */
+    static Reducer filter(final Reducer reducer,
+            @Nullable final Predicate<Statement> existsPredicate,
+            @Nullable final Predicate<Statement> forallPredicate) {
+
+        if (existsPredicate != null) {
+            if (forallPredicate != null) {
+                return new Reducer() {
+
+                    @Override
+                    public void reduce(final Value key, final Statement[] statements,
+                            final RDFHandler handler) throws RDFHandlerException {
+                        boolean exists = false;
+                        for (final Statement statement : statements) {
+                            if (!forallPredicate.test(statement)) {
+                                return;
+                            }
+                            exists = exists || existsPredicate.test(statement);
+                        }
+                        if (exists) {
+                            reducer.reduce(key, statements, handler);
+                        }
+                    }
+
+                };
+            } else {
+                return new Reducer() {
+
+                    @Override
+                    public void reduce(final Value key, final Statement[] statements,
+                            final RDFHandler handler) throws RDFHandlerException {
+                        for (final Statement statement : statements) {
+                            if (existsPredicate.test(statement)) {
+                                reducer.reduce(key, statements, handler);
+                                return;
+                            }
+                        }
+                    }
+
+                };
+            }
+        } else {
+            if (forallPredicate != null) {
+                return new Reducer() {
+
+                    @Override
+                    public void reduce(final Value key, final Statement[] statements,
+                            final RDFHandler handler) throws RDFHandlerException {
+                        for (final Statement statement : statements) {
+                            if (!forallPredicate.test(statement)) {
+                                return;
+                            }
+                        }
+                        reducer.reduce(key, statements, handler);
+                    }
+
+                };
+            } else {
+                return reducer;
+            }
+        }
+    }
+
+    /**
+     * Returns a {@code Reducer} that emits the output of multiple reductions on the same quad
+     * partition.
+     *
+     * @param reducers
+     *            the reducers whose output has to be concatenated
+     * @return the created {@code Reducer}
+     */
+    static Reducer concat(final Reducer... reducers) {
+        return new Reducer() {
+
+            @Override
+            public void reduce(final Value key, final Statement[] statements,
+                    final RDFHandler handler) throws RDFHandlerException {
+                for (final Reducer reducer : reducers) {
+                    reducer.reduce(key, statements, handler);
+                }
+            }
+
+        };
+    }
+
+    /**
+     * Parses a {@code Reducer} out of the supplied expression string. The expression must be a
+     * {@code language: expression} script.
+     *
+     * @param expression
+     *            the expression to parse
+     * @return the parsed reducer, or null if a null expression was supplied
+     */
+    @Nullable
+    static Mapper parse(@Nullable final String expression) {
+        return expression == null ? null //
+                : Scripting.compile(Mapper.class, expression, "k", "p", "h");
+    }
 
     /**
      * Processes the statement partition associated to a certain key, emitting output statements

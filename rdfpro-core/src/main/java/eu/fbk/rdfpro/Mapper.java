@@ -15,9 +15,13 @@ package eu.fbk.rdfpro;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -25,6 +29,7 @@ import org.openrdf.model.impl.URIImpl;
 import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Hash;
+import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
 
 /**
@@ -72,6 +77,65 @@ public interface Mapper {
     Value[] map(Statement statement) throws RDFHandlerException;
 
     /**
+     * Returns a bypassed version of the input mapper that skips and marks with
+     * {@link #BYPASS_KEY} quads matching the specified predicate.
+     *
+     * @param mapper
+     *            the mapper to filter
+     * @param predicate
+     *            the predicate; if null, no bypassing is performed
+     * @return the resulting mapper
+     */
+    public static Mapper bypass(final Mapper mapper, @Nullable final Predicate<Statement> predicate) {
+        if (predicate != null) {
+            final Value[] bypass = new Value[] { BYPASS_KEY };
+            return new Mapper() {
+
+                @Override
+                public Value[] map(final Statement statement) throws RDFHandlerException {
+                    if (predicate.test(statement)) {
+                        return bypass;
+                    } else {
+                        return mapper.map(statement);
+                    }
+                }
+            };
+
+        } else {
+            return mapper;
+        }
+    }
+
+    /**
+     * Returns a filtered version of the input mapper that only maps quads matching the supplied
+     * predicate.
+     *
+     * @param mapper
+     *            the mapper to filter
+     * @param predicate
+     *            the predicate; if null, no filtering is performed
+     * @return the resulting mapper
+     */
+    public static Mapper filter(final Mapper mapper, @Nullable final Predicate<Statement> predicate) {
+        if (predicate != null) {
+            final Value[] empty = new Value[0];
+            return new Mapper() {
+
+                @Override
+                public Value[] map(final Statement statement) throws RDFHandlerException {
+                    if (predicate.test(statement)) {
+                        return mapper.map(statement);
+                    } else {
+                        return empty;
+                    }
+                }
+            };
+        } else {
+            return mapper;
+        }
+    }
+
+    /**
      * Returns a {@code Mapper} returning a concatenation of all the keys produced by the
      * {@code Mapper}s supplied for the input statement. Duplicate keys for the same statement are
      * merged.
@@ -115,6 +179,21 @@ public interface Mapper {
     public static Mapper select(final String components) {
 
         final String comp = components.trim().toLowerCase();
+
+        if (comp.equals("e")) {
+            return new Mapper() {
+
+                @Override
+                public Value[] map(final Statement statement) throws RDFHandlerException {
+                    if (statement.getObject() instanceof Resource) {
+                        return new Value[] { statement.getSubject(), statement.getObject() };
+                    } else {
+                        return new Value[] { statement.getSubject() };
+                    }
+                }
+
+            };
+        }
 
         int num = 0;
         for (int i = 0; i < comp.length(); ++i) {
@@ -240,6 +319,26 @@ public interface Mapper {
             }
 
         };
+    }
+
+    /**
+     * Parses a {@code Mapper} out of the supplied expression string. The expression can be a
+     * {@code language: expression} script or a component expression supported by
+     * {@link #select(String)}.
+     *
+     * @param expression
+     *            the expression to parse
+     * @return the parsed mapper, or null if a null expression was supplied
+     */
+    @Nullable
+    static Mapper parse(@Nullable final String expression) {
+        if (expression == null) {
+            return null;
+        } else if (Scripting.isScript(expression)) {
+            return Scripting.compile(Mapper.class, expression, "q");
+        } else {
+            return select(expression);
+        }
     }
 
 }

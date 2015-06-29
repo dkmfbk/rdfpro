@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 import javax.xml.datatype.DatatypeFactory;
@@ -123,6 +125,18 @@ public final class Statements {
         } else {
             return new StatementComparator(components,
                     valueComparator == null ? DEFAULT_VALUE_ORDERING : valueComparator);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    public static Predicate<Statement> statementMatcher(@Nullable final String spec) {
+        if (spec == null) {
+            return null;
+        } else if (Scripting.isScript(spec)) {
+            return Scripting.compile(Predicate.class, spec, "q");
+        } else {
+            return new StatementMatcher(spec);
         }
     }
 
@@ -1236,6 +1250,243 @@ public final class Statements {
             default:
                 throw new Error();
             }
+        }
+
+    }
+
+    private static final class StatementMatcher implements Predicate<Statement> {
+
+        @Nullable
+        private final ValueMatcher subjMatcher;
+
+        @Nullable
+        private final ValueMatcher predMatcher;
+
+        @Nullable
+        private final ValueMatcher objMatcher;
+
+        @Nullable
+        private final ValueMatcher ctxMatcher;
+
+        @SuppressWarnings("unchecked")
+        public StatementMatcher(final String spec) {
+
+            // Initialize the arrays used to create the ValueTransformers
+            final List<?>[] expressions = new List<?>[4];
+            final Boolean[] includes = new Boolean[4];
+            for (int i = 0; i < 4; ++i) {
+                expressions[i] = new ArrayList<String>();
+            }
+
+            // Parse the specification string
+            char action = 0;
+            final List<Integer> components = new ArrayList<Integer>();
+            for (final String token : spec.split("\\s+")) {
+                final char ch0 = token.charAt(0);
+                if (ch0 == '+' || ch0 == '-') {
+                    action = ch0;
+                    if (token.length() == 1) {
+                        throw new IllegalArgumentException("No component(s) specified in '" + spec
+                                + "'");
+                    }
+                    components.clear();
+                    for (int i = 1; i < token.length(); ++i) {
+                        final char ch1 = Character.toLowerCase(token.charAt(i));
+                        final int component = ch1 == 's' ? 0 : ch1 == 'p' ? 1 : ch1 == 'o' ? 2
+                                : ch1 == 'c' ? 3 : -1;
+                        if (component < 0) {
+                            throw new IllegalArgumentException("Invalid component '" + ch1
+                                    + "' in '" + spec + "'");
+                        }
+                        components.add(component);
+                    }
+                } else if (action == 0) {
+                    throw new IllegalArgumentException("Missing selector in '" + spec + "'");
+                } else {
+                    for (final int component : components) {
+                        ((List<String>) expressions[component]).add(token);
+                        final Boolean include = action == '+' ? Boolean.TRUE : Boolean.FALSE;
+                        if (includes[component] != null
+                                && !Objects.equals(includes[component], include)) {
+                            throw new IllegalArgumentException(
+                                    "Include (+) and exclude (-) rules both "
+                                            + "specified for same component in '" + spec + "'");
+                        }
+                        includes[component] = include;
+                    }
+                }
+            }
+
+            // Create ValueTransformers
+            final ValueMatcher[] matchers = new ValueMatcher[4];
+            for (int i = 0; i < 4; ++i) {
+                matchers[i] = expressions[i].isEmpty() ? null : new ValueMatcher(
+                        (List<String>) expressions[i], Boolean.TRUE.equals(includes[i]));
+            }
+            this.subjMatcher = matchers[0];
+            this.predMatcher = matchers[1];
+            this.objMatcher = matchers[2];
+            this.ctxMatcher = matchers[3];
+        }
+
+        @Override
+        public boolean test(final Statement stmt) {
+            return (this.subjMatcher == null || this.subjMatcher.match(stmt.getSubject()))
+                    && (this.predMatcher == null || this.predMatcher.match(stmt.getPredicate()))
+                    && (this.objMatcher == null || this.objMatcher.match(stmt.getObject()))
+                    && (this.ctxMatcher == null || this.ctxMatcher.match(stmt.getContext()));
+        }
+
+        private static final class ValueMatcher {
+
+            private final boolean include;
+
+            // for URIs
+
+            private final boolean matchAnyURI;
+
+            private final Set<String> matchedURINamespaces;
+
+            private final Set<URI> matchedURIs;
+
+            // for BNodes
+
+            private final boolean matchAnyBNode;
+
+            private final Set<BNode> matchedBNodes;
+
+            // for Literals
+
+            private final boolean matchAnyPlainLiteral;
+
+            private final boolean matchAnyLangLiteral;
+
+            private final boolean matchAnyTypedLiteral;
+
+            private final Set<String> matchedLanguages;
+
+            private final Set<URI> matchedDatatypeURIs;
+
+            private final Set<String> matchedDatatypeNamespaces;
+
+            private final Set<Literal> matchedLiterals;
+
+            ValueMatcher(final Iterable<String> matchExpressions, final boolean include) {
+
+                this.include = include;
+
+                this.matchedURINamespaces = new HashSet<>();
+                this.matchedURIs = new HashSet<>();
+                this.matchedBNodes = new HashSet<>();
+                this.matchedLanguages = new HashSet<>();
+                this.matchedDatatypeURIs = new HashSet<>();
+                this.matchedDatatypeNamespaces = new HashSet<>();
+                this.matchedLiterals = new HashSet<>();
+
+                boolean matchAnyURI = false;
+                boolean matchAnyBNode = false;
+                boolean matchAnyPlainLiteral = false;
+                boolean matchAnyLangLiteral = false;
+                boolean matchAnyTypedLiteral = false;
+
+                for (final String expression : matchExpressions) {
+                    if ("<*>".equals(expression)) {
+                        matchAnyURI = true;
+                    } else if ("_:*".equals(expression)) {
+                        matchAnyBNode = true;
+                    } else if ("*".equals(expression)) {
+                        matchAnyPlainLiteral = true;
+                    } else if ("*@*".equals(expression)) {
+                        matchAnyLangLiteral = true;
+                    } else if ("*^^*".equals(expression)) {
+                        matchAnyTypedLiteral = true;
+                    } else if (expression.startsWith("*@")) {
+                        this.matchedLanguages.add(expression.substring(2));
+                    } else if (expression.startsWith("*^^")) {
+                        if (expression.endsWith(":*")) {
+                            this.matchedDatatypeNamespaces.add(Namespaces.DEFAULT
+                                    .uriFor(expression.substring(3, expression.length() - 2)));
+                        } else {
+                            this.matchedDatatypeURIs.add((URI) Statements.parseValue(
+                                    expression.substring(3), Namespaces.DEFAULT));
+                        }
+                    } else if (expression.endsWith(":*")) {
+                        this.matchedURINamespaces.add(Namespaces.DEFAULT.uriFor(expression
+                                .substring(0, expression.length() - 2)));
+
+                    } else if (expression.endsWith("*>")) {
+                        this.matchedURINamespaces.add(expression.substring(1,
+                                expression.length() - 2));
+                    } else {
+                        final Value value = Statements.parseValue(expression, Namespaces.DEFAULT);
+                        if (value instanceof URI) {
+                            this.matchedURIs.add((URI) value);
+                        } else if (value instanceof BNode) {
+                            this.matchedBNodes.add((BNode) value);
+                        } else if (value instanceof Literal) {
+                            this.matchedLiterals.add((Literal) value);
+                        }
+
+                    }
+                }
+
+                this.matchAnyURI = matchAnyURI;
+                this.matchAnyBNode = matchAnyBNode;
+                this.matchAnyPlainLiteral = matchAnyPlainLiteral;
+                this.matchAnyLangLiteral = matchAnyLangLiteral;
+                this.matchAnyTypedLiteral = matchAnyTypedLiteral;
+            }
+
+            boolean match(final Value value) {
+                final boolean matched = matchHelper(value);
+                return this.include == matched;
+            }
+
+            private boolean matchHelper(final Value value) {
+                if (value instanceof URI) {
+                    return this.matchAnyURI //
+                            || contains(this.matchedURIs, value)
+                            || containsNs(this.matchedURINamespaces, (URI) value);
+                } else if (value instanceof Literal) {
+                    final Literal lit = (Literal) value;
+                    final String lang = lit.getLanguage();
+                    final URI dt = lit.getDatatype();
+                    return lang == null
+                            && (dt == null || XMLSchema.STRING.equals(dt))
+                            && this.matchAnyPlainLiteral //
+                            || lang != null //
+                            && (this.matchAnyLangLiteral || contains(this.matchedLanguages, lang)) //
+                            || dt != null //
+                            && (this.matchAnyTypedLiteral
+                                    || contains(this.matchedDatatypeURIs, dt) || containsNs(
+                                        this.matchedDatatypeNamespaces, dt)) //
+                            || contains(this.matchedLiterals, lit);
+                } else {
+                    return this.matchAnyBNode //
+                            || contains(this.matchedBNodes, value);
+                }
+            }
+
+            private static boolean contains(final Set<?> set, final Object value) {
+                return !set.isEmpty() && set.contains(value);
+            }
+
+            private static boolean containsNs(final Set<String> set, final URI uri) {
+                if (set.isEmpty()) {
+                    return false;
+                }
+                if (set.contains(uri.getNamespace())) {
+                    return true; // exact lookup
+                }
+                final String uriString = uri.stringValue();
+                for (final String elem : set) {
+                    if (uriString.startsWith(elem)) {
+                        return true; // prefix match
+                    }
+                }
+                return false;
+            }
+
         }
 
     }

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -37,6 +37,7 @@ import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Namespaces;
+import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
 
 /**
@@ -506,6 +507,26 @@ public interface Transformer {
     }
 
     /**
+     * Parses a {@code Transformer} out of the supplied expression string. The expression can be a
+     * {@code language: expression} script or a rules expression supported by
+     * {@link #rules(String)}.
+     *
+     * @param expression
+     *            the expression to parse
+     * @return the parsed transformer, or null if a null expression was given
+     */
+    @Nullable
+    static Transformer parse(@Nullable final String expression) {
+        if (expression == null) {
+            return null;
+        } else if (Scripting.isScript(expression)) {
+            return Scripting.compile(Transformer.class, expression, "q");
+        } else {
+            return rules(expression);
+        }
+    }
+
+    /**
      * Applies the {@code Transformer} to the specified statement, emitting its output (possibly
      * empty) to the supplied {@code RDFHandler}. Statement emission should be performed calling
      * method {@link RDFHandler#handleStatement(Statement)}; other {@code RDFHandler} methods
@@ -745,7 +766,7 @@ final class RuleTransformer implements Transformer {
 
                 } else if (expression.endsWith("*>")) {
                     this.matchedURINamespaces
-                            .add(expression.substring(1, expression.length() - 2));
+                    .add(expression.substring(1, expression.length() - 2));
                 } else {
                     final Value value = Statements.parseValue(expression, Namespaces.DEFAULT);
                     if (value instanceof URI) {
@@ -790,7 +811,7 @@ final class RuleTransformer implements Transformer {
                         || dt != null //
                         && (this.matchAnyTypedLiteral || contains(this.matchedDatatypeURIs, dt) || containsNs(
                                 this.matchedDatatypeNamespaces, dt)) //
-                        || contains(this.matchedLiterals, lit);
+                                || contains(this.matchedLiterals, lit);
             } else {
                 return this.matchAnyBNode //
                         || contains(this.matchedBNodes, value);

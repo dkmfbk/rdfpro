@@ -22,6 +22,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +47,9 @@ import org.slf4j.LoggerFactory;
 public final class Environment {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Environment.class);
+
+    @Nullable
+    private static List<String> propertyNames;
 
     private static Map<String, String> configuredProperties = new HashMap<>();
 
@@ -117,6 +121,7 @@ public final class Environment {
                 throw new IllegalStateException("Property " + name + " already in use (value "
                         + frozenProperties.get(name) + ")");
             }
+            propertyNames = null; // invalidate
             if (value == null) {
                 configuredProperties.remove(name);
             } else {
@@ -191,6 +196,22 @@ public final class Environment {
     public static String getProperty(final String name, @Nullable final String valueIfNull) {
         final String value = getProperty(name);
         return value != null ? value : valueIfNull;
+    }
+
+    public static List<String> getPropertyNames() {
+        synchronized (Environment.class) {
+            if (propertyNames == null) {
+                propertyNames = new ArrayList<>();
+                propertyNames.addAll(loadedProperties.keySet());
+                for (final String property : configuredProperties.keySet()) {
+                    if (!loadedProperties.containsKey(property)) {
+                        propertyNames.add(property);
+                    }
+                }
+                Collections.sort(propertyNames);
+            }
+        }
+        return propertyNames;
     }
 
     public static Map<String, String> getPlugins(final Class<?> baseClass) {
