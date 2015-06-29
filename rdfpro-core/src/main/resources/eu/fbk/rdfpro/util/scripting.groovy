@@ -1,4 +1,9 @@
-import org.openrdf.model.*;
+import org.openrdf.model.Value;
+import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
+import org.openrdf.model.URI;
+import org.openrdf.model.BNode;
+import org.openrdf.model.Statement;
 import org.openrdf.model.impl.*;
 
 // Global objects
@@ -22,4 +27,18 @@ def emit(h, q) {
     h.handleStatement(q); }
 def emit(h, s, p, o, c) {
     h.handleStatement(quad(s, p, o, c)); }
+
+// SPARQL functions for classifying nodes
+def isiri(x) { return x instanceof URI; }
+def isblank(x) { return x instanceof BNode; }
+def isliteral(x) { return x instanceof Literal; }
+def isnumeric(x) { return x instanceof Literal && x.getDatatype() != null &&
+    org.openrdf.model.datatypes.XMLDatatypeUtil.isNumericDatatype(x.getDatatype()); }
+
+def str(x) {
+    if (x instanceof BNode) throw "str() called with bnode " + x;
+    return x instanceof Value ? x.stringValue() : x.toString(); }
+def ucase(x) {
+    if (x == null || x instanceof Resource) throw new IllegalArgumentException("not a literal: " + x);
+    return str(x).toUpperCase(); }
     
