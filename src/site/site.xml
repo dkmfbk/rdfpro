@@ -50,6 +50,11 @@
 
     <custom>
         <reflowSkin>
+
+            <endContent>
+                ${site.topbar}
+            </endContent>
+
             <highlightJs>true</highlightJs>
             <highlightJsTheme>googlecode</highlightJsTheme>
             <imgLightbox>true</imgLightbox>
@@ -62,7 +67,11 @@
             <skinAttribution>true</skinAttribution>
             <brand>
                 <name>
-                    <![CDATA[<span class="color-highlight">RDF<sub>pro</sub></span>]]></name>
+                    <![CDATA[
+                        <img src='images/rdfpro.png' />
+                        <span>RDF<sub>pro</sub></span>
+                    ]]>
+                </name>
                 <href>${site-root}</href>
             </brand>
             <titleTemplate>%2$s | %1$s</titleTemplate>
