@@ -13,6 +13,8 @@ RDFpro usage
     * [@transform](#transform)
     * [@groovy](#groovy)
     * [@rdfs](#rdfs)
+    * [@rules](#rules)
+    * [@mapreduce](#mapreduce)
     * [@smush](#smush)
     * [@unique](#unique)
  * [Other processors](#otherprocs)
@@ -50,7 +52,10 @@ Denoting with Mo(q), Mi(q) the mulitplicity of a quad in the output stream, `i`-
   * `d` -- set difference `@p1` \ `@p2` \ ... \ `@pN`), with `Mo(q) = max(0, min(M0(q), 1) - sum_i>0(Mi(q)))`;
   * `D` -- multiset difference `@p1` \ `@p2` \ ... \ `@pN`), with `Mo(q) = max(0, M0(q) - sum_i>0(Mi(q)))`;
   * `s` -- symmetric set difference of `@p1` and `@p2` outputs, i.e. `@p1 \ @p2 union @p2 \ @p1` (using set difference and union);
-  * `S` -- symmetric multiset difference of `@p1` and `@p2` outputs, i.e. `@p1 \ @p2 union @p2 \ @p1` (using multiset difference and union).
+  * `S` -- symmetric multiset difference of `@p1` and `@p2` outputs, i.e. `@p1 \ @p2 union @p2 \ @p1` (using multiset difference and union);
+  * `n+` -- quads with at least n (number) occurrences (no duplicates emitted);
+  * `n-` -- quads with at most n (number) occurrences (no duplicates emitted).
+
 
 Note that set operators different from `a` are implemented using sorting (`sort`) and thus are slower than the default `a`.
 
@@ -65,15 +70,15 @@ The builtin processors `@read`, `@write`, `@query` and `@update` allow to move d
 
 #### <a class="anchor" id="read"></a> @read
 
-    @read|@r [-b BASE] [-p] URL...
+    @read|@r [-b BASE] [-w] URL...
 
 Reads quads from one or more files, injecting them in the input stream to produce the emitted output stream.
 Multiple files are read in parallel and multiple threads are used to parse files that use a line-oriented RDF syntax (NTriples, NQuads, TQL).
 
 Option `-b BASE` can be used to specify a base URI for resolving relative URIs in the input files.
 
-Option `-p` causes BNodes in input files to be preserved.
-If not specified, the default is to rewrite BNodes on a per-file basis, so that no BNode clash may occur between BNodes in different files or between a parsed BNode and a BNode in the processor input stream.
+Option `-w` causes BNodes in input files to be rewritten to avoid possible clashes between BNodes in different files or between a parsed BNode and a BNode in the processor input stream.
+If not specified, the default is to preserve BNodes read from files.
 
 Arguments `URL...` identify the files to read; local files (absolute or relative paths) as well as `file://`, `http://`, `https://` URLs can be supplied.
 For each file, its RDF format and compression scheme are detected based on the extension (e.g., ttl.gz -> gzipped Turtle).
@@ -85,9 +90,13 @@ Shell expansion can be exploited to list multiple files.
 
 #### <a class="anchor" id="write"></a> @write
 
-    @write|@w URL...
+    @write|@w [-c NUM] URL...
 
 Writes quads from the input stream to files.
+
+Option `-c` specifies the number of consecutive quads (from the input stream) to write as a chunk to each file, in case multiple files are specified.
+This option can impact on the size of produced files, in case compression is used and when quads of the input stream are somehow sorted (e.g., because produced by a call to `@unique`).
+In this situation, keeping consecutive (and thus similar) quads together by increasing the value of this option reduces the total size of produced compressed files.
 
 Arguments `URL...` identify the files to write.
 Currently, only `file://` URLs, possibly given as absolute or relative paths, can be used.
@@ -100,7 +109,7 @@ The output stream of this processor is the input stream unchanged, thus allowing
 
 #### <a class="anchor" id="query"></a> @query
 
-    @query [-q QUERY] [-f FILE] [-p] URL
+    @query [-q QUERY] [-f FILE] [-w] URL
 
 Downloads quads from a SPARQL endpoint using a SPARQL CONSTRUCT or SELECT query.
 
@@ -111,7 +120,7 @@ CONSTRUCT queries return quads in the default graph (i.e., plain triples).
 Option `-f FILE` provides a file containing the SPARQL query to be submitted.
 This option is mutually exclusive with option `-q`.
 
-Option `-p` causes BNodes in downloaded data to be preserved.
+Option `-w` causes BNodes in downloaded data to be rewritten to avoid possible clashes. The default is to keep them unchanged.
 Note however that BNodes from a SPARQL query may change from execution to execution depending on the endpoint implementation, as in principle they are scoped locally to the query.
 
 Argument `URL` specifies the URL of the SPARQL endpoint.
@@ -134,13 +143,16 @@ The output stream of this processor is the input stream unchanged, thus allowing
 
 ### <a class="anchor" id="transformprocs"></a> Data transformation processors
 
-Processors `@transform`, `@groovy`, `@rdfs`, `@smush`, `@unique` implement different forms of data transformation.
+Processors `@transform`, `@groovy`, `@rdfs`, `rules`, `mapreduce`, `@smush`, `@unique` implement different forms of data transformation.
 
 #### <a class="anchor" id="transform"></a> @transform
 
     @transform|@t [EXP]
 
-Discards and/or replaces quads based on the rules contained in the supplied string.
+Discards and/or replaces quads based on supplied expression.
+
+The expression can be either a script (`language: script file / script expression`) or a set of simple matching/rewrite rules detailed below.
+
 Given `X` a quad component (possible values: `s`, `p`, `o`, `c`), the string contains three types of rules:
 
   * `+X value list` -- quad is dropped if `X` does not belong to `value list`;
@@ -205,7 +217,7 @@ Finally, note that the boolean flag `__rdfpro__` is set to true when the script 
 
 #### <a class="anchor" id="rdfs"></a> @rdfs
 
-    @rdfs [-e RULES] [-d] [-t] [-C | -c URI] [-b BASE] [-p] [URL...]
+    @rdfs [-e RULES] [-d] [-t] [-C | -c URI] [-b BASE] [-w] [URL...]
 
 Emits the RDFS deductive closure of input quads.
 One or more TBox files are loaded and their RDFS closure is computed and (possibly) emitted first.
@@ -225,8 +237,7 @@ If none of these options is specified, the TBox closure is not emitted.
 
 Option `-b BASE` specifies the base URI to be used for resolving relative URIs in the TBox file.
 
-Option `-p` can be used to preserve BNodes in TBox files.
-If not given, BNodes are rewritten on a per-file basis, similarly to `@read` behaviour.
+Option `-w` can be used to rewrite BNodes in TBox files, similarly to the corresponding option in `@read`.
 
 Arguments `URL...` identify the TBox files to be read.
 The same restrictions and explicit extension prefix supported by `@read` can be used.
@@ -237,6 +248,52 @@ The result represents the complete RDFS closure if the TBOX: (i) contains all th
   * `X rdfs:subPropertyOf {rdfs:domain|rdfs:range|rdfs:subPropertyOf|rdfs:subClassOf}`
   * `X {rdf:type|rdfs:domain|rdfs:range|rdfs:subClassOf} rdfs:ContainerMembershipProperty`
   * `X {rdf:type|rdfs:domain|rdfs:range|rdfs:subClassOf} rdfs:Datatype`
+
+#### <a class="anchor" id="rules"></a> @rules
+
+    @rules [-r RULESETS] [-B BINDINGS] [-p MODE] [-g MODE] [-G URI] [-t] [-C | -c URI] [-b URI] [-w] URL...
+
+Emit the closure of input quads using the specified RULESETS (comma-separated list), possibly pre-processing rules based on supplied static/TBox data provided by arguments `URL...`.
+
+Option `-r` is a comma-separated list of ruleset names. Names of local files as well URLs can be used. In addition, names `rdfs` and `owl2rl` refer to builtin rulesets for RDFS and OWL 2 RL inference.
+
+Option `-B` is a comma-separated list of `variable=value` bindings (values are URIs or literals). These bindings are used to replace corresponding variables in the rules, thus customizing them.
+
+Option `-p` specifies if and how to partition input quads. Acceptable values are `none` for no partitioning (default); `entity` for partitioning data by entities, i.e., subjects and URI/BNode objects (note: if a quad `<s,p,o,c>` has a URI or BNode object `o`, it will be assigned to both partitions for `s` and for `o`); and `graph` for partitioning data by named graph.
+
+Option `-g` specifies if and how to modify the input ruleset to take into accounts named graphs. Default value `none` corresponds to no modifications; `global` means that rules are modified so to match premises in any graph and emit consequences in a global graph specified using option `-G`; value `separate` means that rules will match premises and place consequence exactly in the same graph, with the effect that inference is done separately on each graph; value `star` is a combination of `global` and `separate`, meaning that inference is done separately per graph but premises can also match quads in a special global graph supplied with option `g` (the closure of this global graph is placed in that graph itself).
+
+Option `-t` causes uninformative <x rdf:type \_:b> statements, with \_:b a BNode, to be dropped (default: keep).
+
+Options `-C` and `-c URI` control the graph where the closure of static data is emitted.
+Option `-C` causes the closure to be emitted as is, using the same graphs computed in the closure.
+Option `-c` causes the closure to be emitted in a specific named graph.
+If none of these options is specified, the closure of static data is not emitted.
+
+Option `-b BASE` specifies the base URI to be used for resolving relative URIs in static data.
+Option `-w` can be used to rewrite BNodes in static data, similarly to the corresponding option in `@read`.
+
+Arguments `URL...` identify the static files to be read. Typically these files supply TBox quads, but this is not a restriction.
+In case static data is supplied, the processor will compute its closure using the chosen rulesets. Then, rules will be pre-processed with respect to this closure, exploding the static parts of their bodies (based on `rr:StaticTerm` declarations in the rulesets) and deriving more specific rules that are used to perform inference on dynamic data arriving from the input stream.
+
+#### <a class="anchor" id="mapreduce"></a> @mapreduce
+
+    @mapreduce [-b PRED] [-r REDUCER] [-e PRED] [-a PRED] [-u] MAPPER...
+
+Performs a MapReduce computation, using an in-process, multi-thread implementation of MapReduce optimized using RDFpro sort implementation optimized for dealing with RDF data.
+
+Arguments `MAPPER...` specify the mappers to apply to quads of the input stream. Each mapper could be a script implementing the `eu.fbk.rdfpro.Mapper` interface, either supplied inline or in a file. Other values can be `e`, to select a mapper that partitions quads by entity (i.e., subject and URI/BNode object), and a string satisfying regex `[spoc]+` for a mapper that returns the hash of the selected subject (s), predicate (p), object (o) and context (c) quad components.
+
+Option `-r` specifies the reducer. The reducer should be a script implementing the interface `eu.fbk.rdfpro.Reducer`. If omitted, the default identity reducer that emits the partition unchanged is used.
+
+Option `-b` specifies a bypass predicate applied to input quads; quads matching the predicate are emitted in output without being processed by the MapReduce machinery.
+
+Option `-e` specifies an existential filtering predicate that must be satisfied by at least a partition quad for the partition to be reduced (otherwise, the partition is silently discarded).
+This option is useful to achieve effects such as: partition by entity and return quads of entities of type / with property X.
+
+Option `-a` specifies a universal filtering predicate that must be satisfied by all the quads of a partition in order for the partition to be reduced (otherwise, it is discarded).
+
+Option `-u` requires the processor to deduplicate quads of each partition before processing them (this can be obtained for free and should be preferred to invoke `@unique`).
 
 #### <a class="anchor" id="smush"></a> @smush
 

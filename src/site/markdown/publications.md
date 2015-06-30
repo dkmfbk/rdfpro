@@ -19,7 +19,7 @@ RDFpro was initially described in the following workshop paper:
     [\[bib\]](https://dkm-static.fbk.eu/people/rospocher/bibtexbrowser.php?key=2014iswcSemDev01&amp;bib=my_pub.bib)
     [\[online\]](http://ceur-ws.org/Vol-1268/paper9.pdf)
     [\[pre-print\]](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2014iswcSemDev01.pdf)
-    [\[slides\]](https://dl.dropboxusercontent.com/u/2048600/semdev2014.pdf)
+    [\[slides\]](http://bit.ly/semdev2014slides)
 
 The SemDev workshop paper focuses on the RDFpro tool and its processing model (as of July 2014).
 The SAC paper describes the use of an extended version of RDFpro (as of September 2014) in some experiments on processing large RDF datasets using the streaming and sorting primitives RDFpro builds on.
