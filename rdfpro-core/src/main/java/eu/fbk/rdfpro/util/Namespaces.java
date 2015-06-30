@@ -104,16 +104,6 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
     private Namespaces(final List<URIPrefixPair> pairs, final boolean resolveClashes) {
 
-        final int size = pairs.size();
-        final int tableSize = size + size / 2; // target fill factor = 0.66
-        int neighborhood = 4; // first attempt
-
-        this.uriMap = new EntryMap(true);
-        this.prefixMap = new EntryMap(false);
-        this.prefixTable = new int[2 * tableSize];
-        this.uriTable = new int[2 * tableSize];
-        this.data = new String[size * 2];
-
         List<URIPrefixPair> filteredPairs = pairs;
         if (resolveClashes) {
             final Set<String> prefixes = new HashSet<>();
@@ -125,8 +115,18 @@ public final class Namespaces extends AbstractSet<Namespace> {
                 }
             }
         }
-
         Collections.sort(filteredPairs);
+
+        final int size = filteredPairs.size();
+        final int tableSize = size + size / 2; // target fill factor = 0.66
+        int neighborhood = 4; // first attempt
+
+        this.uriMap = new EntryMap(true);
+        this.prefixMap = new EntryMap(false);
+        this.prefixTable = new int[2 * tableSize];
+        this.uriTable = new int[2 * tableSize];
+        this.data = new String[size * 2];
+
 
         int pointer = 0;
         String uri = null;
