@@ -36,8 +36,8 @@ h1[id]:before, h2[id]:before, h3[id]:before, h4[id]:before, h5[id]:before, h6[id
 }
 
 a.anchor {
-    border-top: 75px solid transparent;
-    margin-top: -75px;
+    border-top: 100px solid transparent;
+    margin-top: -100px;
     -webkit-background-clip: padding-box;
     -moz-background-clip: padding;
     background-clip: padding-box;

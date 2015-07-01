@@ -53,12 +53,13 @@
 
             <endContent>
                 ${site.topbar}
+                <script type="text/javascript" src="$resourcePath/js/custom.js"></script>
             </endContent>
 
             <highlightJs>true</highlightJs>
             <highlightJsTheme>googlecode</highlightJsTheme>
             <imgLightbox>true</imgLightbox>
-            <smoothScroll>true</smoothScroll>
+            <smoothScroll>false</smoothScroll>
             <bootstrapCss>true</bootstrapCss>
             <bootstrapIcons>true</bootstrapIcons>
             <html5Anchor>true</html5Anchor>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -109,27 +110,6 @@
             <url>${site-path}/</url>
         </site>
     </distributionManagement>
-
-    <!--<distributionManagement>-->
-    <!--<repository>-->
-    <!--<id>repordfpro</id>-->
-    <!--<name>Repository for project output artifacts</name>-->
-    <!--<url>${repo-path}</url>-->
-    <!--<layout>default</layout>-->
-    <!--<uniqueVersion>false</uniqueVersion>-->
-    <!--</repository>-->
-    <!--<snapshotRepository>-->
-    <!--<id>repordfpro</id>-->
-    <!--<name>Repository for project output artifacts</name>-->
-    <!--<url>${repo-path}</url>-->
-    <!--<layout>default</layout>-->
-    <!--<uniqueVersion>false</uniqueVersion>-->
-    <!--</snapshotRepository>-->
-    <!--<site>-->
-    <!--<id>siterdfpro</id>-->
-    <!--<url>${site-path}/</url>-->
-    <!--</site>-->
-    <!--</distributionManagement>-->
 
     <dependencyManagement>
         <dependencies>
@@ -376,7 +356,6 @@
             </extension>
         </extensions>
 
-
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -456,7 +435,6 @@
                         <downloadSources>true</downloadSources>
                         <downloadJavadocs>true</downloadJavadocs>
                         <useProjectReferences>true</useProjectReferences>
-                        <failOnError>false</failOnError>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -522,6 +500,16 @@
         </pluginManagement>
 
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <configuration>
+                    <licenseName>public_domain</licenseName>
+                    <licenseResolver>${project.baseUri}/${parent-path}/src/license</licenseResolver>
+                    <fileTemplate>${project.basedir}/${parent-path}/src/license/template.ftl</fileTemplate>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <!-- The following goal is necessary in order to allow child modules to
                      inherit the site descriptor of the parent project -->
@@ -1072,7 +1060,7 @@
         <module>rdfpro-jsonld</module>
         <module>rdfpro-tql</module>
         <module>rdfpro-dist</module>
-    <module>rdfpro-rules</module>
-  </modules>
+        <module>rdfpro-rules</module>
+    </modules>
 
 </project>
