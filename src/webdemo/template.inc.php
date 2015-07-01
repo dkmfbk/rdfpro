@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-
-    <!-- Bootstrap -->
-    <link href="js/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+	<title>RDFpro web interface</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     <link href="style.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -15,20 +14,27 @@
 
 </head>
 <body>
+
 	<div class="page-header">
 		<div class='pull-right logos'>
 			<a href="http://dkm.fbk.eu/"><img src="images/fbkdkm.png"/></a>&nbsp;&nbsp;
 			<a href="http://www.newsreader-project.eu/"><img src="images/newsreader.png"/></a>
 		</div>
-		<h1>RDF<sub>PRO</sub> <small>The Swiss-Army tool for RDF/NG manipulation</small></h1>
+		<h1>
+			<img src='images/rdfpro.png' id='logo' />
+			<a href='http://rdfpro.fbk.eu'>RDF<sub>pro</sub> <small>The Swiss-Army tool for RDF and Named Graph manipulation</small></a>
+		</h1>
 	</div>
 
 	<div class='container-fluid'>
-		<div class="row">
-			<div class="col-md-12">
-				<?php echo $Text; ?>
+		<?php if (isset($Text) && $Text): ?>
+			<div class="row">
+				<div class="col-md-12">
+					<?php echo $Text; ?>
+				</div>
 			</div>
-		</div>
+		<?php endif; ?>
+		
 		<div class="row">
 			<div class="col-md-5" id="form-components">
 				<form enctype="multipart/form-data" method="POST" id="fileForm" target="_blank">
@@ -46,8 +52,8 @@
 							<div class="form-group form-radio">
 								<input id="upload_readFile" type="file" name="readFile" id="readFile" />
 								<p class="help-block">
-									File must be in one of the following format: rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf.<br />
-									File may be compressed using: gz, bz2, xz, 7z.
+									File must be in one of the following format: <?php echo implode(", ", $inputFormat); ?>.<br />
+									File may be compressed using: <?php echo implode(", ", $compressionFormat); ?>.
 								</p>
 							</div>
 						</div>
@@ -61,17 +67,7 @@
 								<div class="form-inline" id="form-format">
 									<label for="readTextType">Format</label>
 									<select class="form-control" name="readTextType" id="readTextType">
-										<option value='rdf'>rdf</option>
-										<option value='rj'>rj</option>
-										<option value='jsonld'>jsonld</option>
-										<option value='nt'>nt</option>
-										<option value='nq'>nq</option>
-										<option value='trix'>trix</option>
-										<option value='trig' selected="selected">trig</option>
-										<option value='tql'>tql</option>
-										<option value='ttl'>ttl</option>
-										<option value='n3'>n3</option>
-										<option value='brf'>brf</option>
+										<?php echo implode("\n", optionList($inputFormat, true, $inputFormatDefault)); ?>
 									</select>
 								</div>
 							</div>
@@ -79,7 +75,7 @@
 						<div class="radio">
 							<label>
 								<input type="radio" name="inputRadio" id="inputRadio_example" value="example">
-								Use an example file (10K triples extracted from DBpedia 2014)
+								Use an example file (<?php echo $inputDescription; ?>)
 							</label>
 						</div>
 					</div>
@@ -95,39 +91,34 @@
 						<p class="help-block">
 							Insert here the commands you want to use for the RDFpro processing.
 							The list of the available commands is documented in the right side window.
+							<a href="#" data-toggle="modal" data-target="#myModal2">Load an example.</a>
 						</p>
 					</div>
 
+<!-- 					<h5>Pick a pre-loaded example</h5>
+					<div class="form-group">
+						<select class="form-control" id="exampleList">
+							<option value=''>[select]</option>
+							<?php echo implode("\n", optionList($exampleList, false)); ?>
+						</select>
+					</div>
+ -->
 					<h5>Additional files</h5>
 					<div class="form-inline" id="form-additional-file">
-						<div class="form-group">
-							<label for="upload_additionalFile1">
-								#file1
-							</label>
-							<input id="upload_additionalFile1" type="file" name="additionalFile1" id="additionalFile1" />
-							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
-						</div>
-						<div class="form-group">
-							<label for="upload_additionalFile2">
-								#file2
-							</label>
-							<input id="upload_additionalFile2" type="file" name="additionalFile2" id="additionalFile2" />
-							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
-						</div>
-						<div class="form-group">
-							<label for="upload_additionalFile3">
-								#file3
-							</label>
-							<input id="upload_additionalFile3" type="file" name="additionalFile3" id="additionalFile3" />
-							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
-						</div>
-						<div class="form-group">
-							<label for="upload_additionalFile4">
-								#file4
-							</label>
-							<input id="upload_additionalFile4" type="file" name="additionalFile4" id="additionalFile4" />
-							<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
-						</div>
+						<?php
+
+						for ($i = 1; $i <= $additionalFileNo; $i++) {
+							?>
+							<div class="form-group">
+								<label for="upload_additionalFile1">
+									#file<?php echo $i; ?>
+								</label>
+								<input id="upload_additionalFile1" type="file" name="additionalFile<?php echo $i; ?>" id="additionalFile<?php echo $i; ?>" />
+								<a href="#" class="cancel-file"><span class="badge"><span class="glyphicon glyphicon-remove"></span></span></a>
+							</div>
+							<?php
+						}
+						?>
 						<p class="help-block">
 							These additional files can be included in the commands using the labels #file1, #file2, #file3, #file4.<br />
 							Some other pre-loaded files are available, too (<a href="#" data-toggle="modal" data-target="#myModal">see list</a>).
@@ -144,30 +135,17 @@
 						<div class="form-group">
 							<label for="fileType">Format</label>
 							<select class="form-control" name="fileType" id="fileType">
-								<option value='rdf'>rdf</option>
-								<option value='rj'>rj</option>
-								<option value='jsonld'>jsonld</option>
-								<option value='nt'>nt</option>
-								<option value='nq'>nq</option>
-								<option value='trix'>trix</option>
-								<option value='trig' selected="selected">trig</option>
-								<option value='tql'>tql</option>
-								<option value='ttl'>ttl</option>
-								<option value='n3'>n3</option>
-								<option value='brf'>brf</option>
+								<?php echo implode("\n", optionList($outputFormat, true, $outputFormatDefault)); ?>
 							</select>
 
 							<label for="fileCompression">Compression</label>
 							<select class="form-control" name="fileCompression" id="fileCompression">
 								<option value=''>[none]</option>
-								<option value='gz'>gz</option>
-								<option value='bz2'>bz2</option>
-								<option value='xz'>xz</option>
-								<option value='7z'>7z</option>
+								<?php echo implode("\n", optionList($compressionFormat, true)); ?>
 							</select>
 
 							<label>
-								<input id="check_showResults" name="showResults" type="checkbox"> Show results as output
+								<input id="check_showResults" name="showResults" type="checkbox"> Show results in the browser
 							</label>
 						</div>
 					</div>
@@ -180,101 +158,22 @@
 
 			<div class="col-md-7" id="documentation">
 				<p class="text-right">
+					<a class="btn btn-default btn-hide" target="_blank" href="http://rdfpro.fbk.eu/usage.html">
+						<span class="glyphicon glyphicon-info-sign"></span>
+						Extended documentation
+					</a>
+					<a class="btn btn-default btn-hide" target="_blank" href="http://rdfpro.fbk.eu/example.html">
+						<span class="glyphicon glyphicon-blackboard"></span>
+						Usage examples
+					</a>
+
 					<button type="button" class="btn btn-default" id="show-hide-button">
 						<span class="glyphicon glyphicon-resize-small"></span>
-						<span id="show-hide-button-text">Hide documentation</span>
+						<span id="show-hide-button-text">Hide documentation panel</span>
 					</button>
 				</p>
 
-				<pre>
-AVAILABLE PROCESSORS:
-
-@count          Counts the number of triples for each distinct subject
-  [-p] URI      the predicate URI denoting the number of triples (def. void:triples)
-  [-c] URI      the context URI where to emit count triples (def. sesame:nil)
-
-@esoreasoner    Performs reasoning according to the ESO ontology supplied
-  [-i]          emits only inferences (default: emit also explicit statements)
-  [-b BASE]     use BASE to resolve URIs in the ESO ontology files (default: empty)
-  [-w]          rewrites BNodes in the ESO ontology file to avoid clashes
-  FILE...       the file(s) of the ESO ontology (you can use #eso in this DEMO)
-
-@groovy         Transform the stream using a user-supplied Groovy script
-  [-p]          use multiple script instances in parallel (script pooling)
-  SCRIPT        either the script expression or the name of the script file
-  [ARG...]      optional arguments to be passed to the script
-
-@prefix|@p      Adds missing prefix-to-namespace bindings
-  [-f FILE]     use prefixes from FILE instead of prefix.cc
-
-@rdfs           Emits the RDFS closure of input quads
-  [-e RULES]    exclude RULES in comma-separated list (default: no exclusions)
-  [-d]          decompose OWL axioms to RDFS (e.g. equivalentClass -&gt; subClass)
-  [-t]          drop uninformative &lt;x rdf:type _:b&gt; statements (default: keep)
-  [-C | -c URI] emits closed TBox to default graph [-C] or graph URI [-c]
-  [-b URI][-w]  use base URI [-b] and optional BNode rewriting [-w] to load TBox
-  [FILE...]     load TBox from FILE...
-
-@rules          Emits the closure of input quads using a set of rules
-  [-r RULESETS] use comma separated list of RULESETs (rdfs, owl2rl, custom filename)
-  [-B BINDINGS] use comma separated list of var=value BINDINGs to customize rules
-  [-p] MODE     set partitioning MODE: 'none' (default), 'entity', 'graph', 'rules'
-  [-g] MODE     set graph inference MODE: 'none' (default), 'global', 'separate', 'star'
-  [-G] URI      set global graph URI for inference modes 'global' and 'star'
-  [-t]          drop uninformative &lt;x rdf:type _:b&gt; statements (default: keep)
-  [-C | -c URI] emits closure of static data to original graphs [-C] or graph URI [-c]
-  [-b URI][-w]  use base URI [-b] and optional BNode rewriting [-w] to load static data
-  [FILE...]     load static data (e.g., TBox) from FILE...
-
-@smush          Performs smushing, using a single URI for each sameAs cluster
-  URI...        use ranked namespace URIs to select canonical URIs
-
-@stats          Emits VOID structural statistics for its input
-  [-n URI]      use namespace URI to mint URIs for VOID dataset instances
-  [-p URI]      create a dataset for graphs linked to a source via property URI
-  [-c URI]      look for graph-to-source quads in graph URI
-  [-t NUM]      emits only VOID partitions with at least NUM entities or triples
-  [-o]          enable computation of void:classes and void:properties (costly)
-
-@tbox           Emits only quads belonging to RDFS or OWL TBox axioms.
-
-@transform|@t   Discards/replaces quads based on matching and replace exp.
-  [EXP]         sequence of rules on quad components X (values: s, p, o, c):
-                  +X value list =&gt; quad dropped if X not belongs to list
-                  -X vlaue list =&gt; quad dropped if X belongs to list
-                  =X value =&gt; component X replaced with value (after filters)
-                values are in Turtle and include following wildcard values: &lt;*&gt;
-                =&gt; any URI; _:* =&gt; any BNode; * =&gt; any plain literal; *@* =&gt; any
-                lang literal; *^^* =&gt; any typed literal; *@xyz =&gt; literals lang
-                xyz; *^^&lt;uri&gt; =&gt; literals type &lt;uri&gt;; *^^ns:iri =&gt; literals type
-                ns:iri; *^^ns:* =&gt; literals any type with prefix ns; ns:* =&gt; any
-                uri with prefix ns; &lt;ns*&gt; =&gt; any uri in namespace ns
-
-@unique|@u      Discards duplicates in the input stream
-  [-m]          merges quads with same &lt;s,p,o&gt; and different graphs in a unique
-                quad, put in a graph described with quads of all source graphs
-
-QUICK SYNTAX:
-
-CMD ::=
-  @p args1                          builtin processor (see below)
-  @p1 args1 ... @pN argsN           sequence composition
-  { @p1 args1 , ... , @pN argsN }S  parallel composition, set operator S
-
-S ::=
-  a   multiset sum of @p1 .. @pn outputs, keep duplicates (fast, default)
-  u   set union of @p1 .. @pn outputs
-  U   multiset union of @p1 .. @pn outputs (with duplicates)
-  i   set intersection of @p1 .. @pn outputs
-  I   multiset intersection of @p1 .. @pn outputs (with duplicates)
-  d   set difference @p1 \ (union of @p2 .. @pN)
-  D   multiset difference @p1 \ (union of @p2 .. @pN) (with duplicates)
-  s   symmetric set difference: quads in at least a @pi but not all of them
-  S   multiset symmetric set difference
-  n+  emits quads with at least n (number) occurrences (no duplicates out) 
-  n-  emits quads with at most n (number) occurrences (no duplicates out)
-
-				</pre>
+				<pre><?php echo htmlentities(file_get_contents("doc.txt")); ?></pre>
 			</div>
 		</div>
 
@@ -283,8 +182,13 @@ S ::=
 		<div class="row">
 			<div class="col-md-12">
 				<p class="text-center">
-					RDF<sub>PRO</sub> is public domain software |
+					RDF<sub>pro</sub> is public domain software
+ 					|
 					<a href='http://rdfpro.fbk.eu/'>Official website</a>
+<!--					|
+					<a href='http://rdfpro.fbk.eu/usage.html'>Documentation</a> |
+					<a href='http://rdfpro.fbk.eu/example.html'>Examples of use</a> |
+					<a href='http://rdfpro.fbk.eu/examples_sac.html'>More examples (SAC 2015 conference paper)</a> -->
 				</p>
 			</div>
 		</div>
@@ -302,7 +206,8 @@ S ::=
 					<ul>
 					<?php
 						foreach ($customFilesDesc as $key => $value) {
-							echo "<li><strong>#$key</strong> - $value</li>\n";
+							$filename = $customFiles[$key];
+							echo "<li><strong><a target='_blank' href='custom/$filename'>#$key</a></strong> - $value</li>\n";
 						}
 					?>
 					</ul>
@@ -315,9 +220,43 @@ S ::=
 		</div>
 	</div>
 
+	<div class="modal fade" id="myModal2" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="myModalLabel2">List of examples</h4>
+				</div>
 
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-	<script type="text/javascript" src="js/bootstrap/js/bootstrap.min.js"></script>
+				<div class="modal-body">
+					<ul>
+					<?php
+						foreach ($exampleList as $key => $value) {
+							echo "<li><strong><a href='#'>$key</a></strong> - $value</li>\n";
+						}
+						// foreach ($customFilesDesc as $key => $value) {
+						// 	$filename = $customFiles[$key];
+						// 	echo "<li><strong><a target='_blank' href='custom/$filename'>#$key</a></strong> - $value</li>\n";
+						// }
+					?>
+					</ul>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="js/jquery.overlay.min.js"></script>
+    <script type="text/javascript" src="js/jquery.textcomplete.min.js"></script>
+
+    <script type="text/javascript" src="js.php"></script>
     <script type="text/javascript" src="js/custom.js"></script>
 
 </body>

@@ -1,6 +1,6 @@
 <?php
 
-require "config.inc.php";
+require "commons.inc.php";
 
 // Debug stuff
 // if (isset($_REQUEST['inputRadio']) && $_REQUEST['inputRadio']) {
@@ -52,7 +52,7 @@ if ($pars['inputRadio'] != null) {
 		$go = true;
 	}
 	else {
-		$in = "$F/abox10k.tql.gz";
+		$in = "$F/custom/$inputExample";
 		$out = tempnam(sys_get_temp_dir(), "reasoning-out");
 		$go = true;
 	}
@@ -60,7 +60,7 @@ if ($pars['inputRadio'] != null) {
 
 if ($go) {
 
-	for ($i = 1; $i <= 4; $i++) {
+	for ($i = 1; $i <= $additionalFileNo; $i++) {
 		if (isset($_FILES['additionalFile'.$i]) && $_FILES['additionalFile'.$i]['error'] === UPLOAD_ERR_OK) {
 			$pars['commands'] = str_replace("#file".$i, $_FILES['additionalFile'.$i]['tmp_name'], $pars['commands']);
 		}
@@ -99,11 +99,12 @@ if ($go) {
 		    header("Content-Description: File Transfer");
 		    header("Content-Disposition: attachment; filename=$baseOut");
 		    header("Content-Transfer-Encoding: binary");
+		    header("Content-Type: application/octet-stream");
 
 		    readfile($out);
 		}
 
-	    exit(1);
+	    exit();
 	}
 
 	// Debug stuff

@@ -1,0 +1,86 @@
+AVAILABLE PROCESSORS:
+
+@count          Counts the number of triples for each distinct subject
+  [-p] URI      the predicate URI denoting the number of triples (def. void:triples)
+  [-c] URI      the context URI where to emit count triples (def. sesame:nil)
+
+@mapreduce      Performs a map/reduce like computation
+  [-b PRED]     directly emits input quads matching bypass predicate PRED
+  [-r REDUCER]  apply REDUCER to quad partitions (default: identity reducer)
+  [-e PRED]     keeps only partitions with a quad matching predicate PRED
+  [-a PRED]     keeps only partitions whose quads all match predicate PRED
+  [-u]          deduplicate partition quads before reducing
+  MAPPER...     map input quads using MAPPERs: either a script, 'e' to map by
+                entity (subject or object resource) or string matching regex
+                [spoc]+ to map by hash of selected s, p, o, c components
+
+@prefix|@p      Adds missing prefix-to-namespace bindings
+  [-f FILE]     use prefixes from FILE instead of prefix.cc
+
+@rdfs           Emits the RDFS closure of input quads
+  [-e RULES]    exclude RULES in comma-separated list (default: no exclusions)
+  [-d]          decompose OWL axioms to RDFS (e.g. equivalentClass -> subClass)
+  [-t]          drop uninformative <x rdf:type _:b> statements (default: keep)
+  [-C | -c URI] emits closed TBox to default graph [-C] or graph URI [-c]
+  [-b URI][-w]  use base URI [-b] and optional BNode rewriting [-w] to load TBox
+  [FILE...]     load TBox from FILE...
+
+@rules          Emit the closure of input quads using a set of rules
+  [-r RULESETS] use comma separated list of RULESETs (rdfs, owl2rl, custom file)
+  [-B BINDINGS] use comma separated list of var=value BINDING to customize rules
+  [-p] MODE     set partitioning MODE: none (default), entity, graph, rules
+  [-g] MODE     set graph inference MODE: none (default), global, separate, star
+  [-G] URI      set global graph URI for inference modes global and star
+  [-t]          drop uninformative <x rdf:type _:b> statements (default: keep)
+  [-C | -c URI] emit static data closure unchanged [-C] or to graph URI [-c]
+  [-b URI][-w]  use base URI [-b] and BNode rewriting [-w] to load static data
+  [FILE...]     load static data (e.g., TBox) from FILE...
+
+@smush          Performs smushing, using a single URI for each sameAs cluster
+  URI...        use ranked namespace URIs to select canonical URIs
+
+@stats          Emits VOID structural statistics for its input
+  [-n URI]      use namespace URI to mint URIs for VOID dataset instances
+  [-p URI]      create a dataset for graphs linked to a source via property URI
+  [-c URI]      look for graph-to-source quads in graph URI
+  [-t NUM]      emits only VOID partitions with at least NUM entities or triples
+  [-o]          enable computation of void:classes and void:properties (costly)
+
+@tbox           Emits only quads belonging to RDFS or OWL TBox axioms.
+
+@transform|@t   Discards/replaces quads based on matching and replace exp.
+  [EXP]         sequence of rules on quad components X (values: s, p, o, c):
+                  +X value list => quad dropped if X not belongs to list
+                  -X vlaue list => quad dropped if X belongs to list
+                  =X value => component X replaced with value (after filters)
+                values are in Turtle and include following wildcard values: <*>
+                => any URI; _:* => any BNode; * => any plain literal; *@* => any
+                lang literal; *^^* => any typed literal; *@xyz => literals lang
+                xyz; *^^<uri> => literals type <uri>; *^^ns:iri => literals type
+                ns:iri; *^^ns:* => literals any type with prefix ns; ns:* => any
+                uri with prefix ns; <ns*> => any uri in namespace ns
+
+@unique|@u      Discards duplicates in the input stream
+  [-m]          merges quads with same <s,p,o> and different graphs in a unique
+                quad, put in a graph described with quads of all source graphs
+
+
+QUICK SYNTAX:
+
+CMD ::=
+  @p args1                          builtin processor (see below)
+  @p1 args1 ... @pN argsN           sequence composition
+  { @p1 args1 , ... , @pN argsN }S  parallel composition, set operator S
+
+S ::=
+  a   multiset sum of @p1 .. @pn outputs, keep duplicates (fast, default)
+  u   set union of @p1 .. @pn outputs
+  U   multiset union of @p1 .. @pn outputs (with duplicates)
+  i   set intersection of @p1 .. @pn outputs
+  I   multiset intersection of @p1 .. @pn outputs (with duplicates)
+  d   set difference @p1 \ (union of @p2 .. @pN)
+  D   multiset difference @p1 \ (union of @p2 .. @pN) (with duplicates)
+  s   symmetric set difference: quads in at least a @pi but not all of them
+  S   multiset symmetric set difference
+  n+  emits quads with at least n (number) occurrences (no duplicates out) 
+  n-  emits quads with at most n (number) occurrences (no duplicates out)

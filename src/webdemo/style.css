@@ -1,5 +1,5 @@
 body {
-	padding: 20px 50px;
+	padding: 0 5%;
 }
 
 #navigation-content {
@@ -16,9 +16,28 @@ body {
 	margin: auto;
 }
 
+.page-header {
+	/*position: fixed;*/
+	margin-top: 0;
+}
+
 .page-header div.logos {
 	background-color: white;
 	padding: 0 20px;
+}
+
+.page-header h1 a {
+	text-decoration: none;
+}
+
+#logo {
+	vertical-align: middle;
+	position: relative;
+	top: -5px;
+}
+
+.page-header h1 small {
+	padding-left: 20px;
 }
 
 span.predicate {
@@ -47,6 +66,9 @@ span.post-situation {
 
 #documentation pre {
 	height: 600px;
+	overflow: auto;
+	word-wrap: normal;
+	white-space: pre;
 }
 
 #form-output label {

@@ -1,14 +1,40 @@
 <?php
 
-$rdfpro_path = "/data/software/bin/rdfpro";
+$rdfpro_path = "/data/software/bin/rdfpro-demo";
 $java_home = "/data/software/jdk8";
 
+$additionalFileNo = 4;
+
+$inputFormat = array('rdf', 'rj', 'jsonld', 'nt', 'nq', 'trix', 'trig', 'tql', 'ttl', 'n3', 'brf');
+$outputFormat = $inputFormat;
+$compressionFormat = array('gz', 'bz2', 'xz', '7z');
+
+$inputFormatDefault = "trig";
+$outputFormatDefault = "trig";
+
+$allowedCommands = array('count', 'esoreasoner', 'groovy', 'prefix', 'rdfs', 'rules', 'smush', 'stats', 'tbox', 'transform', 'unique');
+
+// $inputExample = "abox10k.tql.gz";
+$inputExample = "1000soccerPlayersDBpedia_10000.ttl";
+$inputDescription = "10K triples extracted from DBpedia 2014";
+
+$exampleList = array(
+    "@transform '+p rdfs:label' @unique" => "Extracts rdfs:labels and remove duplicate quads",
+    "@transform groovy:#grul @rules -r #rdfs #dbo" => "Converts string used in rdfs:labels assertions to uppercase and materialises RDFS inferred triples (via the internal rule engine)",
+);
+
 $customFiles = array(
-    "eso" => "ESO.owl"
+    "rdfs" => "rdfs.ttl",
+    "owl2rl" => "owl2rl.ttl",
+    "dbo" => "dbpedia_2014.owl",
+    "grul" => "uppercase_labels.groovy",
 );
 
 $customFilesDesc = array(
-    "eso" => "The <a href='https://github.com/newsreader/eso'>Event and Situation Ontology</a>"
+    "rdfs" => "RDFS ruleset",
+    "owl2rl" => "OWL 2 RL ruleset",
+    "dbo" => "DBpedia ontology (TBox)",
+    "grul" => "Groovy script to convert uppercase RDFS labels",
 );
 
 // ---
@@ -20,41 +46,3 @@ putenv("JAVA_HOME=$java_home");
 $F = dirname(__FILE__);
 $customFolder = "$F/custom";
 
-class UploadException extends Exception {
-    public function __construct($code) { 
-        $message = $this->codeToMessage($code); 
-        parent::__construct($message, $code); 
-    } 
-
-    private function codeToMessage($code) 
-    { 
-        switch ($code) { 
-            case UPLOAD_ERR_INI_SIZE: 
-                $message = "The uploaded file exceeds the upload_max_filesize directive in php.ini"; 
-                break; 
-            case UPLOAD_ERR_FORM_SIZE: 
-                $message = "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form";
-                break; 
-            case UPLOAD_ERR_PARTIAL: 
-                $message = "The uploaded file was only partially uploaded"; 
-                break; 
-            case UPLOAD_ERR_NO_FILE: 
-                $message = "No file was uploaded"; 
-                break; 
-            case UPLOAD_ERR_NO_TMP_DIR: 
-                $message = "Missing a temporary folder"; 
-                break; 
-            case UPLOAD_ERR_CANT_WRITE: 
-                $message = "Failed to write file to disk"; 
-                break; 
-            case UPLOAD_ERR_EXTENSION: 
-                $message = "File upload stopped by extension"; 
-                break; 
-
-            default: 
-                $message = "Unknown upload error"; 
-                break; 
-        } 
-        return $message; 
-    } 
-} 
