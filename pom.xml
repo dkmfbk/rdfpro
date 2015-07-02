@@ -42,7 +42,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>http://rdfpro.fbk.eu/images/team/corcoglio.jpeg</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/corcoglio.jpg</picUrl>
             </properties>
         </developer>
         <developer>
@@ -70,7 +70,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>http://rdfpro.fbk.eu/images/team/mostarda.png</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/mostarda.jpg</picUrl>
             </properties>
         </contributor>
         <contributor>
