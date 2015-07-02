@@ -41,6 +41,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### News
 
+- 2015-07-02 Version 0.4 has been released
 - 2015-02-11 Version 0.3 has been released, RDFpro migrates to GitHub
 - 2014-12-01 [Paper](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2015sac.pdf) accepted at [SAC 2015](http://www.acm.org/conferences/sac/sac2015/) conference
 - 2014-09-01 [Paper](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2014iswcSemDev01.pdf) accepted at [ISWC 2014 SemDev](http://iswc2014.semdev.org/) workshop

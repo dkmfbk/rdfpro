@@ -28,6 +28,7 @@
         <menu name="Tool">
             <item name="Installation" href="install.html"/>
             <item name="Usage" href="usage.html"/>
+            <item name="Web interface" href="web-interface.html"/>
             <item name="Example (SemDev)" href="example.html"/>
             <item name="Examples (SAC)" href="examples_sac.html"/>
         </menu>
@@ -121,6 +122,13 @@
                         <columns>3</columns>
                     </sections>
                 </index>
+                <web-interface>
+                    <markPageHeader>false</markPageHeader>
+                    <sections>
+                        <body/>
+                        <columns>2</columns>
+                    </sections>
+                </web-interface>
                 <taglist>
                     <html5Anchor>false</html5Anchor>
                 </taglist>

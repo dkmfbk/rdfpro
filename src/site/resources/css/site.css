@@ -29,6 +29,14 @@
     padding-top: 15px;
 }
 
+#demo-img {
+    display: block;
+    margin: auto;
+    width: 500px;
+    border: 1px solid black;
+    padding: 5px;
+}
+
 /* Reflow bugfix */
 
 h1[id]:before, h2[id]:before, h3[id]:before, h4[id]:before, h5[id]:before, h6[id]:before, a[name]:before {

@@ -43,19 +43,6 @@
             <timezone>+1</timezone>
         </developer>
         <developer>
-            <id>mostarda</id>
-            <name>Michele Mostarda</name>
-            <email>mostarda@fbk.eu</email>
-            <url>http://wed.fbk.eu/people/profile/mostarda</url>
-            <roles>
-                <role>Developer</role>
-            </roles>
-            <timezone>+1</timezone>
-            <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/mostarda</picUrl>
-            </properties>
-        </developer>
-        <developer>
             <id>aprosio</id>
             <name>Alessio Palmero Aprosio</name>
             <email>aprosio@fbk.eu</email>
@@ -71,6 +58,18 @@
     </developers>
 
     <contributors>
+        <contributor>
+            <name>Michele Mostarda</name>
+            <email>mostarda@fbk.eu</email>
+            <url>http://wed.fbk.eu/people/profile/mostarda</url>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+            <properties>
+                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/mostarda</picUrl>
+            </properties>
+        </contributor>
         <contributor>
             <name>Marco Amadori</name>
             <email>amadori@fbk.eu</email>
@@ -359,6 +358,15 @@
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <configuration>
+                        <licenseName>public_domain</licenseName>
+                        <licenseResolver>${project.baseUri}/${parent-path}/src/license</licenseResolver>
+                        <fileTemplate>${project.basedir}/${parent-path}/src/license/template.ftl</fileTemplate>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
                     <version>${release-plugin-version}</version>
@@ -500,16 +508,6 @@
         </pluginManagement>
 
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <configuration>
-                    <licenseName>public_domain</licenseName>
-                    <licenseResolver>${project.baseUri}/${parent-path}/src/license</licenseResolver>
-                    <fileTemplate>${project.basedir}/${parent-path}/src/license/template.ftl</fileTemplate>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <!-- The following goal is necessary in order to allow child modules to
                      inherit the site descriptor of the parent project -->
@@ -879,6 +877,43 @@
             <id>release</id>
             <build>
                 <plugins>
+                    <!-- License -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make-licenses</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>update-project-license</goal>
+                                    <goal>aggregate-add-third-party</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Move third party file -->
+                    <plugin>
+                        <groupId>com.coderplus.maven.plugins</groupId>
+                        <artifactId>copy-rename-maven-plugin</artifactId>
+                        <version>1.0.1</version>
+                        <inherited>false</inherited>
+                        <executions>
+                            <execution>
+                                <id>copy-file</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>${basedir}/THIRD-PARTY.txt</sourceFile>
+                                    <destinationFile>${basedir}/src/site/markdown/THIRD-PARTY.txt.md</destinationFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
