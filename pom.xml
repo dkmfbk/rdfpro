@@ -34,13 +34,17 @@
             </properties>
         </developer>
         <developer>
-            <id>corcoglio</id>
-            <name>Francesco Corcoglioniti</name>
-            <email>corcoglio@fbk.eu</email>
+            <id>aprosio</id>
+            <name>Alessio Palmero Aprosio</name>
+            <email>aprosio@fbk.eu</email>
+            <url>https://dkm.fbk.eu/people/profile/aprosio</url>
             <roles>
                 <role>Developer</role>
             </roles>
             <timezone>+1</timezone>
+            <properties>
+                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/aprosio</picUrl>
+            </properties>
         </developer>
         <developer>
             <id>mostarda</id>
@@ -55,32 +59,29 @@
                 <picUrl>https://my.fbk.eu/fbk-api/v2/picture/mostarda</picUrl>
             </properties>
         </developer>
-        <developer>
-            <id>aprosio</id>
-            <name>Alessio Palmero Aprosio</name>
-            <email>aprosio@fbk.eu</email>
-            <url>https://dkm.fbk.eu/people/profile/aprosio</url>
-            <roles>
-                <role>Developer</role>
-            </roles>
-            <timezone>+1</timezone>
-            <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/aprosio</picUrl>
-            </properties>
-        </developer>
     </developers>
 
     <contributors>
         <contributor>
             <name>Marco Amadori</name>
             <email>amadori@fbk.eu</email>
-            <url>http://wed.fbk.eu/people/profile/amadori</url>
             <roles>
                 <role>Developer</role>
             </roles>
             <timezone>+1</timezone>
             <properties>
                 <picUrl>https://my.fbk.eu/fbk-api/v2/picture/amadori</picUrl>
+            </properties>
+        </contributor>
+        <contributor>
+            <name>Francesco Corcoglioniti</name>
+            <email>corcoglio@fbk.eu</email>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+            <properties>
+                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/corcoglio</picUrl>
             </properties>
         </contributor>
     </contributors>
