@@ -7,7 +7,7 @@
     <groupId>eu.fbk.rdfpro</groupId>
     <artifactId>rdfpro</artifactId>
     <packaging>pom</packaging>
-    <version>0.4</version>
+    <version>0.5-SNAPSHOT</version>
 
     <name>rdfpro</name>
     <description>RDFpro - an extensible tool for building stream-oriented RDF processing pipelines</description>
