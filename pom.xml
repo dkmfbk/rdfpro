@@ -41,6 +41,9 @@
                 <role>Developer</role>
             </roles>
             <timezone>+1</timezone>
+            <properties>
+                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/corcoglio</picUrl>
+            </properties>
         </developer>
         <developer>
             <id>aprosio</id>
@@ -73,7 +76,6 @@
         <contributor>
             <name>Marco Amadori</name>
             <email>amadori@fbk.eu</email>
-            <url>http://wed.fbk.eu/people/profile/amadori</url>
             <roles>
                 <role>Developer</role>
             </roles>
