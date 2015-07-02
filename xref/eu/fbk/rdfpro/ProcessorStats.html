@@ -1242,10 +1242,10 @@
 <a class="jxr_linenumber" name="L1234" href="#L1234">1234</a>                 hi = hi | 0x1000000000000000L;
 <a class="jxr_linenumber" name="L1235" href="#L1235">1235</a>                 <strong class="jxr_keyword">final</strong> Literal literal = (Literal) value;
 <a class="jxr_linenumber" name="L1236" href="#L1236">1236</a>                 <strong class="jxr_keyword">int</strong> index = 0;
-<a class="jxr_linenumber" name="L1237" href="#L1237">1237</a>                 <strong class="jxr_keyword">if</strong> (literal.getDatatype() != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L1238" href="#L1238">1238</a>                     index = DATATYPE_INDEX.put(literal.getDatatype());
-<a class="jxr_linenumber" name="L1239" href="#L1239">1239</a>                 } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (literal.getLanguage() != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L1240" href="#L1240">1240</a>                     index = LANGUAGE_INDEX.put(literal.getLanguage()) | 0x40000000;
+<a class="jxr_linenumber" name="L1237" href="#L1237">1237</a>                 <strong class="jxr_keyword">if</strong> (literal.getLanguage() != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L1238" href="#L1238">1238</a>                     index = LANGUAGE_INDEX.put(literal.getLanguage()) | 0x40000000;
+<a class="jxr_linenumber" name="L1239" href="#L1239">1239</a>                 } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (literal.getDatatype() != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L1240" href="#L1240">1240</a>                     index = DATATYPE_INDEX.put(literal.getDatatype());
 <a class="jxr_linenumber" name="L1241" href="#L1241">1241</a>                 }
 <a class="jxr_linenumber" name="L1242" href="#L1242">1242</a>                 index = index &amp; 0x7FFFFFFF;
 <a class="jxr_linenumber" name="L1243" href="#L1243">1243</a>                 lo = (lo ^ index) &amp; 0xFFFFFFFF7F7F7F7FL;

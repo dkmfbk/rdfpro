@@ -41,47 +41,48 @@
 <a class="jxr_linenumber" name="L33" href="#L33">33</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> RDFFormat FORMAT = <strong class="jxr_keyword">new</strong> RDFFormat(<span class="jxr_string">"Turtle Quads"</span>, <span class="jxr_string">"application/x-tql"</span>,
 <a class="jxr_linenumber" name="L34" href="#L34">34</a>              Charset.forName(<span class="jxr_string">"UTF-8"</span>), <span class="jxr_string">"tql"</span>, false, <strong class="jxr_keyword">true</strong>);
 <a class="jxr_linenumber" name="L35" href="#L35">35</a>  
-<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <strong class="jxr_keyword">static</strong> {
-<a class="jxr_linenumber" name="L37" href="#L37">37</a>          RDFFormat.register(FORMAT);
-<a class="jxr_linenumber" name="L38" href="#L38">38</a>      }
-<a class="jxr_linenumber" name="L39" href="#L39">39</a>  
-<a class="jxr_linenumber" name="L40" href="#L40">40</a>      <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L41" href="#L41">41</a>  <em class="jxr_javadoccomment">     * Registers the Turtle Quads format in the RIO registry. Calling this method multiple times</em>
-<a class="jxr_linenumber" name="L42" href="#L42">42</a>  <em class="jxr_javadoccomment">     * results in a single registration. Note that registration is also done transparently the</em>
-<a class="jxr_linenumber" name="L43" href="#L43">43</a>  <em class="jxr_javadoccomment">     * first time this class is accessed.</em>
+<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L37" href="#L37">37</a>  <em class="jxr_javadoccomment">     * Registers the Turtle Quads format in the RIO registry. Calling this method multiple times</em>
+<a class="jxr_linenumber" name="L38" href="#L38">38</a>  <em class="jxr_javadoccomment">     * results in a single registration. Note that registration is also done transparently the</em>
+<a class="jxr_linenumber" name="L39" href="#L39">39</a>  <em class="jxr_javadoccomment">     * first time this class is accessed.</em>
+<a class="jxr_linenumber" name="L40" href="#L40">40</a>  <em class="jxr_javadoccomment">     * </em>
+<a class="jxr_linenumber" name="L41" href="#L41">41</a>  <em class="jxr_javadoccomment">     * @deprecated as of Sesame 2.8, calling this method is not necessary - it is enough to avoid</em>
+<a class="jxr_linenumber" name="L42" href="#L42">42</a>  <em class="jxr_javadoccomment">     *             using the deprecated RDFFormat.forFileName() (and other static methods) for</em>
+<a class="jxr_linenumber" name="L43" href="#L43">43</a>  <em class="jxr_javadoccomment">     *             looking up an RDFFormat, and instead rely on methods in the Rio class</em>
 <a class="jxr_linenumber" name="L44" href="#L44">44</a>  <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L45" href="#L45">45</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> register() {
-<a class="jxr_linenumber" name="L46" href="#L46">46</a>          <em class="jxr_comment">// Calling this method will cause the static initializer to run once</em>
-<a class="jxr_linenumber" name="L47" href="#L47">47</a>      }
-<a class="jxr_linenumber" name="L48" href="#L48">48</a>  
-<a class="jxr_linenumber" name="L49" href="#L49">49</a>      <em class="jxr_comment">// Package protected utility methods</em>
-<a class="jxr_linenumber" name="L50" href="#L50">50</a>  
-<a class="jxr_linenumber" name="L51" href="#L51">51</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
-<a class="jxr_linenumber" name="L52" href="#L52">52</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_U(c) || isNumber(c) || c == '-' || c == 0x00B7 || c &gt;= 0x0300
-<a class="jxr_linenumber" name="L53" href="#L53">53</a>                  &amp;&amp; c &lt;= 0x036F || c &gt;= 0x203F &amp;&amp; c &lt;= 0x2040;
-<a class="jxr_linenumber" name="L54" href="#L54">54</a>      }
-<a class="jxr_linenumber" name="L55" href="#L55">55</a>  
-<a class="jxr_linenumber" name="L56" href="#L56">56</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_U(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
-<a class="jxr_linenumber" name="L57" href="#L57">57</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_BASE(c) || c == '_';
-<a class="jxr_linenumber" name="L58" href="#L58">58</a>      }
-<a class="jxr_linenumber" name="L59" href="#L59">59</a>  
-<a class="jxr_linenumber" name="L60" href="#L60">60</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_BASE(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
-<a class="jxr_linenumber" name="L61" href="#L61">61</a>          <strong class="jxr_keyword">return</strong> isLetter(c) || c &gt;= 0x00C0 &amp;&amp; c &lt;= 0x00D6 || c &gt;= 0x00D8 &amp;&amp; c &lt;= 0x00F6
-<a class="jxr_linenumber" name="L62" href="#L62">62</a>                  || c &gt;= 0x00F8 &amp;&amp; c &lt;= 0x02FF || c &gt;= 0x0370 &amp;&amp; c &lt;= 0x037D || c &gt;= 0x037F
-<a class="jxr_linenumber" name="L63" href="#L63">63</a>                  &amp;&amp; c &lt;= 0x1FFF || c &gt;= 0x200C &amp;&amp; c &lt;= 0x200D || c &gt;= 0x2070 &amp;&amp; c &lt;= 0x218F
-<a class="jxr_linenumber" name="L64" href="#L64">64</a>                  || c &gt;= 0x2C00 &amp;&amp; c &lt;= 0x2FEF || c &gt;= 0x3001 &amp;&amp; c &lt;= 0xD7FF || c &gt;= 0xF900
-<a class="jxr_linenumber" name="L65" href="#L65">65</a>                  &amp;&amp; c &lt;= 0xFDCF || c &gt;= 0xFDF0 &amp;&amp; c &lt;= 0xFFFD || c &gt;= 0x10000 &amp;&amp; c &lt;= 0xEFFFF;
-<a class="jxr_linenumber" name="L66" href="#L66">66</a>      }
-<a class="jxr_linenumber" name="L67" href="#L67">67</a>  
-<a class="jxr_linenumber" name="L68" href="#L68">68</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isLetter(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
-<a class="jxr_linenumber" name="L69" href="#L69">69</a>          <strong class="jxr_keyword">return</strong> c &gt;= 65 &amp;&amp; c &lt;= 90 || c &gt;= 97 &amp;&amp; c &lt;= 122;
-<a class="jxr_linenumber" name="L70" href="#L70">70</a>      }
-<a class="jxr_linenumber" name="L71" href="#L71">71</a>  
-<a class="jxr_linenumber" name="L72" href="#L72">72</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isNumber(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
-<a class="jxr_linenumber" name="L73" href="#L73">73</a>          <strong class="jxr_keyword">return</strong> c &gt;= 48 &amp;&amp; c &lt;= 57;
-<a class="jxr_linenumber" name="L74" href="#L74">74</a>      }
-<a class="jxr_linenumber" name="L75" href="#L75">75</a>  
-<a class="jxr_linenumber" name="L76" href="#L76">76</a>  }
+<a class="jxr_linenumber" name="L45" href="#L45">45</a>      @Deprecated
+<a class="jxr_linenumber" name="L46" href="#L46">46</a>      <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> register() {
+<a class="jxr_linenumber" name="L47" href="#L47">47</a>          <em class="jxr_comment">// Calling this method will cause the static initializer to run once</em>
+<a class="jxr_linenumber" name="L48" href="#L48">48</a>      }
+<a class="jxr_linenumber" name="L49" href="#L49">49</a>  
+<a class="jxr_linenumber" name="L50" href="#L50">50</a>      <em class="jxr_comment">// Package protected utility methods</em>
+<a class="jxr_linenumber" name="L51" href="#L51">51</a>  
+<a class="jxr_linenumber" name="L52" href="#L52">52</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L53" href="#L53">53</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_U(c) || isNumber(c) || c == '-' || c == 0x00B7 || c &gt;= 0x0300
+<a class="jxr_linenumber" name="L54" href="#L54">54</a>                  &amp;&amp; c &lt;= 0x036F || c &gt;= 0x203F &amp;&amp; c &lt;= 0x2040;
+<a class="jxr_linenumber" name="L55" href="#L55">55</a>      }
+<a class="jxr_linenumber" name="L56" href="#L56">56</a>  
+<a class="jxr_linenumber" name="L57" href="#L57">57</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_U(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L58" href="#L58">58</a>          <strong class="jxr_keyword">return</strong> isPN_CHARS_BASE(c) || c == '_';
+<a class="jxr_linenumber" name="L59" href="#L59">59</a>      }
+<a class="jxr_linenumber" name="L60" href="#L60">60</a>  
+<a class="jxr_linenumber" name="L61" href="#L61">61</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isPN_CHARS_BASE(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) { <em class="jxr_comment">// ok</em>
+<a class="jxr_linenumber" name="L62" href="#L62">62</a>          <strong class="jxr_keyword">return</strong> isLetter(c) || c &gt;= 0x00C0 &amp;&amp; c &lt;= 0x00D6 || c &gt;= 0x00D8 &amp;&amp; c &lt;= 0x00F6
+<a class="jxr_linenumber" name="L63" href="#L63">63</a>                  || c &gt;= 0x00F8 &amp;&amp; c &lt;= 0x02FF || c &gt;= 0x0370 &amp;&amp; c &lt;= 0x037D || c &gt;= 0x037F
+<a class="jxr_linenumber" name="L64" href="#L64">64</a>                  &amp;&amp; c &lt;= 0x1FFF || c &gt;= 0x200C &amp;&amp; c &lt;= 0x200D || c &gt;= 0x2070 &amp;&amp; c &lt;= 0x218F
+<a class="jxr_linenumber" name="L65" href="#L65">65</a>                  || c &gt;= 0x2C00 &amp;&amp; c &lt;= 0x2FEF || c &gt;= 0x3001 &amp;&amp; c &lt;= 0xD7FF || c &gt;= 0xF900
+<a class="jxr_linenumber" name="L66" href="#L66">66</a>                  &amp;&amp; c &lt;= 0xFDCF || c &gt;= 0xFDF0 &amp;&amp; c &lt;= 0xFFFD || c &gt;= 0x10000 &amp;&amp; c &lt;= 0xEFFFF;
+<a class="jxr_linenumber" name="L67" href="#L67">67</a>      }
+<a class="jxr_linenumber" name="L68" href="#L68">68</a>  
+<a class="jxr_linenumber" name="L69" href="#L69">69</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isLetter(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
+<a class="jxr_linenumber" name="L70" href="#L70">70</a>          <strong class="jxr_keyword">return</strong> c &gt;= 65 &amp;&amp; c &lt;= 90 || c &gt;= 97 &amp;&amp; c &lt;= 122;
+<a class="jxr_linenumber" name="L71" href="#L71">71</a>      }
+<a class="jxr_linenumber" name="L72" href="#L72">72</a>  
+<a class="jxr_linenumber" name="L73" href="#L73">73</a>      <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">boolean</strong> isNumber(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> c) {
+<a class="jxr_linenumber" name="L74" href="#L74">74</a>          <strong class="jxr_keyword">return</strong> c &gt;= 48 &amp;&amp; c &lt;= 57;
+<a class="jxr_linenumber" name="L75" href="#L75">75</a>      }
+<a class="jxr_linenumber" name="L76" href="#L76">76</a>  
+<a class="jxr_linenumber" name="L77" href="#L77">77</a>  }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2015 <a href="http://www.fbk.eu">FBK-irst</a>. All rights reserved.</div>

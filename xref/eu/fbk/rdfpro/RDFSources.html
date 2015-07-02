@@ -468,7 +468,7 @@
 <a class="jxr_linenumber" name="L460" href="#L460">460</a> 
 <a class="jxr_linenumber" name="L461" href="#L461">461</a>             <strong class="jxr_keyword">final</strong> List&lt;ParseJob&gt; jobs = <strong class="jxr_keyword">new</strong> ArrayList&lt;ParseJob&gt;();
 <a class="jxr_linenumber" name="L462" href="#L462">462</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">final</strong> String location : <strong class="jxr_keyword">this</strong>.locations) {
-<a class="jxr_linenumber" name="L463" href="#L463">463</a>                 <strong class="jxr_keyword">final</strong> RDFFormat format = RDFFormat.forFileName(<span class="jxr_string">"test"</span>
+<a class="jxr_linenumber" name="L463" href="#L463">463</a>                 <strong class="jxr_keyword">final</strong> RDFFormat format = Rio.getParserFormatForFileName(<span class="jxr_string">"test"</span>
 <a class="jxr_linenumber" name="L464" href="#L464">464</a>                         + IO.extractExtension(location));
 <a class="jxr_linenumber" name="L465" href="#L465">465</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> parallelism = !<strong class="jxr_keyword">this</strong>.parallelize
 <a class="jxr_linenumber" name="L466" href="#L466">466</a>                         || !Statements.isRDFFormatLineBased(format) ? 1 : Environment.getCores();
@@ -565,7 +565,7 @@
 <a class="jxr_linenumber" name="L557" href="#L557">557</a>                     <strong class="jxr_keyword">return</strong>;
 <a class="jxr_linenumber" name="L558" href="#L558">558</a>                 }
 <a class="jxr_linenumber" name="L559" href="#L559">559</a> 
-<a class="jxr_linenumber" name="L560" href="#L560">560</a>                 <strong class="jxr_keyword">final</strong> RDFFormat format = RDFFormat.forFileName(<span class="jxr_string">"test"</span>
+<a class="jxr_linenumber" name="L560" href="#L560">560</a>                 <strong class="jxr_keyword">final</strong> RDFFormat format = Rio.getParserFormatForFileName(<span class="jxr_string">"test"</span>
 <a class="jxr_linenumber" name="L561" href="#L561">561</a>                         + IO.extractExtension(<strong class="jxr_keyword">this</strong>.location));
 <a class="jxr_linenumber" name="L562" href="#L562">562</a> 
 <a class="jxr_linenumber" name="L563" href="#L563">563</a>                 <strong class="jxr_keyword">final</strong> String logMsg = <span class="jxr_string">"Starting {} {} {} parsing for {}"</span>;
