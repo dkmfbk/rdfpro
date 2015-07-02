@@ -910,7 +910,7 @@
                                 </goals>
                                 <configuration>
                                     <sourceFile>${basedir}/THIRD-PARTY.txt</sourceFile>
-                                    <destinationFile>${basedir}/src/site/markdown/THIRD-PARTY.txt.md</destinationFile>
+                                    <destinationFile>${basedir}/src/site/markdown/third-party.md</destinationFile>
                                 </configuration>
                             </execution>
                         </executions>
