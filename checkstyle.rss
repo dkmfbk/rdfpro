@@ -27,7 +27,7 @@ under the License.
     <item>
       <title>File: 70,
              Errors: 3,
-             Warnings: 482,
+             Warnings: 486,
              Infos: 0
       </title>
             <link>http://rdfpro.fbk.eu//checkstyle.html</link>
@@ -808,7 +808,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  5
+                  9
                 </td>
                 <td>
                   0
