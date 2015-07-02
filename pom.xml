@@ -30,7 +30,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/rospocher</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/rospocher.jpg</picUrl>
             </properties>
         </developer>
         <developer>
@@ -42,7 +42,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/corcoglio</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/corcoglio.jpeg</picUrl>
             </properties>
         </developer>
         <developer>
@@ -55,7 +55,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/aprosio</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/aprosio.jpg</picUrl>
             </properties>
         </developer>
     </developers>
@@ -70,7 +70,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/mostarda</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/mostarda.png</picUrl>
             </properties>
         </contributor>
         <contributor>
@@ -81,7 +81,7 @@
             </roles>
             <timezone>+1</timezone>
             <properties>
-                <picUrl>https://my.fbk.eu/fbk-api/v2/picture/amadori</picUrl>
+                <picUrl>http://rdfpro.fbk.eu/images/team/amadori.jpg</picUrl>
             </properties>
         </contributor>
     </contributors>
