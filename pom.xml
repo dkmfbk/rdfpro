@@ -603,7 +603,7 @@
                             <report>license</report>
                             <report>scm</report>
                             <report>project-team</report>
-                            <report>dependency-management</report>
+                            <!--<report>dependency-management</report>-->
                             <report>plugins</report>
                             <!--<report>modules</report>-->
                         </reports>
