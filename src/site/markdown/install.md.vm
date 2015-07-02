@@ -4,7 +4,8 @@ RDFpro installation
 
 The RDFpro command line tool is packaged as a self-contained, cross-platform Java 8 application. Download it from the following links and unpack in the location you prefer:
 
-  * [rdfpro-dist-${project-version}-bin.tar.gz](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-bin.tar.gz)
+  * [rdfpro-dist-${project-version}-bin.tar.gz](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-bin.tar.gz) (latest version)
+  * [Browse old versions](https://knowledgestore.fbk.eu/files/rdfpro/)
 
 You can run RDFpro by executing the `rdfpro` script. For instance, you can test if everything works correctly by executing the following command, which should display the tool version and other relevant system information:
 
