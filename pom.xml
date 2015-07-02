@@ -1027,14 +1027,6 @@
                 </plugins>
             </reporting>
         </profile>
-
-        <profile>
-            <id>intranet</id>
-            <properties>
-                <site-path>scpexe://stettler.fbk.eu/stettler0/sra/html/rdfpro</site-path>
-                <repo-path>scpexe://stettler.fbk.eu/stettler0/sra/html/maven</repo-path>
-            </properties>
-        </profile>
     </profiles>
 
     <properties>
