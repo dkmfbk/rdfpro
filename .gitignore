@@ -2,4 +2,8 @@ target
 .idea
 *.iml
 *.versionsBackup
+**/.project
+**/.DS_Store
+
+sync-demo.sh
 
