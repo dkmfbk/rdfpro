@@ -69,10 +69,10 @@
 
 #### Public Domain:
 
-  * rdfpro-core (eu.fbk.rdfpro:rdfpro-core:0.4-SNAPSHOT)
-  * rdfpro-groovy (eu.fbk.rdfpro:rdfpro-groovy:0.4-SNAPSHOT)
-  * rdfpro-jsonld (eu.fbk.rdfpro:rdfpro-jsonld:0.4-SNAPSHOT)
-  * rdfpro-rules (eu.fbk.rdfpro:rdfpro-rules:0.4-SNAPSHOT)
-  * rdfpro-tql (eu.fbk.rdfpro:rdfpro-tql:0.4-SNAPSHOT)
+  * rdfpro-core (eu.fbk.rdfpro:rdfpro-core:0.4)
+  * rdfpro-groovy (eu.fbk.rdfpro:rdfpro-groovy:0.4)
+  * rdfpro-jsonld (eu.fbk.rdfpro:rdfpro-jsonld:0.4)
+  * rdfpro-rules (eu.fbk.rdfpro:rdfpro-rules:0.4)
+  * rdfpro-tql (eu.fbk.rdfpro:rdfpro-tql:0.4)
   * XML Pull Parsing API (xmlpull:xmlpull:1.1.3.1)
   * MXP1: Xml Pull Parser 3rd Edition (XPP3) (xpp3:xpp3_min:1.1.4c)

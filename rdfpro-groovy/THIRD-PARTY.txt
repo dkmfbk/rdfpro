@@ -32,4 +32,4 @@
 
 #### Public Domain:
 
-  * rdfpro-core (eu.fbk.rdfpro:rdfpro-core:0.4-SNAPSHOT)
+  * rdfpro-core (eu.fbk.rdfpro:rdfpro-core:0.4)
