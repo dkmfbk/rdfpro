@@ -995,7 +995,7 @@
                                     <report>project-team</report>
                                     <report>dependency-management</report>
                                     <report>plugins</report>
-                                    <report>modules</report>
+                                    <!--<report>modules</report>-->
                                 </reports>
                             </reportSet>
                         </reportSets>
