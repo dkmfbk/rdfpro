@@ -63,8 +63,8 @@
     <contributors>
         <contributor>
             <name>Michele Mostarda</name>
-            <email>mostarda@fbk.eu</email>
-            <url>http://wed.fbk.eu/people/profile/mostarda</url>
+            <email>me@michelemostarda.it</email>
+            <url>http://www.michelemostarda.it/</url>
             <roles>
                 <role>Developer</role>
             </roles>
@@ -595,6 +595,23 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>index</report>
+                            <report>license</report>
+                            <report>scm</report>
+                            <report>project-team</report>
+                            <report>dependency-management</report>
+                            <report>plugins</report>
+                            <!--<report>modules</report>-->
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
                 <version>${site-plugin-version}</version>
             </plugin>
@@ -974,59 +991,6 @@
             </build>
         </profile>
 
-        <profile>
-            <id>parent-info</id>
-            <activation>
-                <file>
-                    <missing>${basedir}/src/main/java</missing>
-                </file>
-            </activation>
-            <reporting>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-project-info-reports-plugin</artifactId>
-                        <reportSets>
-                            <reportSet>
-                                <reports>
-                                    <report>index</report>
-                                    <report>license</report>
-                                    <report>scm</report>
-                                    <report>project-team</report>
-                                    <report>dependency-management</report>
-                                    <report>plugins</report>
-                                    <!--<report>modules</report>-->
-                                </reports>
-                            </reportSet>
-                        </reportSets>
-                    </plugin>
-                </plugins>
-            </reporting>
-        </profile>
-
-        <profile>
-            <id>module-info</id>
-            <activation>
-                <file>
-                    <exists>${basedir}/src/main/java</exists>
-                </file>
-            </activation>
-            <reporting>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-project-info-reports-plugin</artifactId>
-                        <reportSets>
-                            <reportSet>
-                                <reports>
-                                    <report>index</report>
-                                </reports>
-                            </reportSet>
-                        </reportSets>
-                    </plugin>
-                </plugins>
-            </reporting>
-        </profile>
     </profiles>
 
     <properties>
