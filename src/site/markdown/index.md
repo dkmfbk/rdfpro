@@ -11,7 +11,7 @@
     <p class='title2'>
         <a class="btn btn-primary btn-large" href="install.html">Download</a>
         <a class="btn btn-primary btn-large" href="https://knowledgestore2.fbk.eu/rdfpro-demo/">Online demo</a>
-        <a class="btn btn-primary btn-large" href="install.html">Video tour</a>
+        <a class="btn btn-primary btn-large" href="https://www.youtube.com/watch?v=Vd2FCVRL8fk">Video tour</a>
     </p>
 </div>
 
