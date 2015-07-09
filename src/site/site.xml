@@ -72,7 +72,7 @@
             <brand>
                 <name>
                     <![CDATA[
-                        <img src='${site-root}/images/rdfpro.png' width='28' height='30' style='padding: 0px; margin: 0px' />
+                        <img src='${site-root}/images/rdfpro.png' />
                         <span>RDF<sub>pro</sub></span>
                     ]]>
                 </name>
