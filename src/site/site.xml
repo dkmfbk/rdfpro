@@ -11,11 +11,7 @@
 
     <body>
         <head>
-            <style>
-                footer { padding-top: 5px!important; padding-bottom: 5px!important; margin-top: 30px!important }
-                div.subfooter { padding-top: 20px!important; padding-bottom: 10px!important }
-                p.copyright { display: none }
-            </style>
+            <link href="${site-root}/css/custom.css" rel="stylesheet" />
         </head>
 
         <menu name="About">
@@ -76,7 +72,7 @@
             <brand>
                 <name>
                     <![CDATA[
-                        <img src='http://rdfpro.fbk.eu/images/rdfpro.png' width='28' height='30' style='padding: 0px; margin: 0px' />
+                        <img src='${site-root}/images/rdfpro.png' />
                         <span>RDF<sub>pro</sub></span>
                     ]]>
                 </name>
