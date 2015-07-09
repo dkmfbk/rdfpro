@@ -35,8 +35,6 @@ import javax.annotation.Nullable;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
-import com.sun.prism.impl.Disposer.Record;
-
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
@@ -764,7 +762,7 @@ public final class Statements {
      * </tr>
      * <tr>
      * <td>{@link URI}</td>
-     * <td>{@link URI}, {@link Record} (ID assigned), {@link String}</td>
+     * <td>{@link URI}, {@link String}</td>
      * </tr>
      * <tr>
      * <td>{@link BNode}</td>
@@ -773,10 +771,6 @@ public final class Statements {
      * <tr>
      * <td>{@link Statement}</td>
      * <td>{@link Statement}, {@link String}</td>
-     * </tr>
-     * <tr>
-     * <td>{@link Record}</td>
-     * <td>{@link Record}, {@link URI} (ID extracted), {@link String}</td>
      * </tr>
      * </tbody>
      * </table>

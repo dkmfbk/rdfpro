@@ -26,7 +26,7 @@
 
     <distributionManagement>
         <site>
-            <id>siterdfpro</id>
+            <id>site</id>
             <url>${site-path}/rdfpro-core/</url>
         </site>
     </distributionManagement>
@@ -72,7 +72,7 @@
     </dependencies>
 
     <properties>
-        <parent-path>..</parent-path>
+        <parent-path>/..</parent-path>
     </properties>
 
 </project>
