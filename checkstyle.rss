@@ -25,9 +25,9 @@ under the License.
     <language>en-us</language>
     <copyright>&#169;2015 FBK-irst</copyright>
     <item>
-      <title>File: 70,
-             Errors: 3,
-             Warnings: 486,
+      <title>File: 75,
+             Errors: 4,
+             Warnings: 536,
              Infos: 0
       </title>
             <link>http://rdfpro.fbk.eu//checkstyle.html</link>
@@ -81,6 +81,20 @@ under the License.
                 </td>
                 <td>
                   1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.SailQuadModel.java">eu/fbk/rdfpro/rules/model/SailQuadModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
                 </td>
                 <td>
                   0
@@ -382,6 +396,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.MemoryQuadModel.java">eu/fbk/rdfpro/rules/model/MemoryQuadModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Mapper.java">eu/fbk/rdfpro/Mapper.java</a>
                 </td>
                 <td>
@@ -389,6 +417,20 @@ under the License.
                 </td>
                 <td>
                   23
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.QuadModel.java">eu/fbk/rdfpro/rules/model/QuadModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  47
                 </td>
                 <td>
                   0
@@ -648,6 +690,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.RepositoryQuadModel.java">eu/fbk/rdfpro/rules/model/RepositoryQuadModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.Ruleset.java">eu/fbk/rdfpro/rules/Ruleset.java</a>
                 </td>
                 <td>
@@ -808,7 +864,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  9
+                  5
                 </td>
                 <td>
                   0
@@ -907,6 +963,20 @@ under the License.
                 </td>
                 <td>
                   15
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.util.Iterators.java">eu/fbk/rdfpro/rules/util/Iterators.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  6
                 </td>
                 <td>
                   0

@@ -3,6 +3,7 @@ eu.fbk.rdfpro.jsonld
 eu.fbk.rdfpro.rules
 eu.fbk.rdfpro.rules.drools
 eu.fbk.rdfpro.rules.functions
+eu.fbk.rdfpro.rules.model
 eu.fbk.rdfpro.rules.util
 eu.fbk.rdfpro.tql
 eu.fbk.rdfpro.util
