@@ -440,11 +440,11 @@ public final class SPARQLRenderer implements QueryRenderer {
                 this.builder.append("\"");
                 escape(literal.getLabel(), this.builder);
                 this.builder.append("\"");
-                if (literal.getDatatype() != null) {
+                if (literal.getLanguage() != null) {
+                    this.builder.append("@").append(literal.getLanguage());
+                } else if (literal.getDatatype() != null) {
                     this.builder.append("^^");
                     emit(literal.getDatatype());
-                } else if (literal.getLanguage() != null) {
-                    this.builder.append("@").append(literal.getLanguage());
                 }
             }
             return this;

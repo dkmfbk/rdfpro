@@ -34,6 +34,12 @@
 				</div>
 			</div>
 		<?php endif; ?>
+
+		<p>
+			<a href="https://www.youtube.com/watch?v=Vd2FCVRL8fk">Video tutorial</a>
+			| <a href="https://www.youtube.com/watch?v=Vd2FCVRL8fk&amp;t=3m13s">Example 1 video</a>
+			| <a href="https://www.youtube.com/watch?v=Vd2FCVRL8fk&amp;t=4m25s">Example 2 video</a>
+		</p>
 		
 		<div class="row">
 			<div class="col-md-5" id="form-components">

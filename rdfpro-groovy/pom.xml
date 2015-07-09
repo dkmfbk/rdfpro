@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <project
-        xmlns="http://maven.apache.org/POM/4.0.0"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>eu.fbk.rdfpro</groupId>
         <artifactId>rdfpro</artifactId>
-        <version>0.4</version>
+        <version>0.4.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -25,7 +25,7 @@
 
     <distributionManagement>
         <site>
-            <id>siterdfpro</id>
+            <id>site</id>
             <url>${site-path}/rdfpro-sparql/</url>
         </site>
     </distributionManagement>
@@ -36,7 +36,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.5</version>
                 <executions>
                     <execution>
                         <id>empty-javadoc-jar</id>
@@ -121,8 +120,7 @@
     </dependencies>
 
     <properties>
-        <parent-path>..</parent-path>
-        <javadoc-skip>true</javadoc-skip>
+        <parent-path>/..</parent-path>
     </properties>
 
 </project>

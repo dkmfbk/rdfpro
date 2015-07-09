@@ -2,6 +2,7 @@ package eu.fbk.rdfpro.rules.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +43,8 @@ import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
 import org.openrdf.query.algebra.evaluation.TripleSource;
+import org.openrdf.query.algebra.evaluation.federation.FederatedService;
+import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolver;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
 import org.openrdf.query.parser.ParsedBooleanQuery;
@@ -92,6 +95,13 @@ public final class Algebra {
                         final Resource subj, final URI pred, final Value obj,
                         final Resource... contexts) throws QueryEvaluationException {
                     return new EmptyIteration<Statement, QueryEvaluationException>();
+                }
+
+            }, new FederatedServiceResolver() {
+
+                @Override
+                public FederatedService getService(final String serviceURL) {
+                    throw new Error();
                 }
 
             });
@@ -302,6 +312,7 @@ public final class Algebra {
         expr = expr.clone();
         expr.setParentNode(null);
 
+        final Map<String, String> replacements = new HashMap<>();
         final List<Filter> filtersToDrop = new ArrayList<>();
         expr.visit(new QueryModelVisitorBase<RuntimeException>() {
 
@@ -309,20 +320,29 @@ public final class Algebra {
             public void meet(final SameTerm same) throws RuntimeException {
                 if (same.getParentNode() instanceof Filter && same.getLeftArg() instanceof Var
                         && same.getRightArg() instanceof Var) {
-                    final String leftName = ((Var) same.getLeftArg()).getName();
-                    final String rightName = ((Var) same.getRightArg()).getName();
-                    if (leftName.startsWith(rightName + "-")
-                            || rightName.startsWith(leftName + "-")) {
-                        final Filter filter = (Filter) same.getParentNode();
-                        filtersToDrop.add(filter);
+                    final Var leftVar = (Var) same.getLeftArg();
+                    final Var rightVar = (Var) same.getRightArg();
+                    if (leftVar.isAnonymous() || rightVar.isAnonymous()) {
+                        if (!rightVar.isAnonymous()) {
+                            replacements.put(leftVar.getName(), rightVar.getName());
+                        } else {
+                            replacements.put(rightVar.getName(), leftVar.getName());
+                        }
+                        filtersToDrop.add((Filter) same.getParentNode());
                     }
                 }
             }
 
+        });
+        expr.visit(new QueryModelVisitorBase<RuntimeException>() {
+
             @Override
             public void meet(final Var var) throws RuntimeException {
                 if (!var.hasValue()) {
-                    if (var.getName().startsWith("_const-")) {
+                    final String newName = replacements.get(var.getName());
+                    if (newName != null) {
+                        var.setName(newName);
+                    } else if (var.getName().startsWith("_const-")) {
                         if (var.getParentNode() instanceof StatementPattern) {
                             for (final Var var2 : ((StatementPattern) var.getParentNode())
                                     .getVarList()) {
@@ -484,11 +504,11 @@ public final class Algebra {
                         if (join.getLeftArg().getAssuredBindingNames().containsAll(elemVars)) {
                             newArg = join.getLeftArg() instanceof Extension ? (Extension) join
                                     .getLeftArg() : new Extension(join.getLeftArg());
-                            join.setLeftArg(newArg);
+                                    join.setLeftArg(newArg);
                         } else if (join.getRightArg().getAssuredBindingNames().contains(elemVars)) {
                             newArg = join.getRightArg() instanceof Extension ? (Extension) join
                                     .getRightArg() : new Extension(join.getRightArg());
-                            join.setRightArg(newArg);
+                                    join.setRightArg(newArg);
                         }
                         if (newArg != null) {
                             newArg.addElement(elem.clone());
@@ -633,7 +653,7 @@ public final class Algebra {
 
     public static String format(final TupleExpr expr) {
         return expr == null ? "null" : new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-                .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
+        .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
     }
 
     private static class QNameProcessor extends ASTVisitorBase {

@@ -11,7 +11,7 @@
     <p class='title2'>
         <a class="btn btn-primary btn-large" href="install.html">Download</a>
         <a class="btn btn-primary btn-large" href="https://knowledgestore2.fbk.eu/rdfpro-demo/">Online demo</a>
-        <a class="btn btn-primary btn-large" href="install.html">Video tour</a>
+        <a class="btn btn-primary btn-large" href="https://www.youtube.com/watch?v=Vd2FCVRL8fk">Video tour</a>
     </p>
 </div>
 
@@ -41,6 +41,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 ### News
 
+- 2015-07-09 Version 0.4.1 has been released
 - 2015-07-02 Version 0.4 has been released
 - 2015-02-11 Version 0.3 has been released, RDFpro migrates to GitHub
 - 2014-12-01 [Paper](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2015sac.pdf) accepted at [SAC 2015](http://www.acm.org/conferences/sac/sac2015/) conference
