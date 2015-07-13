@@ -143,6 +143,25 @@ final class MemoryQuadModel extends QuadModel {
     }
 
     @Override
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, @Nullable final Resource ctx) {
+
+        // Lookup SPO in the values hash table
+        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
+        final ModelURI mpred = (ModelURI) lookupValue(pred, false);
+        final ModelValue mobj = lookupValue(obj, false);
+        final ModelResource mctx = (ModelResource) lookupValue(ctx, false);
+
+        // If one of SPOC is missing in the table, then no statements can exist for that component
+        if (msubj == NULL_VALUE || mpred == NULL_VALUE || mobj == NULL_VALUE || mctx == NULL_VALUE) {
+            return 0;
+        }
+
+        // Otherwise, delegate
+        return doSizeEstimate(msubj, mpred, mobj, mctx);
+    }
+
+    @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
             @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
 
@@ -278,6 +297,26 @@ final class MemoryQuadModel extends QuadModel {
         return size;
     }
 
+    private int doSizeEstimate(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+            @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
+
+        int size = this.statementCount;
+        if (subj != null && subj.numSubj < size) {
+            size = subj.numSubj;
+        }
+        if (pred != null && pred.numPred < size) {
+            size = pred.numPred;
+        }
+        if (obj != null && obj.numObj < size) {
+            size = obj.numObj;
+        }
+        if (ctx != null && ctx.numCtx < size) {
+            size = ctx.numCtx;
+        }
+        return size;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Iterator<Statement> doIterator(@Nullable final ModelResource subj,
             @Nullable final ModelURI pred, @Nullable final ModelValue obj,
             @Nullable final ModelResource ctx) {
@@ -301,8 +340,8 @@ final class MemoryQuadModel extends QuadModel {
                     if (this.next != null) {
                         return true;
                     }
-                    for (; this.index < MemoryQuadModel.this.statementTable.length; ++this.index) {
-                        final ModelStatement stmt = MemoryQuadModel.this.statementTable[this.index];
+                    while (this.index < MemoryQuadModel.this.statementTable.length) {
+                        final ModelStatement stmt = MemoryQuadModel.this.statementTable[this.index++];
                         if (stmt != null && stmt != NULL_STATEMENT) {
                             this.next = stmt;
                             return true;
@@ -369,7 +408,7 @@ final class MemoryQuadModel extends QuadModel {
             }
 
         };
-        return Iterators.filter(iterator, (final ModelStatement stmt) -> {
+        return (Iterator) Iterators.filter(iterator, (final ModelStatement stmt) -> {
             return stmt.match(subj, pred, obj, ctx);
         });
     }
@@ -379,7 +418,7 @@ final class MemoryQuadModel extends QuadModel {
 
         // Identify the first slot where the statement could be stored in the hash table
         final int hash = ModelStatement.hash(subj, pred, obj, ctx);
-        int slot = Math.abs(hash) % this.statementTable.length;
+        int slot = (hash & 0x7FFFFFFF) % this.statementTable.length;
 
         // Scan the hash table (linear probing), doing nothing if a matching statement is found or
         // adding the statement otherwise
@@ -394,6 +433,7 @@ final class MemoryQuadModel extends QuadModel {
                 // First add the statement to the hash table and rehash if necessary
                 stmt = new ModelStatement(subj, pred, obj, ctx);
                 this.statementTable[slot] = stmt;
+                ++this.statementCount;
                 if (isNull) {
                     ++this.statementSlots;
                     if (this.statementSlots * 2 >= this.statementTable.length) {
@@ -424,7 +464,6 @@ final class MemoryQuadModel extends QuadModel {
                 ctx.nextByCtx = stmt;
 
                 // Increment statement counters
-                ++this.statementCount;
                 ++subj.numSubj;
                 ++pred.numPred;
                 ++obj.numObj;
@@ -512,7 +551,7 @@ final class MemoryQuadModel extends QuadModel {
 
         // Delete a matching statement from the hash table, aborting if it does not exist
         final int hash = ModelStatement.hash(subj, pred, obj, ctx);
-        int slot = Math.abs(hash) % this.statementTable.length;
+        int slot = (hash & 0x7FFFFFFF) % this.statementTable.length;
         ModelStatement mstmt;
         while (true) {
             mstmt = this.statementTable[slot];
@@ -521,7 +560,6 @@ final class MemoryQuadModel extends QuadModel {
             } else if (mstmt != NULL_STATEMENT && subj == mstmt.subj && pred == mstmt.pred
                     && obj == mstmt.obj && ctx == mstmt.ctx) {
                 this.statementTable[slot] = NULL_STATEMENT;
-                --this.statementCount;
                 break;
             } else {
                 slot = incrementSlot(slot, this.statementTable.length);
@@ -596,7 +634,7 @@ final class MemoryQuadModel extends QuadModel {
 
         // Lookup the model value in the hash table
         final int hash = value.hashCode();
-        int slot = Math.abs(hash) % this.valueTable.length;
+        int slot = (hash & 0x7FFFFFFF) % this.valueTable.length;
         while (true) {
             ModelValue mv = this.valueTable[slot];
             final boolean isNull = mv == null;
@@ -614,10 +652,11 @@ final class MemoryQuadModel extends QuadModel {
                     mv = new ModelBNode(this, ((BNode) value).getID());
                 } else if (value instanceof Literal) {
                     final Literal lit = (Literal) value;
+                    final String language = lit.getLanguage();
                     final URI datatype = lit.getLanguage() != null ? RDF.LANGSTRING //
                             : lit.getDatatype() != null ? lit.getDatatype() : XMLSchema.STRING;
-                    mv = new ModelLiteral(this, lit.getLabel(), lit.getLanguage().intern(),
-                            (ModelURI) lookupValue(datatype, true));
+                    mv = new ModelLiteral(this, lit.getLabel(), language == null ? null
+                            : language.intern(), (ModelURI) lookupValue(datatype, true));
                 } else {
                     throw new Error(value.getClass().getName());
                 }
@@ -667,7 +706,7 @@ final class MemoryQuadModel extends QuadModel {
         for (final ModelValue mv : oldTable) {
             if (mv != null && mv != NULL_VALUE) {
                 final int hash = mv.hashCode();
-                int slot = Math.abs(hash) % this.valueTable.length;
+                int slot = (hash & 0x7FFFFFFF) % this.valueTable.length;
                 while (this.valueTable[slot] != null) {
                     slot = incrementSlot(slot, this.valueTable.length);
                 }
@@ -697,7 +736,7 @@ final class MemoryQuadModel extends QuadModel {
         for (final ModelStatement mstmt : oldTable) {
             if (mstmt != null && mstmt != NULL_STATEMENT) {
                 final int hash = mstmt.hash();
-                int slot = Math.abs(hash) % this.statementTable.length;
+                int slot = (hash & 0x7FFFFFFF) % this.statementTable.length;
                 while (this.statementTable[slot] != null) {
                     slot = incrementSlot(slot, this.statementTable.length);
                 }
@@ -874,7 +913,7 @@ final class MemoryQuadModel extends QuadModel {
                 return false;
             }
             if (object instanceof URI) {
-                return this.string.equals(object.toString());
+                return this.string.equals(((URI) object).stringValue());
             }
             return false;
         }
@@ -957,7 +996,6 @@ final class MemoryQuadModel extends QuadModel {
         @Nullable
         private final String language;
 
-        @Nullable
         private final ModelURI datatype;
 
         ModelLiteral(final MemoryQuadModel model, final String label,
@@ -1049,7 +1087,7 @@ final class MemoryQuadModel extends QuadModel {
                 return true;
             }
             if (this.model != null && object instanceof ModelLiteral
-                    && this.model == ((ModelBNode) object).model) {
+                    && this.model == ((ModelLiteral) object).model) {
                 return false;
             }
             if (object instanceof Literal) {
@@ -1063,12 +1101,24 @@ final class MemoryQuadModel extends QuadModel {
 
         @Override
         public int hashCode() {
-            return this.label.hashCode();
+            int hashCode = this.label.hashCode();
+            if (this.language != null) {
+                hashCode = 31 * hashCode + this.language.hashCode();
+            }
+            hashCode = 31 * hashCode + this.datatype.hashCode();
+            return hashCode;
         }
 
         @Override
         public String toString() {
-            return this.label;
+            final StringBuilder builder = new StringBuilder(this.label.length() * 2);
+            builder.append('"').append(this.label).append('"');
+            if (this.language != null) {
+                builder.append('@').append(this.language);
+            } else {
+                builder.append("^^<").append(this.datatype.toString()).append(">");
+            }
+            return builder.toString();
         }
 
     }
@@ -1134,10 +1184,10 @@ final class MemoryQuadModel extends QuadModel {
             }
         }
 
-        boolean match(@Nullable final ModelResource subj, @Nullable final ModelURI mpred,
-                @Nullable final ModelValue mobj, @Nullable final ModelResource mctx) {
-            return (subj == null || subj == this.subj) && (mpred == null || mpred == this.pred)
-                    && (mobj == null || mobj == this.obj) && (mctx == null || mctx == this.ctx);
+        boolean match(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+                @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
+            return (subj == null || subj == this.subj) && (pred == null || pred == this.pred)
+                    && (obj == null || obj == this.obj) && (ctx == null || ctx == this.ctx);
         }
 
         int hash() {

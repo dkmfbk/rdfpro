@@ -14,22 +14,37 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.NamespaceImpl;
 import org.openrdf.model.util.ModelException;
+import org.openrdf.query.Binding;
+import org.openrdf.query.BindingSet;
+import org.openrdf.query.Dataset;
+import org.openrdf.query.MalformedQueryException;
+import org.openrdf.query.QueryEvaluationException;
+import org.openrdf.query.QueryLanguage;
+import org.openrdf.query.TupleQuery;
+import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.RepositoryException;
 import org.openrdf.repository.RepositoryResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-final class RepositoryQuadModel extends QuadModel {
+import eu.fbk.rdfpro.rules.util.Iterators;
+import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryQuadModel.class);
+final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
 
     private static final long serialVersionUID = 1L;
 
     private final RepositoryConnection connection;
 
-    public RepositoryQuadModel(final RepositoryConnection connection) {
+    private final boolean trackChanges;
+
+    public RepositoryQuadModel(final RepositoryConnection connection, final boolean trackChanges) {
         this.connection = Objects.requireNonNull(connection);
+        this.trackChanges = trackChanges;
+    }
+
+    @Override
+    public void close() {
+        Iterators.closeQuietly(this.connection);
     }
 
     @Override
@@ -105,10 +120,16 @@ final class RepositoryQuadModel extends QuadModel {
     }
 
     @Override
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, @Nullable final Resource ctx) {
+        return Integer.MAX_VALUE; // no way to efficiently estimate cardinality
+    }
+
+    @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
             @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
         try {
-            return new RepositoryIterator(this.connection.getStatements(subj, pred, obj, false,
+            return Iterators.forIteration(this.connection.getStatements(subj, pred, obj, false,
                     ctxs));
         } catch (final RepositoryException ex) {
             throw new ModelException(ex);
@@ -119,9 +140,32 @@ final class RepositoryQuadModel extends QuadModel {
     protected boolean doAdd(@Nullable final Resource subj, @Nullable final URI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         try {
-            final long size = this.connection.size();
-            this.connection.add(subj, pred, obj, ctxs);
-            return this.connection.size() != size;
+            if (!this.trackChanges) {
+                this.connection.add(subj, pred, obj, ctxs);
+                return true;
+            } else if (ctxs.length == 0) {
+                if (this.connection.hasStatement(subj, pred, obj, false, new Resource[] { null })) {
+                    return false;
+                }
+                this.connection.add(subj, pred, obj, ctxs);
+                return true;
+            } else if (ctxs.length == 1) {
+                if (this.connection.hasStatement(subj, pred, obj, false, ctxs)) {
+                    return false;
+                }
+                this.connection.add(subj, pred, obj, ctxs);
+                return true;
+            } else {
+                boolean modified = false;
+                for (final Resource ctx : ctxs) {
+                    final Resource[] singletonCtxs = new Resource[] { ctx };
+                    if (!this.connection.hasStatement(subj, pred, obj, false, singletonCtxs)) {
+                        this.connection.add(subj, pred, obj, singletonCtxs);
+                        modified = true;
+                    }
+                }
+                return modified;
+            }
         } catch (final RepositoryException ex) {
             throw new ModelException(ex);
         }
@@ -131,51 +175,37 @@ final class RepositoryQuadModel extends QuadModel {
     protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         try {
-            final long size = this.connection.size();
-            this.connection.remove(subj, pred, obj, ctxs);
-            return this.connection.size() != size;
+            if (!this.trackChanges) {
+                this.connection.remove(subj, pred, obj, ctxs);
+                return true;
+            } else {
+                if (!this.connection.hasStatement(subj, pred, obj, false, ctxs)) {
+                    return false;
+                }
+                this.connection.remove(subj, pred, obj, ctxs);
+                return true;
+            }
         } catch (final RepositoryException ex) {
             throw new ModelException(ex);
         }
     }
 
-    private static final class RepositoryIterator implements Iterator<Statement>, AutoCloseable {
+    @Override
+    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr, final Dataset dataset,
+            final BindingSet bindings) {
 
-        private final RepositoryResult<? extends Statement> iteration;
-
-        RepositoryIterator(final RepositoryResult<? extends Statement> iteration) {
-            this.iteration = iteration;
-        }
-
-        @Override
-        public boolean hasNext() {
-            try {
-                return this.iteration.hasNext();
-            } catch (final RepositoryException ex) {
-                close();
-                throw new ModelException(ex);
+        final String queryString = new SPARQLRenderer(null, true).render(expr, null);
+        try {
+            final TupleQuery query = this.connection.prepareTupleQuery(QueryLanguage.SPARQL,
+                    queryString);
+            query.setDataset(dataset);
+            for (final Binding binding : bindings) {
+                query.setBinding(binding.getName(), binding.getValue());
             }
+            return Iterators.forIteration(query.evaluate());
+        } catch (final QueryEvaluationException | MalformedQueryException | RepositoryException ex) {
+            throw new ModelException(ex);
         }
-
-        @Override
-        public Statement next() {
-            try {
-                return this.iteration.next();
-            } catch (final RepositoryException ex) {
-                close();
-                throw new ModelException(ex);
-            }
-        }
-
-        @Override
-        public void close() {
-            try {
-                this.iteration.close();
-            } catch (final Throwable ex) {
-                LOGGER.error("Could not close iteration", ex);
-            }
-        }
-
     }
 
 }

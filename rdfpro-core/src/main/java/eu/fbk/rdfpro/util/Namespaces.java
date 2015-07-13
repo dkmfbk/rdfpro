@@ -127,7 +127,6 @@ public final class Namespaces extends AbstractSet<Namespace> {
         this.uriTable = new int[2 * tableSize];
         this.data = new String[size * 2];
 
-
         int pointer = 0;
         String uri = null;
         int uriCount = 0;
@@ -156,7 +155,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         // see http://en.wikipedia.org/wiki/Hopscotch_hashing
 
         final int buckets = table.length / 2;
-        int index = Math.abs(hash) % buckets;
+        int index = (hash & 0x7FFFFFFF) % buckets;
         int offset = index * 2;
         int distance = 0;
         while (table[offset] != 0) {
@@ -192,7 +191,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
     private int lookup(final String string, final int[] table, final int field) {
         final int hash = string.hashCode();
-        int offset = 2 * (Math.abs(hash) % (table.length / 2));
+        int offset = 2 * ((hash & 0x7FFFFFFF) % (table.length / 2));
         for (int i = 0; i < this.neighborhood; ++i) {
             final int prefixIndex = table[offset];
             if (prefixIndex == 0) {

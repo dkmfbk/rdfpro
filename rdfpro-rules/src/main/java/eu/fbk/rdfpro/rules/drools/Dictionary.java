@@ -45,7 +45,7 @@ public final class Dictionary {
         if (value == null) {
             return 0;
         }
-        int id = Math.abs(value.hashCode()) % SIZE;
+        int id = (value.hashCode() & 0x7FFFFFFF) % SIZE;
         if (id == 0) {
             id = 1; // 0 used for null context ID
         }

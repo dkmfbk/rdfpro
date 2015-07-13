@@ -250,7 +250,7 @@ final class ProcessorSmush implements RDFProcessor {
         private int lookup(final Resource resource, final boolean canAppend) {
             ++this.numLookups;
             final int hash = resource.hashCode();
-            int offset = Math.abs(hash) % (this.table.length / 2) * 2;
+            int offset = (hash & 0x7FFFFFFF) % (this.table.length / 2) * 2;
             while (true) {
                 ++this.numTests;
                 int pointer = this.table[offset];
@@ -284,7 +284,7 @@ final class ProcessorSmush implements RDFProcessor {
                 final int pointer = this.table[oldOffset];
                 if (pointer != 0) {
                     final int hash = this.table[oldOffset + 1];
-                    int newOffset = Math.abs(hash) % newSize * 2;
+                    int newOffset = (hash & 0x7FFFFFFF) % newSize * 2;
                     while (newTable[newOffset] != 0) {
                         newOffset += 2;
                         if (newOffset >= newTable.length) {

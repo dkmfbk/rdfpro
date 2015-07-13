@@ -497,6 +497,22 @@ public final class RDFHandlers {
         return new DecoupleHandler(handler);
     }
 
+    /**
+     * Wraps the supplied {@code RDFHAndler} (if necessary) so that {@code handleXXX()} calls are
+     * invoked in a mutually exclusive way. This method can be used with {@code RDFHandler}s that
+     * are not thread-safe.
+     *
+     * @param handler
+     *            the handler to wrap
+     * @return the (possibly) wrapped handler
+     */
+    public static RDFHandler synchronize(final RDFHandler handler) {
+        if (handler == NIL || handler instanceof SynchronizeHandler) {
+            return handler;
+        }
+        return new SynchronizeHandler(handler);
+    }
+
     private static final class SequentialWriteHandler extends AbstractRDFHandler {
 
         private final WriterConfig config;
@@ -1476,6 +1492,31 @@ public final class RDFHandlers {
                     future.cancel(false);
                 }
             }
+        }
+
+    }
+
+    private static final class SynchronizeHandler extends AbstractRDFHandlerWrapper {
+
+        SynchronizeHandler(final RDFHandler delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public synchronized void handleComment(final String comment) throws RDFHandlerException {
+            super.handleComment(comment);
+        }
+
+        @Override
+        public synchronized void handleNamespace(final String prefix, final String uri)
+                throws RDFHandlerException {
+            super.handleNamespace(prefix, uri);
+        }
+
+        @Override
+        public synchronized void handleStatement(final Statement statement)
+                throws RDFHandlerException {
+            super.handleStatement(statement);
         }
 
     }

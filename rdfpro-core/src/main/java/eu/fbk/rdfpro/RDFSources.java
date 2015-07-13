@@ -89,7 +89,7 @@ public final class RDFSources {
         config.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
         config.set(BasicParserSettings.VERIFY_LANGUAGE_TAGS, false);
         config.set(BasicParserSettings.VERIFY_RELATIVE_URIS, false);
-        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, true);
+        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
         config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
         config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
         config.set(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES, false);

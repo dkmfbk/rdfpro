@@ -981,7 +981,7 @@ public abstract class Sorter<T> implements AutoCloseable {
                 final int tableSize = this.table.length / 2;
                 final int segmentSize = (tableSize + NUM_LOCKS - 1) / NUM_LOCKS;
 
-                int index = Math.abs(hash) % tableSize;
+                int index = (hash & 0x7FFFFFFF) % tableSize;
 
                 final int segment = index / segmentSize;
                 final int segmentStart = segment * segmentSize;
@@ -1094,7 +1094,7 @@ public abstract class Sorter<T> implements AutoCloseable {
 
                 final int tableSize = this.table.length / 2;
                 final int hash = element.hashCode();
-                int index = Math.abs(hash) % tableSize;
+                int index = (hash & 0x7FFFFFFF) % tableSize;
 
                 // first we operate read-only with no synchronization, as it is likely the entry
                 // is already there (for datatypes and langagues, at least)

@@ -14,23 +14,59 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.NamespaceImpl;
 import org.openrdf.model.util.ModelException;
+import org.openrdf.query.BindingSet;
+import org.openrdf.query.Dataset;
+import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailConnection;
+import org.openrdf.sail.SailConnectionListener;
 import org.openrdf.sail.SailException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import info.aduna.iteration.CloseableIteration;
 
-final class SailQuadModel extends QuadModel {
+import eu.fbk.rdfpro.rules.util.Iterators;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SailQuadModel.class);
+final class SailQuadModel extends QuadModel implements AutoCloseable {
 
     private static final long serialVersionUID = 1L;
 
     private final SailConnection connection;
 
-    public SailQuadModel(final SailConnection connection) {
+    private final boolean trackChanges;
+
+    private long addCounter;
+
+    private long removeCounter;
+
+    public SailQuadModel(final SailConnection connection, final boolean trackChanges) {
         this.connection = Objects.requireNonNull(connection);
+        this.trackChanges = trackChanges;
+        if (trackChanges && connection instanceof NotifyingSailConnection) {
+            this.addCounter = 0;
+            this.removeCounter = 0;
+            ((NotifyingSailConnection) connection)
+                    .addConnectionListener(new SailConnectionListener() {
+
+                        @Override
+                        public void statementAdded(final Statement stmt) {
+                            ++SailQuadModel.this.addCounter;
+                        }
+
+                        @Override
+                        public void statementRemoved(final Statement stmt) {
+                            ++SailQuadModel.this.removeCounter;
+                        }
+
+                    });
+        } else {
+            this.addCounter = -1;
+            this.removeCounter = -1;
+        }
+    }
+
+    @Override
+    public void close() {
+        Iterators.closeQuietly(this.connection);
     }
 
     @Override
@@ -106,10 +142,16 @@ final class SailQuadModel extends QuadModel {
     }
 
     @Override
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, @Nullable final Resource ctx) {
+        return Integer.MAX_VALUE; // no way to efficiently estimate cardinality
+    }
+
+    @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
             @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
         try {
-            return new IterationIterator(this.connection.getStatements(subj, pred, obj, false,
+            return Iterators.forIteration(this.connection.getStatements(subj, pred, obj, false,
                     ctxs));
         } catch (final SailException ex) {
             throw new ModelException(ex);
@@ -120,9 +162,32 @@ final class SailQuadModel extends QuadModel {
     protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
             final Resource[] ctxs) {
         try {
-            final long size = this.connection.size();
-            this.connection.addStatement(subj, pred, obj, ctxs);
-            return this.connection.size() != size;
+            if (!this.trackChanges) {
+                this.connection.addStatement(subj, pred, obj, ctxs);
+                return true;
+            } else if (this.addCounter >= 0) {
+                final long addCounterBefore = this.addCounter;
+                this.connection.addStatement(subj, pred, obj, ctxs);
+                return this.addCounter > addCounterBefore;
+            } else {
+                final Resource[] queryCtxs = ctxs.length > 0 ? ctxs : new Resource[] { null };
+                int count = 0;
+                CloseableIteration<? extends Statement, SailException> iteration;
+                iteration = this.connection.getStatements(subj, pred, obj, false, queryCtxs);
+                try {
+                    while (iteration.hasNext()) {
+                        iteration.next();
+                        ++count;
+                    }
+                } finally {
+                    iteration.close();
+                }
+                if (count >= ctxs.length) {
+                    return false;
+                }
+                this.connection.addStatement(subj, pred, obj, ctxs);
+                return true;
+            }
         } catch (final SailException ex) {
             throw new ModelException(ex);
         }
@@ -132,51 +197,40 @@ final class SailQuadModel extends QuadModel {
     protected boolean doRemove(final Resource subj, final URI pred, final Value obj,
             final Resource[] ctxs) {
         try {
-            final long size = this.connection.size();
-            this.connection.removeStatements(subj, pred, obj, ctxs);
-            return this.connection.size() != size;
+            if (!this.trackChanges) {
+                this.connection.removeStatements(subj, pred, obj, ctxs);
+                return true;
+            } else if (this.removeCounter >= 0) {
+                final long removeCounterBefore = this.removeCounter;
+                this.connection.removeStatements(subj, pred, obj, ctxs);
+                return this.removeCounter != removeCounterBefore;
+            } else {
+                CloseableIteration<? extends Statement, SailException> iteration;
+                iteration = this.connection.getStatements(subj, pred, obj, false, ctxs);
+                try {
+                    if (!iteration.hasNext()) {
+                        return false;
+                    }
+                } finally {
+                    iteration.close();
+                }
+                this.connection.removeStatements(subj, pred, obj, ctxs);
+                return true;
+            }
         } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
 
-    private static final class IterationIterator implements Iterator<Statement>, AutoCloseable {
-
-        private final CloseableIteration<? extends Statement, SailException> iteration;
-
-        IterationIterator(final CloseableIteration<? extends Statement, SailException> iteration) {
-            this.iteration = iteration;
+    @Override
+    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr, final Dataset dataset,
+            final BindingSet bindings) {
+        try {
+            return Iterators
+                    .forIteration(this.connection.evaluate(expr, dataset, bindings, false));
+        } catch (final SailException ex) {
+            throw new ModelException(ex);
         }
-
-        @Override
-        public boolean hasNext() {
-            try {
-                return this.iteration.hasNext();
-            } catch (final SailException ex) {
-                close();
-                throw new ModelException(ex);
-            }
-        }
-
-        @Override
-        public Statement next() {
-            try {
-                return this.iteration.next();
-            } catch (final SailException ex) {
-                close();
-                throw new ModelException(ex);
-            }
-        }
-
-        @Override
-        public void close() {
-            try {
-                this.iteration.close();
-            } catch (final Throwable ex) {
-                LOGGER.error("Could not close iteration", ex);
-            }
-        }
-
     }
 
 }
