@@ -1,5 +1,9 @@
 package eu.fbk.rdfpro.rules.model;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.lang.ref.Reference;
+import java.lang.ref.SoftReference;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -32,17 +36,13 @@ import org.openrdf.model.vocabulary.XMLSchema;
 import eu.fbk.rdfpro.rules.util.Iterators;
 import eu.fbk.rdfpro.rules.util.StringIndex;
 
-// TODO
-// (1) add Object field to ModelURI and ModelLiteral to be used either for (i) caching the label
-// or URI ref with a SoftReference, or to store the string itself in case of a deserialized object
-
 final class MemoryQuadModel extends QuadModel {
 
     private static final int INITIAL_VALUE_TABLE_SIZE = 256 - 1;
 
     private static final int INITIAL_STATEMENT_TABLE_SIZE = 256 - 1;
 
-    private static final ModelURI NULL_VALUE = new ModelURI();
+    private static final ModelURI NULL_VALUE = new ModelURI(null, "sesame:null");
 
     private static final ModelStatement NULL_STATEMENT = new ModelStatement(NULL_VALUE,
             NULL_VALUE, NULL_VALUE, NULL_VALUE);
@@ -900,29 +900,31 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        private final int namespace;
+        private transient final int namespace;
 
-        private final int localName;
+        private transient final int localName;
 
         private final int hash;
 
+        private Object cachedString;
+
         @Nullable
-        ModelStatement nextByPred;
+        transient ModelStatement nextByPred;
 
-        int numPred;
-
-        ModelURI() {
-            super(null);
-            this.namespace = 0;
-            this.localName = 0;
-            this.hash = 0;
-        }
+        transient int numPred;
 
         ModelURI(@Nullable final MemoryQuadModel model, final String string) {
             super(model);
             final int index = URIUtil.getLocalNameIndex(string);
-            this.namespace = model.stringIndex.put(string.substring(0, index));
-            this.localName = model.stringIndex.put(string.substring(index));
+            if (model != null) {
+                this.namespace = model.stringIndex.put(string.substring(0, index));
+                this.localName = model.stringIndex.put(string.substring(index));
+                this.cachedString = null;
+            } else {
+                this.namespace = 0;
+                this.localName = 0;
+                this.cachedString = string;
+            }
             this.hash = string.hashCode();
         }
 
@@ -942,22 +944,63 @@ final class MemoryQuadModel extends QuadModel {
             }
         }
 
+        @Nullable
+        private String getCachedString(final boolean compute) {
+            if (this.cachedString instanceof Reference<?>) {
+                @SuppressWarnings("unchecked")
+                final String s = ((Reference<String>) this.cachedString).get();
+                if (s == null) {
+                    this.cachedString = null;
+                } else {
+                    return s;
+                }
+            } else if (this.cachedString instanceof String) {
+                return (String) this.cachedString;
+            }
+            if (compute) {
+                final StringBuilder builder = new StringBuilder();
+                this.model.stringIndex.get(this.namespace, builder);
+                this.model.stringIndex.get(this.localName, builder);
+                final String s = builder.toString();
+                this.cachedString = new SoftReference<String>(s);
+                return s;
+            }
+            return null;
+        }
+
+        private void writeObject(final ObjectOutputStream out) throws IOException {
+            final String string = getCachedString(true);
+            final Object oldCachedString = this.cachedString;
+            this.cachedString = string;
+            out.defaultWriteObject();
+            this.cachedString = oldCachedString;
+        }
+
         @Override
         public String getNamespace() {
-            return this.model.stringIndex.get(this.namespace);
+            if (this.model != null) {
+                return this.model.stringIndex.get(this.namespace);
+            } else {
+                final String s = (String) this.cachedString;
+                final int index = URIUtil.getLocalNameIndex(s);
+                return s.substring(0, index);
+            }
         }
 
         @Override
         public String getLocalName() {
-            return this.model.stringIndex.get(this.localName);
+            if (this.model != null) {
+                return this.model.stringIndex.get(this.localName);
+            } else {
+                final String s = (String) this.cachedString;
+                final int index = URIUtil.getLocalNameIndex(s);
+                return s.substring(index);
+            }
         }
 
         @Override
         public String stringValue() {
-            final StringBuilder builder = new StringBuilder();
-            this.model.stringIndex.get(this.namespace, builder);
-            this.model.stringIndex.get(this.localName, builder);
-            return builder.toString();
+            return getCachedString(true);
         }
 
         @Override
@@ -971,12 +1014,18 @@ final class MemoryQuadModel extends QuadModel {
             }
             if (object instanceof URI) {
                 final String string = ((URI) object).stringValue();
-                final StringIndex index = this.model.stringIndex;
-                final int namespaceLength = index.length(this.namespace);
-                final int localNameLength = index.length(this.localName);
-                return namespaceLength + localNameLength == string.length()
-                        && index.equals(this.namespace, string, 0, namespaceLength)
-                        && index.equals(this.localName, string, namespaceLength, string.length());
+                final String s = getCachedString(false);
+                if (s != null) {
+                    return s.equals(string);
+                } else {
+                    final StringIndex index = this.model.stringIndex;
+                    final int namespaceLength = index.length(this.namespace);
+                    final int localNameLength = index.length(this.localName);
+                    return namespaceLength + localNameLength == string.length()
+                            && index.equals(this.namespace, string, 0, namespaceLength)
+                            && index.equals(this.localName, string, namespaceLength,
+                                    string.length());
+                }
             }
             return false;
         }
@@ -1056,27 +1105,64 @@ final class MemoryQuadModel extends QuadModel {
 
         private final int hash;
 
-        ModelLiteral(final MemoryQuadModel model, final String label,
-                @Nullable final String language, final ModelURI datatype) {
-            super(model);
-            this.label = model.stringIndex.put(label);
-            this.langOrDatatype = language == null ? datatype : language.intern();
-            this.hash = hashCode(label, language, datatype);
-        }
+        @Nullable
+        private Object cachedLabel;
 
-        static int hashCode(final String label, @Nullable final String language,
-                final ModelURI datatype) {
+        ModelLiteral(@Nullable final MemoryQuadModel model, final String label,
+                @Nullable final String language, final ModelURI datatype) {
+
+            super(model);
+
             int hashCode = label.hashCode();
             if (language != null) {
                 hashCode = 31 * hashCode + language.hashCode();
             }
             hashCode = 31 * hashCode + datatype.hashCode();
-            return hashCode;
+
+            this.langOrDatatype = language == null ? datatype : language.intern();
+            this.hash = hashCode;
+
+            if (model != null) {
+                this.label = model.stringIndex.put(label);
+                this.cachedLabel = null;
+            } else {
+                this.label = 0;
+                this.cachedLabel = label;
+            }
+        }
+
+        @Nullable
+        private String getCachedLabel(final boolean compute) {
+            if (this.cachedLabel instanceof Reference<?>) {
+                @SuppressWarnings("unchecked")
+                final String s = ((Reference<String>) this.cachedLabel).get();
+                if (s == null) {
+                    this.cachedLabel = null;
+                } else {
+                    return s;
+                }
+            } else if (this.cachedLabel instanceof String) {
+                return (String) this.cachedLabel;
+            }
+            if (compute) {
+                final String s = this.model.stringIndex.get(this.label);
+                this.cachedLabel = new SoftReference<String>(s);
+                return s;
+            }
+            return null;
+        }
+
+        private void writeObject(final ObjectOutputStream out) throws IOException {
+            final String label = getCachedLabel(true);
+            final Object oldCachedLabel = this.cachedLabel;
+            this.cachedLabel = label;
+            out.defaultWriteObject();
+            this.cachedLabel = oldCachedLabel;
         }
 
         @Override
         public String getLabel() {
-            return this.model.stringIndex.get(this.label);
+            return getCachedLabel(true);
         }
 
         @Override
@@ -1086,7 +1172,8 @@ final class MemoryQuadModel extends QuadModel {
 
         @Override
         public URI getDatatype() {
-            return this.langOrDatatype instanceof String ? this.model.valueLang
+            return this.langOrDatatype instanceof String ? this.model != null ? this.model.valueLang
+                    : RDF.LANGSTRING
                     : (URI) this.langOrDatatype;
         }
 
@@ -1156,11 +1243,14 @@ final class MemoryQuadModel extends QuadModel {
             }
             if (object instanceof Literal) {
                 final Literal l = (Literal) object;
-                return this.model.stringIndex.equals(this.label, l.getLabel())
-                        && (this.langOrDatatype instanceof String
-                                && this.langOrDatatype.equals(l.getLanguage()) //
+                if (this.langOrDatatype instanceof String
+                        && this.langOrDatatype.equals(l.getLanguage()) //
                         || this.langOrDatatype instanceof URI
-                                && this.langOrDatatype.equals(l.getDatatype()));
+                        && this.langOrDatatype.equals(l.getDatatype())) {
+                    final String s = getCachedLabel(false);
+                    return s != null ? s.equals(l.getLabel()) : this.model.stringIndex.equals(
+                            this.label, l.getLabel());
+                }
             }
             return false;
         }
@@ -1172,9 +1262,14 @@ final class MemoryQuadModel extends QuadModel {
 
         @Override
         public String toString() {
+            final String s = getCachedLabel(false);
             final StringBuilder builder = new StringBuilder(256);
             builder.append('"');
-            this.model.stringIndex.get(this.label, builder);
+            if (s != null) {
+                builder.append(s);
+            } else {
+                this.model.stringIndex.get(this.label, builder);
+            }
             builder.append('"');
             if (this.langOrDatatype instanceof String) {
                 builder.append('@').append(this.langOrDatatype);

@@ -1,13 +1,11 @@
 package eu.fbk.rdfpro.rules.util;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 // TODO
 // (1) move hash values out of hash table or drop them, revising rehashing code
-// (2) replace ByteBuffers with simple byte arrays
 
 public final class StringIndex {
 
@@ -15,9 +13,9 @@ public final class StringIndex {
 
     private static final int LARGE_BUFFER_SIZE = SMALL_BUFFER_SIZE * 8;
 
-    private final List<ByteBuffer> smallBuffers;
+    private final List<byte[]> smallBuffers;
 
-    private final List<ByteBuffer> largeBuffers;
+    private final List<byte[]> largeBuffers;
 
     private int smallNextID;
 
@@ -36,8 +34,8 @@ public final class StringIndex {
         this.table = new int[1022]; // 511 entries, ~4K memory page
         this.size = 0;
 
-        this.smallBuffers.add(ByteBuffer.allocate(SMALL_BUFFER_SIZE));
-        this.largeBuffers.add(ByteBuffer.allocate(LARGE_BUFFER_SIZE));
+        this.smallBuffers.add(new byte[SMALL_BUFFER_SIZE]);
+        this.largeBuffers.add(new byte[LARGE_BUFFER_SIZE]);
     }
 
     public int size() {
@@ -71,24 +69,24 @@ public final class StringIndex {
         final int page = getPage(id);
         int offset = getOffset(id);
 
-        final ByteBuffer buffer;
+        final byte[] buffer;
         int length;
         if (small) {
             buffer = this.smallBuffers.get(page);
-            length = buffer.get(offset);
+            length = buffer[offset] & 0xFF;
             offset++;
         } else {
             buffer = this.largeBuffers.get(page);
-            length = buffer.getInt(offset);
+            length = getInt(buffer, offset);
             offset += 4;
         }
 
         for (int i = 0; i < length; ++i) {
-            final byte b = buffer.get(offset++);
+            final byte b = buffer[offset++];
             if (b != 0) {
                 out.append((char) b);
             } else {
-                out.append(buffer.getChar(offset));
+                out.append(getChar(buffer, offset));
                 offset += 2;
             }
         }
@@ -100,8 +98,8 @@ public final class StringIndex {
         final boolean small = isSmall(id);
         final int page = getPage(id);
         final int offset = getOffset(id);
-        return small ? this.smallBuffers.get(page).get(offset) //
-                : this.largeBuffers.get(page).getInt(offset);
+        return small ? this.smallBuffers.get(page)[offset] & 0xFF //
+                : getInt(this.largeBuffers.get(page), offset);
     }
 
     public boolean equals(final int id, final String string) {
@@ -120,15 +118,15 @@ public final class StringIndex {
         final int page = getPage(id);
         int offset = getOffset(id);
 
-        final ByteBuffer buffer;
+        final byte[] buffer;
         int length;
         if (idSmall) {
             buffer = this.smallBuffers.get(page);
-            length = buffer.get(offset);
+            length = buffer[offset] & 0xFF;
             offset++;
         } else {
             buffer = this.largeBuffers.get(page);
-            length = buffer.getInt(offset);
+            length = getInt(buffer, offset);
             offset += 4;
         }
 
@@ -138,11 +136,11 @@ public final class StringIndex {
 
         for (int i = startIndex; i < endIndex; ++i) {
             char c;
-            final byte b = buffer.get(offset++);
+            final byte b = buffer[offset++];
             if (b != 0) {
                 c = (char) b;
             } else {
-                c = buffer.getChar(offset);
+                c = getChar(buffer, offset);
                 offset += 2;
             }
             if (c != string.charAt(i)) {
@@ -160,7 +158,7 @@ public final class StringIndex {
             if (id == 0) {
                 if (!canAppend) {
                     return 0;
-                } else if (this.size > this.table.length / 3) { // enforce load factor < .66
+                } else if (this.size > this.table.length * 2 / 5) { // enforce load factor < .8
                     rehash();
                     return lookup(string, canAppend); // repeat after rehashing
                 }
@@ -206,40 +204,39 @@ public final class StringIndex {
         final boolean small = isSmall(string);
         final int length = string.length();
 
-        ByteBuffer buffer;
+        byte[] buffer;
         int offset;
         int id;
         if (small) {
             offset = getOffset(this.smallNextID);
             if (offset + 1 + length * 3 > SMALL_BUFFER_SIZE) {
-                this.smallBuffers.add(ByteBuffer.allocate(SMALL_BUFFER_SIZE));
+                this.smallBuffers.add(new byte[SMALL_BUFFER_SIZE]);
                 this.smallNextID = getID(true, this.smallBuffers.size() - 1, 0);
                 offset = 0;
             }
             id = this.smallNextID;
             buffer = this.smallBuffers.get(this.smallBuffers.size() - 1);
-            buffer.put(offset, (byte) length);
-            offset++;
+            buffer[offset++] = (byte) length;
         } else {
             offset = getOffset(this.largeNextID);
             if (offset + 4 + length * 3 > LARGE_BUFFER_SIZE) {
-                this.largeBuffers.add(ByteBuffer.allocate(LARGE_BUFFER_SIZE));
+                this.largeBuffers.add(new byte[LARGE_BUFFER_SIZE]);
                 this.largeNextID = getID(false, this.largeBuffers.size() - 1, 0);
                 offset = 0;
             }
             id = this.largeNextID;
             buffer = this.largeBuffers.get(this.largeBuffers.size() - 1);
-            buffer.putInt(offset, length);
+            putInt(buffer, offset, length);
             offset += 4;
         }
 
         for (int i = 0; i < length; ++i) {
             final char ch = string.charAt(i);
-            if (ch > 0 && ch <= 255) {
-                buffer.put(offset++, (byte) ch);
+            if (ch > 0 && ch <= 127) {
+                buffer[offset++] = (byte) ch;
             } else {
-                buffer.put(offset++, (byte) 0);
-                buffer.putChar(offset, ch);
+                buffer[offset++] = (byte) 0;
+                putChar(buffer, offset, ch);
                 offset += 2;
             }
         }
@@ -272,6 +269,32 @@ public final class StringIndex {
 
     private boolean isSmall(final String string) {
         return string.length() <= 255;
+    }
+
+    private static char getChar(final byte[] buffer, final int offset) {
+        final int byte0 = buffer[offset] & 0xFF;
+        final int byte1 = buffer[offset + 1] & 0xFF;
+        return (char) (byte0 << 8 | byte1);
+    }
+
+    private static void putChar(final byte[] buffer, final int offset, final char value) {
+        buffer[offset] = (byte) (value >>> 8);
+        buffer[offset + 1] = (byte) value;
+    }
+
+    private static int getInt(final byte[] buffer, final int offset) {
+        final int byte0 = buffer[offset] & 0xFF;
+        final int byte1 = buffer[offset + 1] & 0xFF;
+        final int byte2 = buffer[offset + 2] & 0xFF;
+        final int byte3 = buffer[offset + 3] & 0xFF;
+        return byte0 << 24 | byte1 << 16 | byte2 << 8 | byte3;
+    }
+
+    private static void putInt(final byte[] buffer, final int offset, final int value) {
+        buffer[offset] = (byte) (value >>> 24);
+        buffer[offset + 1] = (byte) (value >>> 16);
+        buffer[offset + 2] = (byte) (value >>> 8);
+        buffer[offset + 3] = (byte) value;
     }
 
 }
