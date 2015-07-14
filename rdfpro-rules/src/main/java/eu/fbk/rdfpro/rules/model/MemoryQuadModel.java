@@ -68,6 +68,8 @@ final class MemoryQuadModel extends QuadModel {
 
     private int statementCount;
 
+    private int statementZombies;
+
     public MemoryQuadModel() {
         this.namespaces = new HashMap<>();
         this.valueTable = new ModelValue[INITIAL_VALUE_TABLE_SIZE];
@@ -76,6 +78,7 @@ final class MemoryQuadModel extends QuadModel {
         this.statementTable = new ModelStatement[INITIAL_STATEMENT_TABLE_SIZE];
         this.statementCount = 0;
         this.statementSlots = 0;
+        this.statementZombies = 0;
         this.valueNil = (ModelURI) lookupValue(SESAME.NIL, true);
     }
 
@@ -316,7 +319,6 @@ final class MemoryQuadModel extends QuadModel {
         return size;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Iterator<Statement> doIterator(@Nullable final ModelResource subj,
             @Nullable final ModelURI pred, @Nullable final ModelValue obj,
             @Nullable final ModelResource ctx) {
@@ -376,11 +378,17 @@ final class MemoryQuadModel extends QuadModel {
         // then filter it so to return only statements matching the supplied filter. The returned
         // iterator supports statement removal (by delegating to removeStatement)
         final ModelValue value = comp == 0 ? subj : comp == 1 ? pred : comp == 2 ? obj : ctx;
-        final ModelStatement firstStmt = value.next(comp);
-        if (firstStmt == null) {
-            return Collections.emptyIterator();
+        ModelStatement stmt = value.next(comp);
+        while (true) {
+            if (stmt == null) {
+                return Collections.emptyIterator();
+            } else if (stmt.subj != NULL_VALUE && stmt.match(subj, pred, obj, ctx)) {
+                break;
+            }
+            stmt = stmt.next(comp);
         }
-        final Iterator<ModelStatement> iterator = new Iterator<ModelStatement>() {
+        final ModelStatement firstStmt = stmt;
+        return new Iterator<Statement>() {
 
             private ModelStatement next = firstStmt;
 
@@ -394,7 +402,13 @@ final class MemoryQuadModel extends QuadModel {
             @Override
             public ModelStatement next() {
                 this.last = this.next;
-                this.next = this.next.next(comp);
+                while (true) {
+                    this.next = this.next.next(comp);
+                    if (this.next == null || this.next.subj != NULL_VALUE
+                            && this.next.match(subj, pred, obj, ctx)) {
+                        break;
+                    }
+                }
                 return this.last;
             }
 
@@ -408,9 +422,6 @@ final class MemoryQuadModel extends QuadModel {
             }
 
         };
-        return (Iterator) Iterators.filter(iterator, (final ModelStatement stmt) -> {
-            return stmt.match(subj, pred, obj, ctx);
-        });
     }
 
     private boolean doAdd(final ModelResource subj, final ModelURI pred, final ModelValue obj,
@@ -442,22 +453,10 @@ final class MemoryQuadModel extends QuadModel {
                 }
 
                 // Then connect the statement to the various linked lists
-                if (subj.nextBySubj != null) {
-                    stmt.nextBySubj = subj.nextBySubj;
-                    subj.nextBySubj.prevBySubj = stmt;
-                }
-                if (pred.nextByPred != null) {
-                    stmt.nextByPred = pred.nextByPred;
-                    pred.nextByPred.prevByPred = stmt;
-                }
-                if (obj.nextByObj != null) {
-                    stmt.nextByObj = obj.nextByObj;
-                    obj.nextByObj.prevByObj = stmt;
-                }
-                if (ctx.nextByCtx != null) {
-                    stmt.nextByCtx = ctx.nextByCtx;
-                    ctx.nextByCtx.prevByCtx = stmt;
-                }
+                stmt.nextBySubj = subj.nextBySubj;
+                stmt.nextByPred = pred.nextByPred;
+                stmt.nextByObj = obj.nextByObj;
+                stmt.nextByCtx = ctx.nextByCtx;
                 subj.nextBySubj = stmt;
                 pred.nextByPred = stmt;
                 obj.nextByObj = stmt;
@@ -566,45 +565,11 @@ final class MemoryQuadModel extends QuadModel {
             }
         }
 
-        // Delete from subject doubly-linked list
-        if (mstmt.prevBySubj != null) {
-            mstmt.prevBySubj.nextBySubj = mstmt.nextBySubj;
-        } else {
-            subj.nextBySubj = mstmt.nextBySubj;
-        }
-        if (mstmt.nextBySubj != null) {
-            mstmt.nextBySubj.prevBySubj = mstmt.prevBySubj;
-        }
-
-        // Delete from predicate doubly-linked list
-        if (mstmt.prevByPred != null) {
-            mstmt.prevByPred.nextByPred = mstmt.nextByPred;
-        } else {
-            pred.nextByPred = mstmt.nextByPred;
-        }
-        if (mstmt.nextByPred != null) {
-            mstmt.nextByPred.prevByPred = mstmt.prevByPred;
-        }
-
-        // Delete from object doubly-linked list
-        if (mstmt.prevByObj != null) {
-            mstmt.prevByObj.nextByObj = mstmt.nextByObj;
-        } else {
-            obj.nextByObj = mstmt.nextByObj;
-        }
-        if (mstmt.nextByObj != null) {
-            mstmt.nextByObj.prevByObj = mstmt.prevByObj;
-        }
-
-        // Delete from context doubly-linked list
-        if (mstmt.prevByCtx != null) {
-            mstmt.prevByCtx.nextByCtx = mstmt.nextByCtx;
-        } else {
-            ctx.nextByCtx = mstmt.nextByCtx;
-        }
-        if (mstmt.nextByCtx != null) {
-            mstmt.nextByCtx.prevByCtx = mstmt.prevByCtx;
-        }
+        // Mark the statement as deleted
+        mstmt.subj = NULL_VALUE;
+        mstmt.pred = NULL_VALUE;
+        mstmt.obj = NULL_VALUE;
+        mstmt.ctx = NULL_VALUE;
 
         // Update counters
         --subj.numSubj;
@@ -612,6 +577,12 @@ final class MemoryQuadModel extends QuadModel {
         --obj.numObj;
         --ctx.numCtx;
         --this.statementCount;
+        ++this.statementZombies;
+
+        // Remove zombie statements if too many
+        if (this.statementZombies >= this.statementCount) {
+            cleanZombies();
+        }
 
         // Signal that a statement was removed
         return true;
@@ -748,6 +719,79 @@ final class MemoryQuadModel extends QuadModel {
         this.statementSlots = this.statementCount;
     }
 
+    private void cleanZombies() {
+
+        // Iterate over the values in this model, removing zombie statements from SPOC lists
+        ModelStatement stmt;
+        ModelStatement prev;
+        for (final ModelValue mv : this.valueTable) {
+
+            // Skip empty slots
+            if (mv == null || mv == NULL_VALUE) {
+                continue;
+            }
+
+            // Remove zombie statements from object list
+            for (prev = null, stmt = mv.nextByObj; stmt != null; stmt = stmt.nextByObj) {
+                if (stmt.subj != NULL_VALUE) {
+                    prev = stmt;
+                } else if (prev == null) {
+                    mv.nextByObj = stmt.nextByObj;
+                } else {
+                    prev.nextByObj = stmt.nextByObj;
+                }
+            }
+
+            // Proceed only if the value is a Resource with subject and context lists
+            if (!(mv instanceof ModelResource)) {
+                continue;
+            }
+            final ModelResource mr = (ModelResource) mv;
+
+            // Remove zombie statements from subject list
+            for (prev = null, stmt = mr.nextBySubj; stmt != null; stmt = stmt.nextBySubj) {
+                if (stmt.subj != NULL_VALUE) {
+                    prev = stmt;
+                } else if (prev == null) {
+                    mr.nextBySubj = stmt.nextBySubj;
+                } else {
+                    prev.nextBySubj = stmt.nextBySubj;
+                }
+            }
+
+            // Remove zombie statements from context list
+            for (prev = null, stmt = mr.nextByCtx; stmt != null; stmt = stmt.nextByCtx) {
+                if (stmt.subj != NULL_VALUE) {
+                    prev = stmt;
+                } else if (prev == null) {
+                    mr.nextByCtx = stmt.nextByCtx;
+                } else {
+                    prev.nextByCtx = stmt.nextByCtx;
+                }
+            }
+
+            // Proceed only if the value is a URI with predicate list
+            if (!(mv instanceof ModelURI)) {
+                continue;
+            }
+            final ModelURI mu = (ModelURI) mv;
+
+            // Remove zombie statements from predicate list
+            for (prev = null, stmt = mu.nextByPred; stmt != null; stmt = stmt.nextByPred) {
+                if (stmt.subj != NULL_VALUE) {
+                    prev = stmt;
+                } else if (prev == null) {
+                    mu.nextByPred = stmt.nextByPred;
+                } else {
+                    prev.nextByPred = stmt.nextByPred;
+                }
+            }
+        }
+
+        // Reset zombie counter
+        this.statementZombies = 0;
+    }
+
     private static int selectComponent(@Nullable final ModelResource subj,
             @Nullable final ModelURI pred, @Nullable final ModelValue obj,
             @Nullable final ModelResource ctx) {
@@ -797,7 +841,7 @@ final class MemoryQuadModel extends QuadModel {
             case OBJ:
                 return this.nextByObj;
             default:
-                throw new Error();
+                return null;
             }
         }
 
@@ -829,7 +873,7 @@ final class MemoryQuadModel extends QuadModel {
             case CTX:
                 return this.nextByCtx;
             default:
-                throw new Error();
+                return null;
             }
         }
 
@@ -1127,25 +1171,13 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        final ModelResource subj;
+        ModelResource subj;
 
-        final ModelURI pred;
+        ModelURI pred;
 
-        final ModelValue obj;
+        ModelValue obj;
 
-        final ModelResource ctx;
-
-        @Nullable
-        transient ModelStatement prevBySubj;
-
-        @Nullable
-        transient ModelStatement prevByPred;
-
-        @Nullable
-        transient ModelStatement prevByObj;
-
-        @Nullable
-        transient ModelStatement prevByCtx;
+        ModelResource ctx;
 
         @Nullable
         transient ModelStatement nextBySubj;
