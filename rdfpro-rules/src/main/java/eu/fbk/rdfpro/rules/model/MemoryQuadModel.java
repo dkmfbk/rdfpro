@@ -30,6 +30,11 @@ import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.model.vocabulary.XMLSchema;
 
 import eu.fbk.rdfpro.rules.util.Iterators;
+import eu.fbk.rdfpro.rules.util.StringIndex;
+
+// TODO
+// (1) add Object field to ModelURI and ModelLiteral to be used either for (i) caching the label
+// or URI ref with a SoftReference, or to store the string itself in case of a deserialized object
 
 final class MemoryQuadModel extends QuadModel {
 
@@ -37,7 +42,7 @@ final class MemoryQuadModel extends QuadModel {
 
     private static final int INITIAL_STATEMENT_TABLE_SIZE = 256 - 1;
 
-    private static final ModelURI NULL_VALUE = new ModelURI(null, "sesame:empty");
+    private static final ModelURI NULL_VALUE = new ModelURI();
 
     private static final ModelStatement NULL_STATEMENT = new ModelStatement(NULL_VALUE,
             NULL_VALUE, NULL_VALUE, NULL_VALUE);
@@ -54,6 +59,8 @@ final class MemoryQuadModel extends QuadModel {
 
     private final Map<String, Namespace> namespaces;
 
+    private final StringIndex stringIndex;
+
     private ModelValue[] valueTable;
 
     private int valueCount;
@@ -61,6 +68,8 @@ final class MemoryQuadModel extends QuadModel {
     private int valueSlots;
 
     private final ModelURI valueNil;
+
+    private final ModelURI valueLang;
 
     private ModelStatement[] statementTable;
 
@@ -72,6 +81,7 @@ final class MemoryQuadModel extends QuadModel {
 
     public MemoryQuadModel() {
         this.namespaces = new HashMap<>();
+        this.stringIndex = new StringIndex();
         this.valueTable = new ModelValue[INITIAL_VALUE_TABLE_SIZE];
         this.valueCount = 0;
         this.valueSlots = 0;
@@ -80,6 +90,7 @@ final class MemoryQuadModel extends QuadModel {
         this.statementSlots = 0;
         this.statementZombies = 0;
         this.valueNil = (ModelURI) lookupValue(SESAME.NIL, true);
+        this.valueLang = (ModelURI) lookupValue(RDF.LANGSTRING, true);
     }
 
     // NAMESPACE HANDLING
@@ -382,7 +393,7 @@ final class MemoryQuadModel extends QuadModel {
         while (true) {
             if (stmt == null) {
                 return Collections.emptyIterator();
-            } else if (stmt.subj != NULL_VALUE && stmt.match(subj, pred, obj, ctx)) {
+            } else if (!stmt.isZombie() && stmt.match(subj, pred, obj, ctx)) {
                 break;
             }
             stmt = stmt.next(comp);
@@ -404,7 +415,7 @@ final class MemoryQuadModel extends QuadModel {
                 this.last = this.next;
                 while (true) {
                     this.next = this.next.next(comp);
-                    if (this.next == null || this.next.subj != NULL_VALUE
+                    if (this.next == null || !this.next.isZombie()
                             && this.next.match(subj, pred, obj, ctx)) {
                         break;
                     }
@@ -566,10 +577,7 @@ final class MemoryQuadModel extends QuadModel {
         }
 
         // Mark the statement as deleted
-        mstmt.subj = NULL_VALUE;
-        mstmt.pred = NULL_VALUE;
-        mstmt.obj = NULL_VALUE;
-        mstmt.ctx = NULL_VALUE;
+        mstmt.markZombie();
 
         // Update counters
         --subj.numSubj;
@@ -598,7 +606,7 @@ final class MemoryQuadModel extends QuadModel {
         // Handle the case the value is already a model value belonging to this model
         if (value instanceof ModelValue) {
             final ModelValue mv = (ModelValue) value;
-            if (mv.model() == this) {
+            if (mv.model == this) {
                 return mv;
             }
         }
@@ -733,7 +741,7 @@ final class MemoryQuadModel extends QuadModel {
 
             // Remove zombie statements from object list
             for (prev = null, stmt = mv.nextByObj; stmt != null; stmt = stmt.nextByObj) {
-                if (stmt.subj != NULL_VALUE) {
+                if (!stmt.isZombie()) {
                     prev = stmt;
                 } else if (prev == null) {
                     mv.nextByObj = stmt.nextByObj;
@@ -750,7 +758,7 @@ final class MemoryQuadModel extends QuadModel {
 
             // Remove zombie statements from subject list
             for (prev = null, stmt = mr.nextBySubj; stmt != null; stmt = stmt.nextBySubj) {
-                if (stmt.subj != NULL_VALUE) {
+                if (!stmt.isZombie()) {
                     prev = stmt;
                 } else if (prev == null) {
                     mr.nextBySubj = stmt.nextBySubj;
@@ -761,7 +769,7 @@ final class MemoryQuadModel extends QuadModel {
 
             // Remove zombie statements from context list
             for (prev = null, stmt = mr.nextByCtx; stmt != null; stmt = stmt.nextByCtx) {
-                if (stmt.subj != NULL_VALUE) {
+                if (!stmt.isZombie()) {
                     prev = stmt;
                 } else if (prev == null) {
                     mr.nextByCtx = stmt.nextByCtx;
@@ -778,7 +786,7 @@ final class MemoryQuadModel extends QuadModel {
 
             // Remove zombie statements from predicate list
             for (prev = null, stmt = mu.nextByPred; stmt != null; stmt = stmt.nextByPred) {
-                if (stmt.subj != NULL_VALUE) {
+                if (!stmt.isZombie()) {
                     prev = stmt;
                 } else if (prev == null) {
                     mu.nextByPred = stmt.nextByPred;
@@ -832,9 +840,16 @@ final class MemoryQuadModel extends QuadModel {
         private static final long serialVersionUID = 1L;
 
         @Nullable
+        final transient MemoryQuadModel model;
+
+        @Nullable
         transient ModelStatement nextByObj;
 
         transient int numObj;
+
+        ModelValue(final MemoryQuadModel model) {
+            this.model = model;
+        }
 
         ModelStatement next(final int component) {
             switch (component) {
@@ -844,8 +859,6 @@ final class MemoryQuadModel extends QuadModel {
                 return null;
             }
         }
-
-        abstract MemoryQuadModel model();
 
     }
 
@@ -862,6 +875,10 @@ final class MemoryQuadModel extends QuadModel {
         transient int numSubj;
 
         transient int numCtx;
+
+        ModelResource(final MemoryQuadModel model) {
+            super(model);
+        }
 
         @Override
         ModelStatement next(final int component) {
@@ -883,22 +900,30 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        private final transient MemoryQuadModel model;
+        private final int namespace;
 
-        private final String string;
+        private final int localName;
 
-        private @Nullable String namespace;
-
-        private @Nullable String localName;
+        private final int hash;
 
         @Nullable
         ModelStatement nextByPred;
 
         int numPred;
 
-        ModelURI(final MemoryQuadModel model, final String string) {
-            this.model = model;
-            this.string = string;
+        ModelURI() {
+            super(null);
+            this.namespace = 0;
+            this.localName = 0;
+            this.hash = 0;
+        }
+
+        ModelURI(@Nullable final MemoryQuadModel model, final String string) {
+            super(model);
+            final int index = URIUtil.getLocalNameIndex(string);
+            this.namespace = model.stringIndex.put(string.substring(0, index));
+            this.localName = model.stringIndex.put(string.substring(index));
+            this.hash = string.hashCode();
         }
 
         @Override
@@ -918,33 +943,21 @@ final class MemoryQuadModel extends QuadModel {
         }
 
         @Override
-        MemoryQuadModel model() {
-            return this.model;
-        }
-
-        private void splitIfNecessary() {
-            if (this.namespace == null) {
-                final int index = URIUtil.getLocalNameIndex(this.string);
-                this.namespace = this.string.substring(0, index).intern();
-                this.localName = this.string.substring(index);
-            }
-        }
-
-        @Override
         public String getNamespace() {
-            splitIfNecessary();
-            return this.namespace;
+            return this.model.stringIndex.get(this.namespace);
         }
 
         @Override
         public String getLocalName() {
-            splitIfNecessary();
-            return this.localName;
+            return this.model.stringIndex.get(this.localName);
         }
 
         @Override
         public String stringValue() {
-            return this.string;
+            final StringBuilder builder = new StringBuilder();
+            this.model.stringIndex.get(this.namespace, builder);
+            this.model.stringIndex.get(this.localName, builder);
+            return builder.toString();
         }
 
         @Override
@@ -957,19 +970,25 @@ final class MemoryQuadModel extends QuadModel {
                 return false;
             }
             if (object instanceof URI) {
-                return this.string.equals(((URI) object).stringValue());
+                final String string = ((URI) object).stringValue();
+                final StringIndex index = this.model.stringIndex;
+                final int namespaceLength = index.length(this.namespace);
+                final int localNameLength = index.length(this.localName);
+                return namespaceLength + localNameLength == string.length()
+                        && index.equals(this.namespace, string, 0, namespaceLength)
+                        && index.equals(this.localName, string, namespaceLength, string.length());
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return this.string.hashCode();
+            return this.hash;
         }
 
         @Override
         public String toString() {
-            return this.string;
+            return stringValue();
         }
 
     }
@@ -978,28 +997,24 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        private final transient MemoryQuadModel model;
+        private final int id;
 
-        private final String id;
+        private final int hash;
 
-        public ModelBNode(final MemoryQuadModel model, final String id) {
-            this.model = model;
-            this.id = id;
-        }
-
-        @Override
-        MemoryQuadModel model() {
-            return this.model;
+        ModelBNode(final MemoryQuadModel model, final String id) {
+            super(model);
+            this.id = model.stringIndex.put(id);
+            this.hash = id.hashCode();
         }
 
         @Override
         public String getID() {
-            return this.id;
+            return this.model.stringIndex.get(this.id);
         }
 
         @Override
         public String stringValue() {
-            return this.id;
+            return getID();
         }
 
         @Override
@@ -1012,19 +1027,21 @@ final class MemoryQuadModel extends QuadModel {
                 return false;
             }
             if (object instanceof BNode) {
-                return this.id.equals(((BNode) object).getID());
+                return this.model.stringIndex.equals(this.id, ((BNode) object).getID());
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return this.id.hashCode();
+            return this.hash;
         }
 
         @Override
         public String toString() {
-            return "_:" + this.id;
+            final StringBuilder builder = new StringBuilder("_:");
+            this.model.stringIndex.get(this.id, builder);
+            return builder.toString();
         }
 
     }
@@ -1033,46 +1050,49 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        private final transient MemoryQuadModel model;
+        private final int label;
 
-        private final String label;
+        private final Object langOrDatatype;
 
-        @Nullable
-        private final String language;
-
-        private final ModelURI datatype;
+        private final int hash;
 
         ModelLiteral(final MemoryQuadModel model, final String label,
                 @Nullable final String language, final ModelURI datatype) {
-            this.model = model;
-            this.label = label;
-            this.language = language;
-            this.datatype = datatype;
+            super(model);
+            this.label = model.stringIndex.put(label);
+            this.langOrDatatype = language == null ? datatype : language.intern();
+            this.hash = hashCode(label, language, datatype);
         }
 
-        @Override
-        MemoryQuadModel model() {
-            return this.model;
+        static int hashCode(final String label, @Nullable final String language,
+                final ModelURI datatype) {
+            int hashCode = label.hashCode();
+            if (language != null) {
+                hashCode = 31 * hashCode + language.hashCode();
+            }
+            hashCode = 31 * hashCode + datatype.hashCode();
+            return hashCode;
         }
 
         @Override
         public String getLabel() {
-            return this.label;
+            return this.model.stringIndex.get(this.label);
         }
 
         @Override
         public String getLanguage() {
-            return this.language;
+            return this.langOrDatatype instanceof String ? (String) this.langOrDatatype : null;
         }
 
         @Override
         public URI getDatatype() {
-            return this.datatype;
+            return this.langOrDatatype instanceof String ? this.model.valueLang
+                    : (URI) this.langOrDatatype;
         }
 
         @Override
         public String stringValue() {
-            return this.label;
+            return getLabel();
         }
 
         @Override
@@ -1136,31 +1156,30 @@ final class MemoryQuadModel extends QuadModel {
             }
             if (object instanceof Literal) {
                 final Literal l = (Literal) object;
-                return this.label.equals(l.getLabel())
-                        && Objects.equals(this.datatype, l.getDatatype())
-                        && Objects.equals(this.language, l.getLanguage());
+                return this.model.stringIndex.equals(this.label, l.getLabel())
+                        && (this.langOrDatatype instanceof String
+                                && this.langOrDatatype.equals(l.getLanguage()) //
+                        || this.langOrDatatype instanceof URI
+                                && this.langOrDatatype.equals(l.getDatatype()));
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            int hashCode = this.label.hashCode();
-            if (this.language != null) {
-                hashCode = 31 * hashCode + this.language.hashCode();
-            }
-            hashCode = 31 * hashCode + this.datatype.hashCode();
-            return hashCode;
+            return this.hash;
         }
 
         @Override
         public String toString() {
-            final StringBuilder builder = new StringBuilder(this.label.length() * 2);
-            builder.append('"').append(this.label).append('"');
-            if (this.language != null) {
-                builder.append('@').append(this.language);
+            final StringBuilder builder = new StringBuilder(256);
+            builder.append('"');
+            this.model.stringIndex.get(this.label, builder);
+            builder.append('"');
+            if (this.langOrDatatype instanceof String) {
+                builder.append('@').append(this.langOrDatatype);
             } else {
-                builder.append("^^<").append(this.datatype.toString()).append(">");
+                builder.append("^^<").append(this.langOrDatatype).append(">");
             }
             return builder.toString();
         }
@@ -1171,13 +1190,19 @@ final class MemoryQuadModel extends QuadModel {
 
         private static final long serialVersionUID = 1L;
 
-        ModelResource subj;
+        private static final int HASH_ZOMBIE = 0;
 
-        ModelURI pred;
+        private static final int HASH_UNCACHED = 1;
 
-        ModelValue obj;
+        int hash;
 
-        ModelResource ctx;
+        final ModelResource subj;
+
+        final ModelURI pred;
+
+        final ModelValue obj;
+
+        final ModelResource ctx;
 
         @Nullable
         transient ModelStatement nextBySubj;
@@ -1193,6 +1218,10 @@ final class MemoryQuadModel extends QuadModel {
 
         ModelStatement(final ModelResource subj, final ModelURI pred, final ModelValue obj,
                 final ModelResource ctx) {
+
+            final int cachedHash = 961 * subj.hashCode() + 31 * pred.hashCode() + obj.hashCode();
+
+            this.hash = cachedHash != HASH_ZOMBIE ? cachedHash : HASH_UNCACHED;
             this.subj = subj;
             this.pred = pred;
             this.obj = obj;
@@ -1232,6 +1261,14 @@ final class MemoryQuadModel extends QuadModel {
                     * System.identityHashCode(obj) + System.identityHashCode(ctx);
         }
 
+        boolean isZombie() {
+            return this.hash == HASH_ZOMBIE;
+        }
+
+        void markZombie() {
+            this.hash = HASH_ZOMBIE;
+        }
+
         @Override
         public Resource getSubject() {
             return this.subj;
@@ -1267,7 +1304,12 @@ final class MemoryQuadModel extends QuadModel {
 
         @Override
         public int hashCode() {
-            return 961 * this.subj.hashCode() + 31 * this.pred.hashCode() + this.obj.hashCode();
+            if (this.hash != HASH_ZOMBIE && this.hash != HASH_UNCACHED) {
+                return this.hash;
+            } else {
+                return 961 * this.subj.hashCode() + 31 * this.pred.hashCode()
+                        + this.obj.hashCode();
+            }
         }
 
         @Override

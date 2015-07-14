@@ -1,7 +1,13 @@
 package eu.fbk.rdfpro.rules.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+
+// TODO
+// (1) move hash values out of hash table or drop them, revising rehashing code
+// (2) replace ByteBuffers with simple byte arrays
 
 public final class StringIndex {
 
@@ -9,9 +15,9 @@ public final class StringIndex {
 
     private static final int LARGE_BUFFER_SIZE = SMALL_BUFFER_SIZE * 8;
 
-    private List<ByteBuffer> smallBuffers;
+    private final List<ByteBuffer> smallBuffers;
 
-    private List<ByteBuffer> largeBuffers;
+    private final List<ByteBuffer> largeBuffers;
 
     private int smallNextID;
 
@@ -20,6 +26,19 @@ public final class StringIndex {
     private int[] table;
 
     private int size;
+
+    public StringIndex() {
+
+        this.smallBuffers = new ArrayList<>();
+        this.largeBuffers = new ArrayList<>();
+        this.smallNextID = getID(true, 0, 0);
+        this.largeNextID = getID(false, 0, 0);
+        this.table = new int[1022]; // 511 entries, ~4K memory page
+        this.size = 0;
+
+        this.smallBuffers.add(ByteBuffer.allocate(SMALL_BUFFER_SIZE));
+        this.largeBuffers.add(ByteBuffer.allocate(LARGE_BUFFER_SIZE));
+    }
 
     public int size() {
         return this.size;
@@ -34,6 +53,19 @@ public final class StringIndex {
     }
 
     public String get(final int id) {
+        return get(id, new StringBuilder()).toString();
+    }
+
+    public StringBuilder get(final int id, final StringBuilder out) {
+        try {
+            get(id, (Appendable) out);
+            return out;
+        } catch (final IOException ex) {
+            throw new Error(ex);
+        }
+    }
+
+    public <T extends Appendable> T get(final int id, final T out) throws IOException {
 
         final boolean small = isSmall(id);
         final int page = getPage(id);
@@ -51,17 +83,17 @@ public final class StringIndex {
             offset += 4;
         }
 
-        final StringBuilder builder = new StringBuilder();
-        while (builder.length() < length) {
+        for (int i = 0; i < length; ++i) {
             final byte b = buffer.get(offset++);
             if (b != 0) {
-                builder.append((char) b);
+                out.append((char) b);
             } else {
-                builder.append(buffer.getChar(offset));
+                out.append(buffer.getChar(offset));
                 offset += 2;
             }
         }
-        return builder.toString();
+
+        return out;
     }
 
     public int length(final int id) {
@@ -73,6 +105,11 @@ public final class StringIndex {
     }
 
     public boolean equals(final int id, final String string) {
+        return equals(id, string, 0, string.length());
+    }
+
+    public boolean equals(final int id, final String string, final int startIndex,
+            final int endIndex) {
 
         final boolean idSmall = isSmall(id);
         final boolean stringSmall = isSmall(string);
@@ -95,11 +132,11 @@ public final class StringIndex {
             offset += 4;
         }
 
-        if (length != string.length()) {
+        if (length != endIndex - startIndex) {
             return false;
         }
 
-        for (int i = 0; i < length; ++i) {
+        for (int i = startIndex; i < endIndex; ++i) {
             char c;
             final byte b = buffer.get(offset++);
             if (b != 0) {
@@ -117,28 +154,28 @@ public final class StringIndex {
 
     private int lookup(final String string, final boolean canAppend) {
         final int hash = string.hashCode();
-        int offset = (hash & 0x7FFFFFFF) % (this.table.length / 2) * 2;
+        int slot = (hash & 0x7FFFFFFF) % (this.table.length / 2) * 2;
         while (true) {
-            int id = this.table[offset];
+            int id = this.table[slot];
             if (id == 0) {
                 if (!canAppend) {
                     return 0;
-                } else if (this.size > this.table.length / 4) { // enforce load factor < .5
+                } else if (this.size > this.table.length / 3) { // enforce load factor < .66
                     rehash();
                     return lookup(string, canAppend); // repeat after rehashing
                 }
                 id = append(string);
-                this.table[offset] = id;
-                this.table[offset + 1] = hash;
+                this.table[slot] = id;
+                this.table[slot + 1] = hash;
                 ++this.size;
                 return id;
             }
-            if (this.table[offset + 1] == hash && equals(id, string)) {
+            if (this.table[slot + 1] == hash && equals(id, string)) {
                 return id;
             }
-            offset += 2;
-            if (offset >= this.table.length) {
-                offset = 0;
+            slot += 2;
+            if (slot >= this.table.length) {
+                slot = 0;
             }
         }
     }
@@ -217,12 +254,12 @@ public final class StringIndex {
     }
 
     private int getID(final boolean small, final int page, final int offset) {
-        return small ? (page & 0x7FFF) << 16 | offset & 0xFFFF : 0x80000000
-                | (page & 0x7FFF) << 16 | offset + 7 >> 3 & 0xFFFF;
+        return small ? (page + 1 & 0x7FFF) << 16 | offset & 0xFFFF : 0x80000000
+                | (page + 1 & 0x7FFF) << 16 | offset + 7 >> 3 & 0xFFFF;
     }
 
     private int getPage(final int id) {
-        return id >> 16 & 0x7FFF;
+        return (id >> 16 & 0x7FFF) - 1;
     }
 
     private int getOffset(final int id) {
