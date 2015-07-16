@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 
 import org.openrdf.model.Graph;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Model;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
@@ -66,6 +67,10 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     protected final static Resource[] CTX_ANY = new Resource[0];
 
+    protected final static Resource[] CTX_DEFAULT = new Resource[] { null };
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuadModel.class);
+
     private static final long serialVersionUID = 1L;
 
     private static FederatedServiceResolverImpl federatedServiceResolver = null;
@@ -97,6 +102,10 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         return new RepositoryQuadModel(connection, trackChanges);
     }
 
+    public static QuadModel wrap(final Model model) {
+        return new ModelQuadModel(model);
+    }
+
     protected abstract Set<Namespace> doGetNamespaces();
 
     @Nullable
@@ -108,8 +117,10 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     protected abstract int doSize(@Nullable Resource subj, @Nullable URI pred,
             @Nullable Value obj, Resource[] ctxs);
 
-    protected abstract int doSizeEstimate(@Nullable Resource subj, @Nullable URI pred,
-            @Nullable Value obj, @Nullable Resource ctx);
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, @Nullable final Resource ctx) {
+        return -1;
+    }
 
     protected abstract Iterator<Statement> doIterator(@Nullable final Resource subj,
             @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs);
@@ -119,8 +130,6 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     protected abstract boolean doRemove(@Nullable Resource subj, @Nullable URI pred,
             @Nullable Value obj, Resource[] ctxs);
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(QuadModel.class);
 
     protected Iterator<BindingSet> doEvaluate(TupleExpr expr, @Nullable final Dataset dataset,
             @Nullable final BindingSet bindings) {
@@ -758,7 +767,8 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
                         final Resource c = cv == null || !(cv.getValue() instanceof Resource) ? null
                                 : (Resource) cv.getValue();
 
-                        return doSizeEstimate(s, p, o, c);
+                        final int estimate = doSizeEstimate(s, p, o, c);
+                        return estimate >= 0 ? estimate : super.getCardinality(pattern);
                     }
 
                 };

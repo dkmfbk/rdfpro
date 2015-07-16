@@ -37,7 +37,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
 
     private final boolean trackChanges;
 
-    public RepositoryQuadModel(final RepositoryConnection connection, final boolean trackChanges) {
+    RepositoryQuadModel(final RepositoryConnection connection, final boolean trackChanges) {
         this.connection = Objects.requireNonNull(connection);
         this.trackChanges = trackChanges;
     }

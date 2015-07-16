@@ -38,7 +38,7 @@ final class SailQuadModel extends QuadModel implements AutoCloseable {
 
     private long removeCounter;
 
-    public SailQuadModel(final SailConnection connection, final boolean trackChanges) {
+    SailQuadModel(final SailConnection connection, final boolean trackChanges) {
         this.connection = Objects.requireNonNull(connection);
         this.trackChanges = trackChanges;
         if (trackChanges && connection instanceof NotifyingSailConnection) {
@@ -194,8 +194,8 @@ final class SailQuadModel extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected boolean doRemove(final Resource subj, final URI pred, final Value obj,
-            final Resource[] ctxs) {
+    protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, final Resource[] ctxs) {
         try {
             if (!this.trackChanges) {
                 this.connection.removeStatements(subj, pred, obj, ctxs);
