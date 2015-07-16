@@ -8,8 +8,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Throwables;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,7 +185,7 @@ public class Iterators {
         @Override
         public boolean hasNext() {
             if (!this.eof) {
-                if (next != null) {
+                if (this.next != null) {
                     return true;
                 }
                 while (this.next == null && this.iterator.hasNext()) {
@@ -276,9 +274,12 @@ public class Iterators {
         public boolean hasNext() {
             try {
                 return this.iteration.hasNext();
+            } catch (RuntimeException | Error ex) {
+                close();
+                throw ex;
             } catch (final Throwable ex) {
                 close();
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
         }
 
@@ -286,9 +287,12 @@ public class Iterators {
         public T next() {
             try {
                 return this.iteration.next();
+            } catch (RuntimeException | Error ex) {
+                close();
+                throw ex;
             } catch (final Throwable ex) {
                 close();
-                throw Throwables.propagate(ex);
+                throw new RuntimeException(ex);
             }
         }
 
