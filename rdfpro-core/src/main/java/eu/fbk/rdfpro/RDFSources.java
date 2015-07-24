@@ -188,8 +188,8 @@ public final class RDFSources {
 
                 Objects.requireNonNull(handler);
 
-                if (handler instanceof RDFSource) {
-                    ((RDFSource) handler).emit(new AbstractRDFHandlerWrapper(handler) {
+                if (statements instanceof RDFSource) {
+                    ((RDFSource) statements).emit(new AbstractRDFHandlerWrapper(handler) {
 
                         @Override
                         public void startRDF() throws RDFHandlerException {
