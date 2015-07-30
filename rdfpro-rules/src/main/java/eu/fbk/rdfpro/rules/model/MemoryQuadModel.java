@@ -286,6 +286,11 @@ final class MemoryQuadModel extends QuadModel {
         }
     }
 
+    @Override
+    protected synchronized Value doNormalize(final Value value) {
+        return lookupValue(value, true);
+    }
+
     // STATEMENT HANDLING - SINGLE CONTEXTS
 
     private int doSize(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
@@ -1380,7 +1385,19 @@ final class MemoryQuadModel extends QuadModel {
         }
 
         @Override
+        @Nullable
         public Resource getContext() {
+            if (this.ctx != null) {
+                if (this.ctx.model != null) {
+                    if (this.ctx == this.ctx.model.valueNil) {
+                        return null;
+                    }
+                } else {
+                    if (this.ctx.equals(SESAME.NIL)) {
+                        return null;
+                    }
+                }
+            }
             return this.ctx;
         }
 

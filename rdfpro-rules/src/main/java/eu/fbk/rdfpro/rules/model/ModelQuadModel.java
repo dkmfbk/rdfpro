@@ -15,7 +15,7 @@ import org.openrdf.model.Value;
 import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.model.util.ModelException;
 
-import eu.fbk.rdfpro.rules.util.Iterators;
+import eu.fbk.rdfpro.util.IO;
 
 final class ModelQuadModel extends QuadModel implements AutoCloseable {
 
@@ -29,7 +29,7 @@ final class ModelQuadModel extends QuadModel implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        Iterators.closeQuietly(this.model);
+        IO.closeQuietly(this.model);
     }
 
     @Override

@@ -17,6 +17,7 @@ import org.openrdf.model.util.ModelException;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.Dataset;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailConnectionListener;
@@ -25,6 +26,7 @@ import org.openrdf.sail.SailException;
 import info.aduna.iteration.CloseableIteration;
 
 import eu.fbk.rdfpro.rules.util.Iterators;
+import eu.fbk.rdfpro.util.IO;
 
 final class SailQuadModel extends QuadModel implements AutoCloseable {
 
@@ -66,7 +68,7 @@ final class SailQuadModel extends QuadModel implements AutoCloseable {
 
     @Override
     public void close() {
-        Iterators.closeQuietly(this.connection);
+        IO.closeQuietly(this.connection);
     }
 
     @Override
@@ -223,9 +225,10 @@ final class SailQuadModel extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr, final Dataset dataset,
-            final BindingSet bindings) {
+    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr,
+            @Nullable final Dataset dataset, @Nullable BindingSet bindings) {
         try {
+            bindings = bindings != null ? bindings : EmptyBindingSet.getInstance();
             return Iterators
                     .forIteration(this.connection.evaluate(expr, dataset, bindings, false));
         } catch (final SailException ex) {

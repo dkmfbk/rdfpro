@@ -34,12 +34,17 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,6 +170,53 @@ public final class Environment {
             }
         }
         return frozenPool;
+    }
+
+    public static void run(final Iterable<? extends Runnable> runnables) {
+
+        final List<Runnable> runnableList = ImmutableList.copyOf(runnables);
+        final int parallelism = Math.min(Environment.getCores(), runnableList.size());
+
+        final CountDownLatch latch = new CountDownLatch(parallelism);
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicInteger index = new AtomicInteger(0);
+
+        final List<Runnable> threadRunnables = new ArrayList<Runnable>();
+        for (int i = 0; i < parallelism; ++i) {
+            threadRunnables.add(new Runnable() {
+
+                @Override
+                public void run() {
+                    try {
+                        while (true) {
+                            final int i = index.getAndIncrement();
+                            if (i >= runnableList.size() || exception.get() != null) {
+                                break;
+                            }
+                            runnableList.get(i).run();
+                        }
+                    } catch (final Throwable ex) {
+                        exception.set(ex);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+            });
+        }
+
+        try {
+            for (int i = 1; i < parallelism; ++i) {
+                Environment.getPool().submit(threadRunnables.get(i));
+            }
+            threadRunnables.get(0).run();
+            latch.await();
+            if (exception.get() != null) {
+                throw exception.get();
+            }
+        } catch (final Throwable ex) {
+            Throwables.propagate(ex);
+        }
     }
 
     @Nullable

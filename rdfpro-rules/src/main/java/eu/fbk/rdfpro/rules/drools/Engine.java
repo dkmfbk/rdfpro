@@ -26,9 +26,7 @@ import org.kie.api.conf.EqualityBehaviorOption;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.And;
@@ -135,92 +133,93 @@ public final class Engine extends RuleEngine {
 
             try {
                 // Differentiate between axioms and rules (DROOLS rule not created for axioms)
-                if (body == null && head != null) {
+                // if (body == null && head != null) {
+                //
+                // // Add axiom quads based on head patterns
+                // for (final StatementPattern atom : head) {
+                // final Resource subj = (Resource) atom.getSubjectVar().getValue();
+                // final URI pred = (URI) atom.getPredicateVar().getValue();
+                // final Value obj = atom.getObjectVar().getValue();
+                // final Resource ctx = atom.getContextVar() == null ? null : (Resource) atom
+                // .getContextVar().getValue();
+                // if (subj == null || pred == null || obj == null) {
+                // throw new IllegalArgumentException("Unbound head variables");
+                // }
+                // this.axioms.add(Quad.encode(this.dictionary, subj, pred, obj, ctx));
+                // }
+                //
+                // } else {
 
-                    // Add axiom quads based on head patterns
-                    for (final StatementPattern atom : head) {
-                        final Resource subj = (Resource) atom.getSubjectVar().getValue();
-                        final URI pred = (URI) atom.getPredicateVar().getValue();
-                        final Value obj = atom.getObjectVar().getValue();
-                        final Resource ctx = atom.getContextVar() == null ? null : (Resource) atom
-                                .getContextVar().getValue();
-                        if (subj == null || pred == null || obj == null) {
-                            throw new IllegalArgumentException("Unbound head variables");
-                        }
-                        this.axioms.add(Quad.encode(this.dictionary, subj, pred, obj, ctx));
-                    }
+                // Declare rule
+                final int ruleIndex = this.ruleIDs.size();
+                this.ruleIDs.add(ruleID);
+                this.ruleBuilder.append("\nrule \"").append(ruleID).append("\"\n");
+                this.ruleBuilder.append("when\n");
 
-                } else {
-                    // Declare rule
-                    final int ruleIndex = this.ruleIDs.size();
-                    this.ruleIDs.add(ruleID);
-                    this.ruleBuilder.append("\nrule \"").append(ruleID).append("\"\n");
-                    this.ruleBuilder.append("when\n");
-
-                    // Emit rule body
-                    final Map<String, Expression> extensionExprs = new HashMap<>();
-                    final Set<String> matchedVars = new HashSet<>();
-                    if (body != null) {
-                        translate(body, Collections.emptySet(), extensionExprs, matchedVars);
-                        for (final String extensionVar : extensionExprs.keySet()) {
-                            if (matchedVars.contains(extensionVar)) {
-                                throw new IllegalArgumentException("Variable " + extensionVar
-                                        + " already used in body patterns");
-                            }
-                        }
-                    }
-
-                    // Emit rule head: handler.trigger(ruleNum, var1, ..., varN);
-                    this.ruleBuilder.append("\nthen\n");
-
-                    this.ruleBuilder.append("handler.triggered(").append(ruleIndex).append(");\n");
-
-                    this.ruleBuilder.append("if (callback != null && !handler.callback(")
-                            .append(ruleIndex).append(", new String[] {");
-                    final List<String> sortedVars = new ArrayList<>(matchedVars);
-                    Collections.sort(sortedVars);
-                    for (int i = 0; i < sortedVars.size(); ++i) {
-                        this.ruleBuilder.append(i == 0 ? "" : ", ").append("\"")
-                                .append(sortedVars.get(i)).append("\"");
-                    }
-                    this.ruleBuilder.append("}, new int[] {");
-                    for (int i = 0; i < sortedVars.size(); ++i) {
-                        this.ruleBuilder.append(i == 0 ? "" : ", ").append("$")
-                                .append(sortedVars.get(i));
-                    }
-                    this.ruleBuilder.append("})) { return; }\n");
-
-                    if (head != null) {
-                        for (final Map.Entry<String, Expression> entry : extensionExprs.entrySet()) {
-                            final String var = entry.getKey();
-                            final Expression expr = entry.getValue();
-                            final int index = register(expr);
-                            this.ruleBuilder.append("int $").append(var).append(" = ")
-                                    .append(expr.toString("handler.eval(" + index + ", ", ");\n"));
-                        }
-                        for (final StatementPattern atom : head) {
-                            final List<Var> vars = atom.getVarList();
-                            this.ruleBuilder.append("handler.insert(drools, ");
-                            for (int j = 0; j < 4; ++j) {
-                                this.ruleBuilder.append(j == 0 ? "" : ", ");
-                                String name = null;
-                                Value value = null;
-                                if (j < vars.size()) {
-                                    final Var var = vars.get(j);
-                                    value = var.getValue();
-                                    name = var.getName();
-                                }
-                                if (name != null && value == null) {
-                                    this.ruleBuilder.append("$").append(name);
-                                } else {
-                                    this.ruleBuilder.append(this.dictionary.encode(value));
-                                }
-                            }
-                            this.ruleBuilder.append(");\n");
+                // Emit rule body
+                final Map<String, Expression> extensionExprs = new HashMap<>();
+                final Set<String> matchedVars = new HashSet<>();
+                if (body != null) {
+                    translate(body, Collections.emptySet(), extensionExprs, matchedVars);
+                    for (final String extensionVar : extensionExprs.keySet()) {
+                        if (matchedVars.contains(extensionVar)) {
+                            throw new IllegalArgumentException("Variable " + extensionVar
+                                    + " already used in body patterns");
                         }
                     }
-                    this.ruleBuilder.append("end\n");
                 }
+
+                // Emit rule head: handler.trigger(ruleNum, var1, ..., varN);
+                this.ruleBuilder.append("\nthen\n");
+
+                this.ruleBuilder.append("handler.triggered(").append(ruleIndex).append(");\n");
+
+                this.ruleBuilder.append("if (callback != null && !handler.callback(")
+                        .append(ruleIndex).append(", new String[] {");
+                final List<String> sortedVars = new ArrayList<>(matchedVars);
+                Collections.sort(sortedVars);
+                for (int i = 0; i < sortedVars.size(); ++i) {
+                    this.ruleBuilder.append(i == 0 ? "" : ", ").append("\"")
+                            .append(sortedVars.get(i)).append("\"");
+                }
+                this.ruleBuilder.append("}, new int[] {");
+                for (int i = 0; i < sortedVars.size(); ++i) {
+                    this.ruleBuilder.append(i == 0 ? "" : ", ").append("$")
+                            .append(sortedVars.get(i));
+                }
+                this.ruleBuilder.append("})) { return; }\n");
+
+                if (head != null) {
+                    for (final Map.Entry<String, Expression> entry : extensionExprs.entrySet()) {
+                        final String var = entry.getKey();
+                        final Expression expr = entry.getValue();
+                        final int index = register(expr);
+                        this.ruleBuilder.append("int $").append(var).append(" = ")
+                                .append(expr.toString("handler.eval(" + index + ", ", ");\n"));
+                    }
+                    for (final StatementPattern atom : head) {
+                        final List<Var> vars = atom.getVarList();
+                        this.ruleBuilder.append("handler.insert(drools, ");
+                        for (int j = 0; j < 4; ++j) {
+                            this.ruleBuilder.append(j == 0 ? "" : ", ");
+                            String name = null;
+                            Value value = null;
+                            if (j < vars.size()) {
+                                final Var var = vars.get(j);
+                                value = var.getValue();
+                                name = var.getName();
+                            }
+                            if (name != null && value == null) {
+                                this.ruleBuilder.append("$").append(name);
+                            } else {
+                                this.ruleBuilder.append(this.dictionary.encode(value));
+                            }
+                        }
+                        this.ruleBuilder.append(");\n");
+                    }
+                }
+                this.ruleBuilder.append("end\n");
+                // }
 
             } catch (final Throwable ex) {
                 throw new IllegalArgumentException("Invalid rule " + ruleID + ": "
@@ -308,7 +307,7 @@ public final class Engine extends RuleEngine {
 
             } else if (expr instanceof Join) {
                 final Join join = (Join) expr;
-                final Set<String> leftVars = Algebra.extractVariables(join.getLeftArg());
+                final Set<String> leftVars = Algebra.extractVariables(join.getLeftArg(), true);
                 final Set<Expression> leftConditionExprs = new HashSet<>();
                 final Set<Expression> rightConditionExprs = new HashSet<>();
                 for (final Expression conditionExpr : conditionExprs) {
@@ -532,7 +531,7 @@ public final class Engine extends RuleEngine {
 
         public Expression(final ValueExpr expr) {
             this.expr = expr;
-            this.variables = new ArrayList<>(Algebra.extractVariables(expr));
+            this.variables = new ArrayList<>(Algebra.extractVariables(expr, false));
             Collections.sort(this.variables);
         }
 

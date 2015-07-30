@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -30,36 +31,20 @@ import org.openrdf.model.util.ModelException;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.Dataset;
 import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.algebra.QueryRoot;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
-import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
 import org.openrdf.query.algebra.evaluation.TripleSource;
-import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolver;
-import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolverImpl;
-import org.openrdf.query.algebra.evaluation.impl.BindingAssigner;
-import org.openrdf.query.algebra.evaluation.impl.CompareOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.ConjunctiveConstraintSplitter;
-import org.openrdf.query.algebra.evaluation.impl.ConstantOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.DisjunctiveConstraintOptimizer;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
-import org.openrdf.query.algebra.evaluation.impl.FilterOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.IterativeEvaluationOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.OrderLimitOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.QueryJoinOptimizer;
-import org.openrdf.query.algebra.evaluation.impl.QueryModelNormalizer;
-import org.openrdf.query.algebra.evaluation.impl.SameTermFilterOptimizer;
-import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.sail.SailConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import info.aduna.iteration.CloseableIteration;
 
+import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.rules.util.Iterators;
+import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Statements;
 
 public abstract class QuadModel extends AbstractCollection<Statement> implements Graph,
@@ -69,31 +54,27 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     protected final static Resource[] CTX_DEFAULT = new Resource[] { null };
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(QuadModel.class);
-
     private static final long serialVersionUID = 1L;
-
-    private static FederatedServiceResolverImpl federatedServiceResolver = null;
-
-    private synchronized static FederatedServiceResolver getFederatedServiceResolver() {
-        if (federatedServiceResolver == null) {
-            federatedServiceResolver = new FederatedServiceResolverImpl();
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-
-                @Override
-                public void run() {
-                    federatedServiceResolver.shutDown();
-                }
-
-            });
-        }
-        return federatedServiceResolver;
-    }
 
     public static QuadModel create() {
         return new MemoryQuadModel();
     }
 
+    /**
+     * Returns a {@code QuadModel} view of the supplied {@code SailConnection}. Given to the use
+     * of internal locks in some SAIL implementations (e.g., the MemoryStore), the returned view
+     * should be used only inside a thread, similarly to the SailConnection it wraps. Parameter
+     * {@code trackChanges} enables or disables the checks performed each time a statement is
+     * added or removed that the model was changed.
+     *
+     * @param connection
+     *            the connection to wrap
+     * @param trackChanges
+     *            true, if addition/deletion operations should return true or false based on
+     *            whether the model was actually changed by the operation; if false, the check is
+     *            skipped and all modification operations return true
+     * @return the created {@code QuadModel} view
+     */
     public static QuadModel wrap(final SailConnection connection, final boolean trackChanges) {
         return new SailQuadModel(connection, trackChanges);
     }
@@ -131,41 +112,16 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     protected abstract boolean doRemove(@Nullable Resource subj, @Nullable URI pred,
             @Nullable Value obj, Resource[] ctxs);
 
-    protected Iterator<BindingSet> doEvaluate(TupleExpr expr, @Nullable final Dataset dataset,
-            @Nullable final BindingSet bindings) {
+    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr,
+            @Nullable final Dataset dataset, @Nullable final BindingSet bindings) {
 
-        // Clone the expression and add a dummy query root node to help with the optimization
-        expr = expr.clone();
-        if (!(expr instanceof QueryRoot)) {
-            expr = new QueryRoot(expr);
-        }
+        return Algebra.evaluateTupleExpr(expr, dataset, bindings, new EvaluationStrategyImpl(
+                getTripleSource(), dataset, Algebra.getFederatedServiceResolver()),
+                getEvaluationStatistics(), getValueNormalizer());
+    }
 
-        // Obtain auxiliary, query-specific TripleSource and EvaluationStrategy
-        final TripleSource tripleSource = getTripleSource();
-        final EvaluationStrategy strategy = new EvaluationStrategyImpl(tripleSource, dataset,
-                getFederatedServiceResolver());
-
-        // Optimize the query
-        LOGGER.trace("Query before optimization:\n{}", expr);
-        new BindingAssigner().optimize(expr, dataset, bindings);
-        new ConstantOptimizer(strategy).optimize(expr, dataset, bindings);
-        new CompareOptimizer().optimize(expr, dataset, bindings);
-        new ConjunctiveConstraintSplitter().optimize(expr, dataset, bindings);
-        new DisjunctiveConstraintOptimizer().optimize(expr, dataset, bindings);
-        new SameTermFilterOptimizer().optimize(expr, dataset, bindings);
-        new QueryModelNormalizer().optimize(expr, dataset, bindings);
-        new QueryJoinOptimizer(getEvaluationStatistics()).optimize(expr, dataset, bindings);
-        new IterativeEvaluationOptimizer().optimize(expr, dataset, bindings);
-        new FilterOptimizer().optimize(expr, dataset, bindings);
-        new OrderLimitOptimizer().optimize(expr, dataset, bindings);
-        LOGGER.trace("Query after optimization:\n{}", expr);
-
-        // Start the query, returning a CloseableIteration over its results
-        try {
-            return Iterators.forIteration(strategy.evaluate(expr, EmptyBindingSet.getInstance()));
-        } catch (final QueryEvaluationException ex) {
-            throw new RuntimeException(ex);
-        }
+    protected Value doNormalize(@Nullable final Value value) {
+        return value;
     }
 
     public final QuadModel unmodifiable() {
@@ -235,7 +191,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         try {
             return !iterator.hasNext();
         } finally {
-            Iterators.closeQuietly(iterator);
+            IO.closeQuietly(iterator);
         }
     }
 
@@ -252,6 +208,23 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     public final int size(@Nullable final Resource subj, @Nullable final URI pred,
             @Nullable final Value obj, final Resource... contexts) {
         return doSize(subj, pred, obj, contexts);
+    }
+
+    public final int sizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+            @Nullable final Value obj, final Resource... contexts) {
+        if (contexts.length == 0) {
+            return doSizeEstimate(subj, pred, obj, null);
+        } else {
+            int estimate = 0;
+            for (final Resource ctx : contexts) {
+                final int delta = doSizeEstimate(subj, pred, obj, ctx);
+                if (ctx == null) {
+                    return delta;
+                }
+                estimate += delta;
+            }
+            return estimate;
+        }
     }
 
     @Override
@@ -314,7 +287,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         try {
             return iterator.hasNext();
         } finally {
-            Iterators.closeQuietly(iterator);
+            IO.closeQuietly(iterator);
         }
     }
 
@@ -745,36 +718,41 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     }
 
     public final EvaluationStatistics getEvaluationStatistics() {
-        return new EvaluationStatistics() {
+
+        return Algebra.getEvaluationStatistics((final StatementPattern pattern) -> {
+
+            final Var sv = pattern.getSubjectVar();
+            final Var pv = pattern.getPredicateVar();
+            final Var ov = pattern.getObjectVar();
+            final Var cv = pattern.getContextVar();
+
+            final Resource s = sv == null || !(sv.getValue() instanceof Resource) ? null
+                    : (Resource) sv.getValue();
+            final URI p = pv == null || !(pv.getValue() instanceof URI) ? null : (URI) pv
+                    .getValue();
+            final Value o = ov == null ? null : ov.getValue();
+            final Resource c = cv == null || !(cv.getValue() instanceof Resource) ? null
+                    : (Resource) cv.getValue();
+
+            return doSizeEstimate(s, p, o, c);
+
+        });
+    }
+
+    public final Function<Value, Value> getValueNormalizer() {
+        return new Function<Value, Value>() {
 
             @Override
-            protected CardinalityCalculator createCardinalityCalculator() {
-                return new CardinalityCalculator() {
-
-                    @Override
-                    public final double getCardinality(final StatementPattern pattern) {
-
-                        final Var sv = pattern.getSubjectVar();
-                        final Var pv = pattern.getPredicateVar();
-                        final Var ov = pattern.getObjectVar();
-                        final Var cv = pattern.getContextVar();
-
-                        final Resource s = sv == null || !(sv.getValue() instanceof Resource) ? null
-                                : (Resource) sv.getValue();
-                        final URI p = pv == null || !(pv.getValue() instanceof URI) ? null
-                                : (URI) pv.getValue();
-                        final Value o = ov == null ? null : ov.getValue();
-                        final Resource c = cv == null || !(cv.getValue() instanceof Resource) ? null
-                                : (Resource) cv.getValue();
-
-                        final int estimate = doSizeEstimate(s, p, o, c);
-                        return estimate >= 0 ? estimate : super.getCardinality(pattern);
-                    }
-
-                };
+            public Value apply(final Value value) {
+                return doNormalize(value);
             }
 
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Value> T normalize(final T value) {
+        return (T) doNormalize(value);
     }
 
     private abstract class ValueSet<V extends Value> extends AbstractSet<V> {

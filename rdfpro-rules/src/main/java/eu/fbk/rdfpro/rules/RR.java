@@ -21,28 +21,34 @@ public final class RR {
     /** Class rr:Rule. */
     public static final URI RULE = createURI("Rule");
 
+    /** Class rr:FixpointRule. */
+    public static final URI FIXPOINT_RULE = createURI("FixpointRule");
+
+    /** Class rr:NonFixpointRule. */
+    public static final URI NON_FIXPOINT_RULE = createURI("NonFixpointRule");
+
     /** Class rr:StaticTerm. */
     public static final URI STATIC_TERM = createURI("StaticTerm");
 
-    /** Class rr:StaticRule. */
-    @Deprecated
-    public static final URI STATIC_RULE = createURI("StaticRule");
-
-    /** Class rr:DynamicRule. */
-    @Deprecated
-    public static final URI DYNAMIC_RULE = createURI("DynamicRule");
-
     // PROPERTIES
 
+    /** Property rr:delete. */
+    public static final URI DELETE = createURI("delete");
+
+    /** Property rr:insert. */
+    public static final URI INSERT = createURI("insert");
+
+    /** Property rr:where. */
+    public static final URI WHERE = createURI("where");
+
+    /** Property rr:where. */
+    public static final URI PHASE = createURI("phase");
+
     /** Property rr:head. */
-    public static final URI HEAD = createURI("head");
+    public static final URI HEAD = createURI("head"); // alias for rr:insert
 
     /** Property rr:body. */
-    public static final URI BODY = createURI("body");
-
-    /** Property rr:data. */
-    @Deprecated
-    public static final URI DATA = createURI("data");
+    public static final URI BODY = createURI("body"); // alias for rr:where
 
     /** Property rr:prefix. */
     public static final URI PREFIX_PROPERTY = createURI("prefix");

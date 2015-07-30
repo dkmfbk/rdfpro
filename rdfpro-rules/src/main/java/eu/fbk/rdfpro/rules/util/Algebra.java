@@ -4,13 +4,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +38,7 @@ import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.Join;
 import org.openrdf.query.algebra.Projection;
 import org.openrdf.query.algebra.QueryModelNode;
+import org.openrdf.query.algebra.QueryRoot;
 import org.openrdf.query.algebra.SameTerm;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
@@ -43,10 +48,23 @@ import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
 import org.openrdf.query.algebra.evaluation.TripleSource;
-import org.openrdf.query.algebra.evaluation.federation.FederatedService;
 import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolver;
+import org.openrdf.query.algebra.evaluation.federation.FederatedServiceResolverImpl;
+import org.openrdf.query.algebra.evaluation.impl.BindingAssigner;
+import org.openrdf.query.algebra.evaluation.impl.CompareOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.ConjunctiveConstraintSplitter;
+import org.openrdf.query.algebra.evaluation.impl.ConstantOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.DisjunctiveConstraintOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
+import org.openrdf.query.algebra.evaluation.impl.FilterOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.IterativeEvaluationOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.OrderLimitOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.QueryJoinOptimizer;
+import org.openrdf.query.algebra.evaluation.impl.QueryModelNormalizer;
+import org.openrdf.query.algebra.evaluation.impl.SameTermFilterOptimizer;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
+import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.query.parser.ParsedBooleanQuery;
 import org.openrdf.query.parser.ParsedGraphQuery;
 import org.openrdf.query.parser.ParsedQuery;
@@ -73,6 +91,8 @@ import org.openrdf.query.parser.sparql.ast.SyntaxTreeBuilder;
 import org.openrdf.query.parser.sparql.ast.SyntaxTreeBuilderTreeConstants;
 import org.openrdf.query.parser.sparql.ast.TokenMgrError;
 import org.openrdf.query.parser.sparql.ast.VisitorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import info.aduna.iteration.CloseableIteration;
 import info.aduna.iteration.EmptyIteration;
@@ -82,29 +102,84 @@ import eu.fbk.rdfpro.util.Statements;
 
 public final class Algebra {
 
-    private static final EvaluationStrategy STRATEGY = new EvaluationStrategyImpl(
-            new TripleSource() {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Algebra.class);
 
-                @Override
-                public ValueFactory getValueFactory() {
-                    return Statements.VALUE_FACTORY;
-                }
+    private static final EvaluationStatistics DEFAULT_EVALUATION_STATISTICS = new EvaluationStatistics();
 
-                @Override
-                public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
-                        final Resource subj, final URI pred, final Value obj,
-                        final Resource... contexts) throws QueryEvaluationException {
-                    return new EmptyIteration<Statement, QueryEvaluationException>();
-                }
+    private static final FederatedServiceResolverImpl FEDERATED_SERVICE_RESOLVER = //
+    new FederatedServiceResolverImpl();
 
-            }, new FederatedServiceResolver() {
+    private static final TripleSource EMPTY_TRIPLE_SOURCE = new TripleSource() {
 
-                @Override
-                public FederatedService getService(final String serviceURL) {
-                    throw new Error();
-                }
+        @Override
+        public ValueFactory getValueFactory() {
+            return Statements.VALUE_FACTORY;
+        }
 
-            });
+        @Override
+        public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
+                final Resource subj, final URI pred, final Value obj, final Resource... contexts)
+                throws QueryEvaluationException {
+            return new EmptyIteration<Statement, QueryEvaluationException>();
+        }
+
+    };
+
+    private static final EvaluationStrategy EMPTY_EVALUATION_STRATEGY = new EvaluationStrategyImpl(
+            EMPTY_TRIPLE_SOURCE, FEDERATED_SERVICE_RESOLVER);
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+
+            @Override
+            public void run() {
+                FEDERATED_SERVICE_RESOLVER.shutDown();
+            }
+
+        });
+    }
+
+    public static FederatedServiceResolver getFederatedServiceResolver() {
+        return FEDERATED_SERVICE_RESOLVER;
+    }
+
+    public static TripleSource getEmptyTripleSource() {
+        return EMPTY_TRIPLE_SOURCE;
+    }
+
+    public static EvaluationStrategy getEvaluationStrategy(
+            @Nullable final TripleSource tripleSource, @Nullable final Dataset dataset) {
+
+        if (tripleSource != null) {
+            return new EvaluationStrategyImpl(tripleSource, dataset, FEDERATED_SERVICE_RESOLVER);
+        } else if (dataset != null) {
+            return new EvaluationStrategyImpl(EMPTY_TRIPLE_SOURCE, dataset,
+                    FEDERATED_SERVICE_RESOLVER);
+        } else {
+            return EMPTY_EVALUATION_STRATEGY;
+        }
+    }
+
+    public static EvaluationStatistics getEvaluationStatistics(
+            @Nullable final ToDoubleFunction<StatementPattern> estimator) {
+
+        return estimator == null ? DEFAULT_EVALUATION_STATISTICS : new EvaluationStatistics() {
+
+            @Override
+            protected CardinalityCalculator createCardinalityCalculator() {
+                return new CardinalityCalculator() {
+
+                    @Override
+                    public final double getCardinality(final StatementPattern pattern) {
+                        final double estimate = estimator.applyAsDouble(pattern);
+                        return estimate >= 0.0 ? estimate : super.getCardinality(pattern);
+                    }
+
+                };
+            }
+
+        };
+    }
 
     public static TupleExpr parseTupleExpr(final String string, @Nullable final String baseURI,
             @Nullable final Map<String, String> namespaces) throws MalformedQueryException {
@@ -195,11 +270,94 @@ public final class Algebra {
 
     public static Value evaluateValueExpr(final ValueExpr expr, final BindingSet bindings) {
         try {
-            return STRATEGY.evaluate(expr, bindings);
+            return EMPTY_EVALUATION_STRATEGY.evaluate(expr, bindings);
         } catch (final QueryEvaluationException ex) {
             throw new IllegalArgumentException("Error evaluating value expr:\n" + expr
                     + "\nbindings: " + bindings, ex);
         }
+    }
+
+    public static Iterator<BindingSet> evaluateTupleExpr(TupleExpr expr,
+            @Nullable final Dataset dataset, @Nullable BindingSet bindings,
+            @Nullable EvaluationStrategy evaluationStrategy,
+            @Nullable EvaluationStatistics evaluationStatistics,
+            @Nullable final Function<Value, Value> valueNormalizer) {
+
+        // Apply defaults where necessary
+        bindings = bindings != null ? bindings : EmptyBindingSet.getInstance();
+        evaluationStrategy = evaluationStrategy != null ? evaluationStrategy //
+                : Algebra.getEvaluationStrategy(null, dataset);
+        evaluationStatistics = evaluationStatistics != null ? evaluationStatistics //
+                : Algebra.getEvaluationStatistics(null);
+
+        // Add a dummy query root node to help with the optimization
+        expr = expr.clone();
+        if (!(expr instanceof QueryRoot)) {
+            expr = new QueryRoot(expr);
+        }
+
+        // Replace constant values in the query with corresponding values in the model
+        if (valueNormalizer != null) {
+            expr.visit(new QueryModelVisitorBase<RuntimeException>() {
+
+                @Override
+                public void meet(final Var node) throws RuntimeException {
+                    if (node.hasValue()) {
+                        node.setValue(valueNormalizer.apply(node.getValue()));
+                    }
+                }
+
+                @Override
+                public void meet(final ValueConstant node) throws RuntimeException {
+                    node.setValue(valueNormalizer.apply(node.getValue()));
+                }
+
+            });
+        }
+
+        // Optimize the query
+        LOGGER.trace("Query before optimization:\n{}", expr);
+        new BindingAssigner().optimize(expr, dataset, bindings);
+        new ConstantOptimizer(evaluationStrategy).optimize(expr, dataset, bindings);
+        new CompareOptimizer().optimize(expr, dataset, bindings);
+        new ConjunctiveConstraintSplitter().optimize(expr, dataset, bindings);
+        new DisjunctiveConstraintOptimizer().optimize(expr, dataset, bindings);
+        new SameTermFilterOptimizer().optimize(expr, dataset, bindings);
+        new QueryModelNormalizer().optimize(expr, dataset, bindings);
+        new QueryJoinOptimizer(evaluationStatistics).optimize(expr, dataset, bindings);
+        new IterativeEvaluationOptimizer().optimize(expr, dataset, bindings);
+        new FilterOptimizer().optimize(expr, dataset, bindings);
+        new OrderLimitOptimizer().optimize(expr, dataset, bindings);
+        LOGGER.trace("Query after optimization:\n{}", expr);
+
+        // Start the query, returning a CloseableIteration over its results
+        try {
+            return eu.fbk.rdfpro.rules.util.Iterators.forIteration(evaluationStrategy.evaluate(
+                    expr, EmptyBindingSet.getInstance()));
+        } catch (final QueryEvaluationException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public static boolean isBGP(final TupleExpr expr) {
+        final AtomicBoolean bgp = new AtomicBoolean(true);
+        expr.visit(new QueryModelVisitorBase<RuntimeException>() {
+
+            @Override
+            protected void meetNode(final QueryModelNode node) throws RuntimeException {
+                if (!bgp.get()) {
+                    return;
+                } else if (node instanceof StatementPattern || node instanceof Join
+                        || node instanceof Var) {
+                    super.meetNode(node);
+                } else {
+                    bgp.set(false);
+                    return;
+                }
+            }
+
+        });
+        return bgp.get();
     }
 
     public static <T> List<T> extractNodes(@Nullable final QueryModelNode expr,
@@ -226,7 +384,8 @@ public final class Algebra {
         return result;
     }
 
-    public static Set<String> extractVariables(@Nullable final QueryModelNode expr) {
+    public static Set<String> extractVariables(@Nullable final QueryModelNode expr,
+            final boolean onlyOutputVars) {
         final Set<String> set = new HashSet<>();
         if (expr != null) {
             expr.visit(new QueryModelVisitorBase<RuntimeException>() {
@@ -241,8 +400,24 @@ public final class Algebra {
                 }
 
             });
+            if (onlyOutputVars && expr instanceof TupleExpr) {
+                set.retainAll(((TupleExpr) expr).getBindingNames());
+            }
         }
         return set;
+    }
+
+    public static void internStrings(@Nullable final QueryModelNode expr) {
+        if (expr != null) {
+            expr.visit(new QueryModelVisitorBase<RuntimeException>() {
+
+                @Override
+                public void meet(final Var var) throws RuntimeException {
+                    var.setName(var.getName().intern());
+                }
+
+            });
+        }
     }
 
     @Nullable
@@ -454,7 +629,7 @@ public final class Algebra {
 
                 if (arg instanceof Join) {
                     final ValueExpr condition = filter.getCondition();
-                    final Set<String> filterVars = extractVariables(condition);
+                    final Set<String> filterVars = extractVariables(condition, false);
                     final Join join = (Join) arg;
                     boolean rewritten = false;
                     if (join.getLeftArg().getAssuredBindingNames().containsAll(filterVars)) {
@@ -468,6 +643,21 @@ public final class Algebra {
                     if (rewritten) {
                         expr = (TupleExpr) replaceNode(expr, filter, filter.getArg());
                         dirty = true;
+                    }
+                } else if (arg instanceof Extension) {
+                    final Extension ext = (Extension) arg;
+                    final TupleExpr extArg = ext.getArg();
+                    final Set<String> vars = extArg.getBindingNames();
+                    boolean canMove = true;
+                    for (TupleExpr e = filter; e instanceof Filter; e = ((Filter) e).getArg()) {
+                        canMove = canMove
+                                && vars.containsAll(Algebra.extractVariables(
+                                        ((Filter) e).getCondition(), false));
+                    }
+                    if (canMove) {
+                        expr = (TupleExpr) replaceNode(expr, ext, extArg);
+                        ext.setArg(filter);
+                        expr = (TupleExpr) replaceNode(expr, filter, ext);
                     }
                 }
             }
@@ -499,16 +689,16 @@ public final class Algebra {
                 if (arg instanceof Join) {
                     final Join join = (Join) arg;
                     for (final ExtensionElem elem : new ArrayList<>(extension.getElements())) {
-                        final Set<String> elemVars = extractVariables(elem.getExpr());
+                        final Set<String> elemVars = extractVariables(elem.getExpr(), false);
                         Extension newArg = null;
                         if (join.getLeftArg().getAssuredBindingNames().containsAll(elemVars)) {
                             newArg = join.getLeftArg() instanceof Extension ? (Extension) join
                                     .getLeftArg() : new Extension(join.getLeftArg());
-                                    join.setLeftArg(newArg);
+                            join.setLeftArg(newArg);
                         } else if (join.getRightArg().getAssuredBindingNames().contains(elemVars)) {
                             newArg = join.getRightArg() instanceof Extension ? (Extension) join
                                     .getRightArg() : new Extension(join.getRightArg());
-                                    join.setRightArg(newArg);
+                            join.setRightArg(newArg);
                         }
                         if (newArg != null) {
                             newArg.addElement(elem.clone());
@@ -614,7 +804,7 @@ public final class Algebra {
                 boolean fixed = false;
                 if (e instanceof Filter) {
                     final ValueExpr condition = ((Filter) e).getCondition();
-                    final Set<String> vars = extractVariables(condition);
+                    final Set<String> vars = extractVariables(condition, false);
                     for (int i = 0; i < 2; ++i) {
                         if (result[i].getAssuredBindingNames().containsAll(vars)) {
                             result[i] = new Filter(result[i], condition);
@@ -629,7 +819,7 @@ public final class Algebra {
                     final List<ExtensionElem> elems = ((Extension) e).getElements();
                     final Set<String> vars = new HashSet<>();
                     for (final ExtensionElem elem : elems) {
-                        vars.addAll(extractVariables(elem));
+                        vars.addAll(extractVariables(elem, false));
                     }
                     for (int i = 0; i < 2; ++i) {
                         if (i == partition || result[i].getAssuredBindingNames().containsAll(vars)) {
@@ -653,7 +843,7 @@ public final class Algebra {
 
     public static String format(final TupleExpr expr) {
         return expr == null ? "null" : new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-        .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
+                .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
     }
 
     private static class QNameProcessor extends ASTVisitorBase {

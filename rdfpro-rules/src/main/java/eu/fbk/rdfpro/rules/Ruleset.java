@@ -280,8 +280,8 @@ public final class Ruleset {
         // Extract all the vars used in the rules
         final Set<String> vars = new HashSet<String>();
         for (final Rule rule : this.rules) {
-            vars.addAll(Algebra.extractVariables(rule.getHead()));
-            vars.addAll(Algebra.extractVariables(rule.getBody()));
+            vars.addAll(Algebra.extractVariables(rule.getHead(), false));
+            vars.addAll(Algebra.extractVariables(rule.getBody(), false));
         }
 
         // Select a fresh graph var that does not appear in the rules
@@ -307,8 +307,8 @@ public final class Ruleset {
         // Extract all the vars used in the rules
         final Set<String> vars = new HashSet<String>();
         for (final Rule rule : this.rules) {
-            vars.addAll(Algebra.extractVariables(rule.getHead()));
-            vars.addAll(Algebra.extractVariables(rule.getBody()));
+            vars.addAll(Algebra.extractVariables(rule.getHead(), false));
+            vars.addAll(Algebra.extractVariables(rule.getBody(), false));
         }
 
         // Select a variable prefix never used in the rules

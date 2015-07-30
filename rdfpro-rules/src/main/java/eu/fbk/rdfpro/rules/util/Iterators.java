@@ -14,19 +14,11 @@ import org.slf4j.LoggerFactory;
 import info.aduna.iteration.CloseableIteration;
 import info.aduna.iteration.Iteration;
 
+import eu.fbk.rdfpro.util.IO;
+
 public class Iterators {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Iterators.class);
-
-    public static void closeQuietly(final Object object) {
-        if (object instanceof AutoCloseable) {
-            try {
-                ((AutoCloseable) object).close();
-            } catch (final Throwable ex) {
-                LOGGER.error("Could not close " + object.getClass().getName(), ex);
-            }
-        }
-    }
 
     @Nullable
     public static <T> Iterator<T> unmodifiable(@Nullable final Iterator<T> iterator) {
@@ -119,7 +111,7 @@ public class Iterators {
                     if (this.currentIterator.hasNext()) {
                         return true;
                     } else if (this.currentIterator != this.removeIterator) {
-                        closeQuietly(this.currentIterator);
+                        IO.closeQuietly(this.currentIterator);
                     }
                 }
                 if (!this.iteratorSupplier.hasNext()) {
@@ -137,7 +129,7 @@ public class Iterators {
             }
             final T element = this.currentIterator.next();
             if (this.removeIterator != this.currentIterator) {
-                closeQuietly(this.removeIterator);
+                IO.closeQuietly(this.removeIterator);
             }
             this.removeIterator = this.currentIterator;
             return element;
@@ -155,9 +147,9 @@ public class Iterators {
         @Override
         public void close() throws Exception {
             this.eof = true;
-            closeQuietly(this.removeIterator);
-            closeQuietly(this.currentIterator);
-            closeQuietly(this.iteratorSupplier);
+            IO.closeQuietly(this.removeIterator);
+            IO.closeQuietly(this.currentIterator);
+            IO.closeQuietly(this.iteratorSupplier);
         }
 
     }
@@ -223,7 +215,7 @@ public class Iterators {
 
         @Override
         public void close() throws Exception {
-            closeQuietly(this.iterator);
+            IO.closeQuietly(this.iterator);
         }
 
     }
@@ -257,7 +249,7 @@ public class Iterators {
 
         @Override
         public void close() throws Exception {
-            closeQuietly(this.iterator);
+            IO.closeQuietly(this.iterator);
         }
 
     }
@@ -335,7 +327,7 @@ public class Iterators {
 
         @Override
         public void close() throws E {
-            closeQuietly(this.iterator);
+            IO.closeQuietly(this.iterator);
         }
 
     }

@@ -28,6 +28,7 @@ import org.openrdf.repository.RepositoryResult;
 
 import eu.fbk.rdfpro.rules.util.Iterators;
 import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
+import eu.fbk.rdfpro.util.IO;
 
 final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
 
@@ -44,7 +45,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
 
     @Override
     public void close() {
-        Iterators.closeQuietly(this.connection);
+        IO.closeQuietly(this.connection);
     }
 
     @Override
