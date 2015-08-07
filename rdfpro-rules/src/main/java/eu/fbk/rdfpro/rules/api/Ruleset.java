@@ -3,16 +3,17 @@ package eu.fbk.rdfpro.rules.api;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
@@ -25,14 +26,13 @@ import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
-import org.openrdf.rio.RDFHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.rules.RR;
-import eu.fbk.rdfpro.rules.api.RuleEngine.Callback;
 import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
+import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -280,32 +280,27 @@ public final class Ruleset {
         }
 
         // Compute preprocessing rules that obtain bindings of static WHERE exprs
-        final List<Rule> preprocessingRules = new ArrayList<>();
-        final Map<URI, List<BindingSet>> bindingsMap = new HashMap<>();
+        final Map<URI, List<BindingSet>> bindingsMap = new ConcurrentHashMap<>();
+        final List<Runnable> queries = new ArrayList<>();
         int numDynamic = 0;
         for (final RuleSplit split : this.ruleSplits) {
             if (split.dynamicDeleteExpr != null || split.dynamicInsertExpr != null) {
                 ++numDynamic;
                 if (split.staticWhereExpr != null) {
-                    preprocessingRules.add(new Rule(split.rule.getID(), false, 0, null, null,
-                            split.staticWhereExpr));
-                    bindingsMap.put(split.rule.getID(), new ArrayList<>());
+                    queries.add(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            final List<BindingSet> bindings = Lists.newArrayList(staticData
+                                    .evaluate(split.staticWhereExpr, null, null));
+                            bindingsMap.put(split.rule.getID(), bindings);
+                        }
+
+                    });
                 }
             }
         }
-        final Ruleset preprocessingRuleset = new Ruleset(preprocessingRules, this.staticTerms);
-
-        // Evaluate preprocessing rules, using a callback to store bindings for static WHERE exprs
-        RuleEngine.create(preprocessingRuleset).eval(new Callback() {
-
-            @Override
-            public boolean ruleTriggered(final RDFHandler deleteHandler,
-                    final RDFHandler insertHandler, final Rule rule, final BindingSet bindings) {
-                bindingsMap.get(rule.getID()).add(bindings);
-                return true;
-            }
-
-        }, staticData);
+        Environment.run(queries);
 
         // Compute the dynamic rules using obtained bindings to explode the static WHERE parts
         final List<Rule> rules = new ArrayList<>();
@@ -336,8 +331,7 @@ public final class Ruleset {
         }
         LOGGER.debug("{} dynamic rules derived from {} static quads and {} original rules "
                 + "({} with dynamic components, {} with static & dynamic components)",
-                rules.size(), staticData.size(), this.rules.size(), numDynamic,
-                preprocessingRules.size());
+                rules.size(), staticData.size(), this.rules.size(), numDynamic, queries.size());
 
         // Build and return the resulting ruleset
         return new Ruleset(rules, this.staticTerms);

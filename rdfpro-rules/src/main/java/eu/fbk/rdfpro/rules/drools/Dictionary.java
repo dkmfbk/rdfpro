@@ -8,7 +8,7 @@ import org.openrdf.model.Value;
 
 public final class Dictionary {
 
-    static final int SIZE = 1 * 1024 * 1024 - 1;
+    static final int SIZE = 4 * 1024 * 1024 - 1;
 
     private final Value[] table;
 

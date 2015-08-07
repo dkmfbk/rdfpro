@@ -231,7 +231,7 @@ public abstract class RuleEngine {
                     LOGGER.debug("{}/{} statements directly emitted", numPropagated.get(),
                             numPropagated.get() + numProcessed.get());
                     LOGGER.debug("Rule evaluation completed: {} input statements, "
-                            + "{} output statements, {} ms",
+                            + "{} output statements , {} ms",
                             numProcessed.get() + numPropagated.get(), numOut.get(),
                             System.currentTimeMillis() - this.ts);
                 }
