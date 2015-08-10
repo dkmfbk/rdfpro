@@ -1,158 +1,349 @@
 package eu.fbk.rdfpro.rules;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
+import com.google.common.base.Throwables;
 
-import org.openrdf.model.Model;
 import org.openrdf.model.Statement;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.MalformedQueryException;
-import org.openrdf.query.algebra.Join;
-import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
-import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.rio.RDFHandler;
+import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import eu.fbk.rdfpro.rules.util.Algebra;
+import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
+import eu.fbk.rdfpro.RDFHandlers;
+import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.util.Environment;
-import eu.fbk.rdfpro.util.Namespaces;
+import eu.fbk.rdfpro.util.IO;
 
+/**
+ * Rule engine abstraction.
+ * <p>
+ * Implementation note: concrete rule engine implementations should extend this abstract class and
+ * implement one or both methods {@link #doEval(QuadModel)} and {@link #doEval(RDFHandler)}.
+ * </p>
+ */
 public abstract class RuleEngine {
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
-    private static final String BUILDER_CLASS = Environment.getProperty("rdfpro.rules.builder",
-            "eu.fbk.rdfpro.rules.drools.Engine$Builder");
+    private static final String IMPLEMENTATION = Environment.getProperty(
+            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
 
-    public RDFHandler newSession(final RDFHandler handler) {
-        return newSession(handler, null);
+    // private static final String IMPLEMENTATION = Environment.getProperty(
+    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");
+
+    protected final Ruleset ruleset;
+
+    /**
+     * Creates a new {@code RuleEngine} using the {@code Ruleset} specified. The ruleset must not
+     * contain unsafe rules.
+     *
+     * @param ruleset
+     *            the ruleset, not null and without unsafe rules
+     */
+    protected RuleEngine(final Ruleset ruleset) {
+
+        // Check the input ruleset
+        Objects.requireNonNull(ruleset);
+        for (final Rule rule : ruleset.getRules()) {
+            if (!rule.isSafe()) {
+                throw new IllegalArgumentException("Ruleset contains unsafe rule " + rule);
+            }
+        }
+
+        // Store the ruleset
+        this.ruleset = ruleset;
     }
 
-    public abstract RDFHandler newSession(final RDFHandler handler,
-            @Nullable final Callback callback);
+    /**
+     * Factory method for creating a new {@code RuleEngine} using the {@code Ruleset} specified.
+     * The ruleset must not contain unsafe rules. The engine implementation instantiated is based
+     * on the value of configuration property {@code rdfpro.rules.implementation}, which contains
+     * the qualified name of a concrete class extending abstract class {@code RuleEngine}.
+     *
+     * @param ruleset
+     *            the ruleset, not null and without unsafe rules
+     * @return the created rule engine
+     */
+    public static RuleEngine create(final Ruleset ruleset) {
 
-    public static Builder builder() {
-        return builder(new EmptyBindingSet());
-    }
+        // Check parameters
+        Objects.requireNonNull(ruleset);
 
-    public static Builder builder(@Nullable final BindingSet bindings) {
         try {
-            final BindingSet actualBindings = bindings != null ? bindings : new EmptyBindingSet();
-            final Class<?> clazz = Class.forName(BUILDER_CLASS);
-            final Constructor<?> constructor = clazz.getConstructor(BindingSet.class);
-            return (Builder) constructor.newInstance(actualBindings);
-        } catch (final Throwable ex) {
-            throw new Error("Illegal rule engine implementation: " + BUILDER_CLASS);
+            // Log the operation
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Creating '{}' engine with ruleset:\n{}\n", IMPLEMENTATION, ruleset);
+            }
+
+            // Locate the RuleEngine constructor to be used
+            final Class<?> clazz = Class.forName(IMPLEMENTATION);
+            final Constructor<?> constructor = clazz.getConstructor(Ruleset.class);
+
+            // Instantiate the engine via reflection
+            return (RuleEngine) constructor.newInstance(ruleset);
+
+        } catch (final IllegalAccessException | ClassNotFoundException | NoSuchMethodException
+                | InstantiationException ex) {
+            // Configuration is wrong
+            throw new Error("Illegal rule engine implementation: " + IMPLEMENTATION, ex);
+
+        } catch (final InvocationTargetException ex) {
+            // Configuration is ok, but the RuleEngine cannot be created
+            throw Throwables.propagate(ex.getCause());
         }
     }
 
-    public static abstract class Builder {
+    /**
+     * Returns the ruleset applied by this engine
+     *
+     * @return the ruleset
+     */
+    public final Ruleset getRuleset() {
+        return this.ruleset;
+    }
 
-        private final BindingSet bindings;
+    /**
+     * Evaluates rules on the {@code QuadModel} specified.
+     *
+     * @param model
+     *            the model the engine will operate on
+     */
+    public final void eval(final Collection<Statement> model) {
 
-        private final boolean normalizeBodyVars;
+        // Check parameters
+        Objects.requireNonNull(model);
 
-        protected Builder(final BindingSet bindings, final boolean normalizeBodyVars) {
-            this.bindings = bindings;
-            this.normalizeBodyVars = normalizeBodyVars;
+        // Handle two cases, respectively with/without logging information emitted
+        if (!LOGGER.isDebugEnabled()) {
+
+            // Logging disabled: directly forward to doEval()
+            doEval(model);
+
+        } else {
+
+            // Logging enabled: log relevant info before and after forwarding to doEval()
+            final long ts = System.currentTimeMillis();
+            final int inputSize = model.size();
+            LOGGER.debug("Rule evaluation started: {} input statements, {} rule(s), model input",
+                    inputSize, this.ruleset.getRules().size());
+            doEval(model);
+            LOGGER.debug(
+                    "Rule evaluation completed: {} input statements, {} output statements, {} ms",
+                    inputSize, model.size(), System.currentTimeMillis() - ts);
         }
+    }
 
-        protected abstract void doAddRule(final String ruleID, final List<StatementPattern> head,
-                @Nullable final TupleExpr body);
+    /**
+     * Evaluates rules in streaming mode, emitting resulting statements to the {@code RDFHandler}
+     * supplied.
+     *
+     * @param handler
+     *            the handler where to emit resulting statements
+     * @return an {@code RDFHandler} where input statements can be streamed into
+     */
+    public final RDFHandler eval(final RDFHandler handler) {
 
-        protected abstract RuleEngine doBuild();
+        // Check parameters
+        Objects.requireNonNull(handler);
 
-        public final Builder addRules(final Model model) {
-            final Set<String> ids = new HashSet<>();
-            final Map<String, String> heads = new HashMap<>();
-            final Map<String, String> bodies = new HashMap<>();
-            for (final Statement stmt : model.filter(null, RR.HEAD, null)) {
-                ids.add(stmt.getSubject().stringValue());
-                heads.put(stmt.getSubject().stringValue(), stmt.getObject().stringValue());
-            }
-            for (final Statement stmt : model.filter(null, RR.BODY, null)) {
-                ids.add(stmt.getSubject().stringValue());
-                bodies.put(stmt.getSubject().stringValue(), stmt.getObject().stringValue());
-            }
-            final List<String> sortedIDs = new ArrayList<>(ids);
-            Collections.sort(sortedIDs);
-            for (final String id : sortedIDs) {
-                addRule(id, heads.get(id), bodies.get(id),
-                        Namespaces.forIterable(model.getNamespaces(), false), null);
-            }
-            return this;
-        }
+        // Handle two cases, respectively with/without logging information emitted
+        if (!LOGGER.isDebugEnabled()) {
 
-        public final Builder addRule(final String id, @Nullable final String head,
-                @Nullable final String body, @Nullable final Namespaces namespaces,
-                @Nullable final Map<BindingSet, Iterable<BindingSet>> mappings) {
-            try {
-                final TupleExpr headExpr = head == null ? null : Algebra.parseTupleExpr(head,
-                        null, namespaces.uriMap());
-                final TupleExpr bodyExpr = body == null ? null : Algebra.parseTupleExpr(body,
-                        null, namespaces.uriMap());
-                addRule(id, headExpr, bodyExpr);
-                return this;
-            } catch (final MalformedQueryException ex) {
-                throw new IllegalArgumentException(ex);
-            }
-        }
+            // Logging disabled: delegate to doEval(), filtering out non-matchable quads
+            final RDFHandler sink = handler;
+            return new AbstractRDFHandlerWrapper(doEval(handler)) {
 
-        public final Builder addRule(final String ruleID, @Nullable final TupleExpr head,
-                @Nullable final TupleExpr body) {
-
-            final TupleExpr rewrittenHead = Algebra.rewrite(Algebra.normalizeVars(head),
-                    this.bindings);
-            final TupleExpr rewrittenBody = Algebra.rewrite(
-                    this.normalizeBodyVars ? Algebra.normalizeVars(body) : body, this.bindings);
-
-            final List<StatementPattern> headAtoms = new ArrayList<>();
-            if (rewrittenHead != null) {
-                rewrittenHead.visit(new QueryModelVisitorBase<RuntimeException>() {
-
-                    @Override
-                    protected void meetNode(final QueryModelNode node) throws RuntimeException {
-                        if (node instanceof StatementPattern) {
-                            headAtoms.add((StatementPattern) node);
-                        } else if (node instanceof Join) {
-                            node.visitChildren(this);
-                        } else {
-                            throw new IllegalArgumentException("Unsupported head expression: "
-                                    + node);
-                        }
+                @Override
+                public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
+                        super.handleStatement(stmt);
+                    } else {
+                        sink.handleStatement(stmt);
                     }
+                }
 
-                });
-            }
+            };
 
-            doAddRule(ruleID, headAtoms, rewrittenBody);
+        } else {
 
-            return this;
+            // Logging enabled: allocate counters to track quads in (processed/propagated) and out
+            final AtomicInteger numProcessed = new AtomicInteger(0);
+            final AtomicInteger numPropagated = new AtomicInteger(0);
+            final AtomicInteger numOut = new AtomicInteger(0);
+
+            // Wrap sink handler to count out quads
+            final RDFHandler sink = new AbstractRDFHandlerWrapper(handler) {
+
+                @Override
+                public void handleStatement(final Statement statement) throws RDFHandlerException {
+                    super.handleStatement(statement);
+                    numOut.incrementAndGet();
+                }
+
+            };
+
+            // Delegate to doEval(), wrapping the returned handler to perform logging and filter
+            // out non-matchable quads
+            return new AbstractRDFHandlerWrapper(doEval(sink)) {
+
+                private long ts;
+
+                @Override
+                public void startRDF() throws RDFHandlerException {
+                    this.ts = System.currentTimeMillis();
+                    numProcessed.set(0);
+                    numPropagated.set(0);
+                    numOut.set(0);
+                    LOGGER.debug("Rule evaluation started: {} rule(s), stream input",
+                            RuleEngine.this.ruleset.getRules().size());
+                    super.startRDF();
+                }
+
+                @Override
+                public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
+                        super.handleStatement(stmt);
+                        numProcessed.incrementAndGet();
+                    } else {
+                        this.handler.handleStatement(stmt);
+                        numPropagated.incrementAndGet();
+                    }
+                }
+
+                @Override
+                public void endRDF() throws RDFHandlerException {
+                    super.endRDF();
+                    LOGGER.debug("{}/{} statements directly emitted", numPropagated.get(),
+                            numPropagated.get() + numProcessed.get());
+                    LOGGER.debug("Rule evaluation completed: {} input statements, "
+                            + "{} output statements , {} ms",
+                            numProcessed.get() + numPropagated.get(), numOut.get(),
+                            System.currentTimeMillis() - this.ts);
+                }
+
+            };
         }
-
-        public final RuleEngine build() {
-            return doBuild();
-        }
-
     }
 
-    public interface Callback {
+    /**
+     * Internal method called by {@link #eval(QuadModel)}. Its base implementation delegates to
+     * {@link #doEval(RDFHandler)}.
+     *
+     * @param model
+     *            the model to operate on
+     */
+    protected void doEval(final Collection<Statement> model) {
 
-        boolean ruleTriggered(final RDFHandler handler, final String ruleID,
-                final BindingSet bindings);
+        // Counters used for logging
+        final int numInput = LOGGER.isDebugEnabled() ? model.size() : 0;
+        int numPropagated = 0;
 
+        // Delegate to doEval(RDFHandler), handling two cases for performance reasons
+        if (!this.ruleset.isDeletePossible()
+                && (model instanceof QuadModel || model instanceof Set<?>)) {
+
+            // Optimized version that adds inferred statement back to the supplied model, relying
+            // on the fact that no statement can be possibly deleted
+            final List<Statement> inputStmts = new ArrayList<>(model);
+            final RDFHandler handler = doEval(RDFHandlers.wrap(model));
+            try {
+                handler.startRDF();
+                for (final Statement stmt : inputStmts) {
+                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
+                        handler.handleStatement(stmt);
+                    } else {
+                        ++numPropagated;
+                    }
+                }
+                handler.endRDF();
+            } catch (final RDFHandlerException ex) {
+                throw new RuntimeException(ex);
+            } finally {
+                IO.closeQuietly(handler);
+            }
+
+        } else {
+
+            // General implementation that stores resulting statement in a list, and then clears
+            // the input model and loads those statement (this will also take into consideration
+            // possible deletions)
+            final List<Statement> outputStmts = new ArrayList<>();
+            final RDFHandler handler = doEval(RDFHandlers.wrap(outputStmts));
+            try {
+                handler.startRDF();
+                for (final Statement stmt : model) {
+                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
+                        handler.handleStatement(stmt);
+                    } else {
+                        outputStmts.add(stmt);
+                        ++numPropagated;
+                    }
+                }
+                handler.endRDF();
+            } catch (final RDFHandlerException ex) {
+                throw new RuntimeException(ex);
+            } finally {
+                IO.closeQuietly(handler);
+            }
+            model.clear();
+            for (final Statement stmt : outputStmts) {
+                model.add(stmt);
+            }
+        }
+
+        // Log the number of input statements directly emitted in output as non matchable
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("{}/{} input statements directly emitted", numPropagated, numInput);
+        }
+    }
+
+    /**
+     * Internal method called by {@link #eval(RDFHandler)}. Its base implementation delegates to
+     * {@link #doEval(QuadModel)}.
+     *
+     * @param handler
+     *            the handler where to emit resulting statements
+     * @return an handler accepting input statements
+     */
+    protected RDFHandler doEval(final RDFHandler handler) {
+
+        // Return an RDFHandler that delegates to doEval(QuadModel)
+        return new AbstractRDFHandlerWrapper(handler) {
+
+            private QuadModel model;
+
+            @Override
+            public void startRDF() throws RDFHandlerException {
+                super.startRDF();
+                this.model = QuadModel.create();
+            }
+
+            @Override
+            public synchronized void handleStatement(final Statement stmt)
+                    throws RDFHandlerException {
+                this.model.add(stmt);
+            }
+
+            @Override
+            public void endRDF() throws RDFHandlerException {
+                doEval(this.model);
+                for (final Statement stmt : this.model) {
+                    super.handleStatement(stmt);
+                }
+                this.model = null; // free memory
+                super.endRDF();
+            }
+
+        };
     }
 
 }

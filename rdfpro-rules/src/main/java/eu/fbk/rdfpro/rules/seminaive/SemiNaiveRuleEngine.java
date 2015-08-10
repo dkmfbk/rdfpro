@@ -46,9 +46,9 @@ import org.slf4j.LoggerFactory;
 import info.aduna.iteration.CloseableIteration;
 
 import eu.fbk.rdfpro.AbstractRDFHandler;
-import eu.fbk.rdfpro.rules.api.Rule;
-import eu.fbk.rdfpro.rules.api.RuleEngine;
-import eu.fbk.rdfpro.rules.api.Ruleset;
+import eu.fbk.rdfpro.rules.Rule;
+import eu.fbk.rdfpro.rules.RuleEngine;
+import eu.fbk.rdfpro.rules.Ruleset;
 import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.rules.util.Iterators;

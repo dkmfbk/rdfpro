@@ -46,9 +46,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
-import eu.fbk.rdfpro.rules.api.Rule;
-import eu.fbk.rdfpro.rules.api.RuleEngine;
-import eu.fbk.rdfpro.rules.api.Ruleset;
+import eu.fbk.rdfpro.rules.Rule;
+import eu.fbk.rdfpro.rules.RuleEngine;
+import eu.fbk.rdfpro.rules.Ruleset;
 import eu.fbk.rdfpro.rules.util.Algebra;
 
 public class DroolsRuleEngine extends RuleEngine {

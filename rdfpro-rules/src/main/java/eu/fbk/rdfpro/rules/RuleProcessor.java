@@ -1,9 +1,7 @@
 package eu.fbk.rdfpro.rules;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -13,7 +11,6 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.query.BindingSet;
 import org.openrdf.query.impl.MapBindingSet;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -28,7 +25,7 @@ import eu.fbk.rdfpro.RDFProcessors;
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
 import eu.fbk.rdfpro.Reducer;
-import eu.fbk.rdfpro.rules.RuleEngine.Callback;
+import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
@@ -46,7 +43,7 @@ public final class RuleProcessor implements RDFProcessor {
     private final Mapper mapper;
 
     @Nullable
-    private final RDFSource staticClosure;
+    private final QuadModel staticClosure;
 
     private final boolean dropBNodeTypes;
 
@@ -81,11 +78,11 @@ public final class RuleProcessor implements RDFProcessor {
             rulesetURLs.add(IO.extractURL(location).toString());
         }
         final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
-                rulesetURLs.toArray(new String[0]));
+                rulesetURLs.toArray(new String[rulesetURLs.size()]));
         Ruleset ruleset = Ruleset.fromRDF(rulesetSource);
 
         // Transform ruleset
-        ruleset = ruleset.transform(bindings);
+        ruleset = ruleset.rewriteVariables(bindings);
         URI globalURI = null;
         if (options.hasOption("G")) {
             final String u = options.getOptionArg("G", String.class);
@@ -94,11 +91,11 @@ public final class RuleProcessor implements RDFProcessor {
         }
         final String mode = options.getOptionArg("g", String.class, "none").trim();
         if ("global".equalsIgnoreCase(mode)) {
-            ruleset = ruleset.transformGlobalGM(globalURI);
+            ruleset = ruleset.rewriteGlobalGM(globalURI);
         } else if ("separate".equalsIgnoreCase(mode)) {
-            ruleset = ruleset.transformSeparateGM();
+            ruleset = ruleset.rewriteSeparateGM();
         } else if ("star".equalsIgnoreCase(mode)) {
-            ruleset = ruleset.transformStarGM(globalURI);
+            ruleset = ruleset.rewriteStarGM(globalURI);
         } else if (!"none".equalsIgnoreCase(mode)) {
             throw new IllegalArgumentException("Unknown graph inference mode: " + mode);
         }
@@ -153,111 +150,44 @@ public final class RuleProcessor implements RDFProcessor {
             final boolean dropBNodeTypes, @Nullable final RDFSource staticData,
             final boolean emitStatic, @Nullable final URI staticContext) {
 
-        // Setup the handler receiving closure of static data, if any.
-        final List<Statement> staticClosure = new ArrayList<>();
-        RDFHandler staticSink = RDFHandlers.NIL;
-        if (staticData != null && emitStatic) {
-            staticSink = RDFHandlers.wrap(staticClosure);
-            if (staticContext != null) {
-                final URI uri = staticContext.equals(SESAME.NIL) ? null : staticContext;
-                staticSink = new AbstractRDFHandlerWrapper(staticSink) {
-
-                    @Override
-                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                        super.handleStatement(Statements.VALUE_FACTORY.createStatement(
-                                stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), uri));
-                    }
-
-                };
+        // Process ruleset and static data
+        LOGGER.info("Processing {} rules {} static data", ruleset.getRules().size(),
+                staticData == null ? "without" : "with");
+        final long ts = System.currentTimeMillis();
+        Ruleset processedRuleset = ruleset.mergeSameWhereExpr();
+        RuleEngine engine = RuleEngine.create(processedRuleset);
+        QuadModel staticClosure = null;
+        if (staticData != null) {
+            staticClosure = QuadModel.create();
+            try {
+                staticData.emit(RDFHandlers.synchronize(RDFHandlers.wrap(staticClosure)), 1);
+            } catch (final RDFHandlerException ex) {
+                throw new RuntimeException(ex);
+            }
+            engine.eval(staticClosure);
+            processedRuleset = processedRuleset.getDynamicRuleset(staticClosure)
+                    .mergeSameWhereExpr();
+            engine = RuleEngine.create(processedRuleset);
+            if (!emitStatic) {
+                staticClosure = null;
+            } else if (staticContext != null) {
+                final URI ctx = staticContext.equals(SESAME.NIL) ? null : staticContext;
+                final List<Statement> stmts = new ArrayList<>(staticClosure);
+                staticClosure.clear();
+                for (final Statement stmt : stmts) {
+                    staticClosure.add(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+                            ctx);
+                }
             }
         }
-
-        // Build the dynamic rule engine by closing static data and proprocessing rules
-        final RuleEngine engine = preprocess(ruleset, staticData, staticSink);
+        LOGGER.info("Rule engine initialized with {} dynamic rules in {} ms", processedRuleset
+                .getRules().size(), System.currentTimeMillis() - ts);
 
         // Setup object
         this.engine = engine;
         this.mapper = mapper;
-        this.staticClosure = RDFSources.wrap(staticClosure);
+        this.staticClosure = staticClosure;
         this.dropBNodeTypes = dropBNodeTypes;
-    }
-
-    private static RuleEngine preprocess(final Ruleset ruleset,
-            @Nullable final RDFSource staticData, final RDFHandler staticSink) {
-
-        // Build the dynamic engine and compute the static closure by handling two cases
-        LOGGER.info("Processing {} rules {} static data", ruleset.getRules().size(),
-                staticData == null ? "without" : "with");
-        final long ts = System.currentTimeMillis();
-        if (staticData == null) {
-
-            // (1) Static data not provided, use input rules without static/dynamic distinction
-            final Ruleset mergedRuleset = ruleset.transformMergeHeads();
-            final RuleEngine.Builder builder = RuleEngine.builder(null);
-            for (final Rule rule : mergedRuleset.getRules()) {
-                builder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
-            }
-            final RuleEngine engine = builder.build();
-            LOGGER.info("Rule engine initialized with {} rules in {} ms", mergedRuleset.getRules()
-                    .size(), System.currentTimeMillis() - ts);
-            return engine;
-
-        } else {
-
-            // (2) Static data provided, use dynamic rules obtained by preprocessing.
-            // First build the static rule engine
-            final RuleEngine.Builder staticBuilder = RuleEngine.builder(null);
-            for (final Rule rule : ruleset.transformMergeHeads().getRules()) {
-                staticBuilder.addRule(rule.getID().stringValue() + "__static", rule.getHead(),
-                        rule.getBody());
-            }
-            for (final Rule rule : ruleset.getPreprocessingRuleset().getRules()) {
-                staticBuilder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
-            }
-            final RuleEngine staticEngine = staticBuilder.build();
-
-            // Then run the static engine to compute the closure of static data and build the
-            // dynamic ruleset based on bindings computed for preprocessing rules.
-            final Map<URI, List<BindingSet>> bindings = new HashMap<>();
-            final Map<String, List<BindingSet>> bindingsHelper = new HashMap<>();
-            for (final Rule rule : ruleset.getPreprocessingRuleset().getRules()) {
-                final List<BindingSet> list = new ArrayList<>();
-                bindings.put(rule.getID(), list);
-                bindingsHelper.put(rule.getID().stringValue(), list);
-            }
-            final RDFHandler handler = staticEngine.newSession(staticSink, new Callback() {
-
-                @Override
-                public boolean ruleTriggered(final RDFHandler handler, final String id,
-                        final BindingSet bindings) {
-                    final List<BindingSet> list = bindingsHelper.get(id);
-                    if (list != null) {
-                        list.add(bindings);
-                    }
-                    return true;
-                }
-
-            });
-            try {
-                staticData.emit(handler, 1);
-            } catch (final RDFHandlerException ex) {
-                throw new RuntimeException(ex);
-            }
-            final Ruleset dynamicRuleset = ruleset.getDynamicRuleset(bindings)
-                    .transformMergeHeads();
-
-            // Build the dynamic engine
-            final RuleEngine.Builder dynamicBuilder = RuleEngine.builder(null);
-            for (final Rule rule : dynamicRuleset.getRules()) {
-                dynamicBuilder.addRule(rule.getID().stringValue(), rule.getHead(), rule.getBody());
-            }
-            final RuleEngine engine = dynamicBuilder.build();
-
-            // Log results
-            LOGGER.info("Rule engine initialized with {} dynamic rules in {} ms", dynamicRuleset
-                    .getRules().size(), System.currentTimeMillis() - ts);
-            return engine;
-        }
     }
 
     @Override
@@ -283,14 +213,14 @@ public final class RuleProcessor implements RDFProcessor {
 
         // If necessary, filter the handler so to inject the static closure (in parallel)
         if (this.staticClosure != null) {
-            result = RDFProcessors.inject(this.staticClosure).wrap(result);
+            result = RDFProcessors.inject(RDFSources.wrap(this.staticClosure)).wrap(result);
         }
 
         // Filter the handler to perform inference. Handle two cases.
         if (this.mapper == null) {
 
             // (1) No mapper: just invoke the rule engine
-            result = this.engine.newSession(result);
+            result = this.engine.eval(result);
 
         } else {
 
@@ -300,7 +230,7 @@ public final class RuleProcessor implements RDFProcessor {
                 @Override
                 public void reduce(final Value key, final Statement[] stmts,
                         final RDFHandler handler) throws RDFHandlerException {
-                    final RDFHandler session = RuleProcessor.this.engine.newSession(RDFHandlers
+                    final RDFHandler session = RuleProcessor.this.engine.eval(RDFHandlers
                             .ignoreMethods(handler, RDFHandlers.METHOD_START_RDF
                                     | RDFHandlers.METHOD_END_RDF | RDFHandlers.METHOD_CLOSE));
                     try {
