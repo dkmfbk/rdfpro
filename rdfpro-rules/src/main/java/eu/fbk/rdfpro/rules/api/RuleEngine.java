@@ -3,16 +3,15 @@ package eu.fbk.rdfpro.rules.api;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.annotation.Nullable;
 
 import com.google.common.base.Throwables;
 
 import org.openrdf.model.Statement;
-import org.openrdf.query.BindingSet;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
@@ -28,16 +27,18 @@ import eu.fbk.rdfpro.util.IO;
  * Rule engine abstraction.
  * <p>
  * Implementation note: concrete rule engine implementations should extend this abstract class and
- * implement one or both methods {@link #doEval(Callback, QuadModel)} and
- * {@link #doEval(Callback, RDFHandler)}.
+ * implement one or both methods {@link #doEval(QuadModel)} and {@link #doEval(RDFHandler)}.
  * </p>
  */
 public abstract class RuleEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
+    // private static final String IMPLEMENTATION = Environment.getProperty(
+    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
+
     private static final String IMPLEMENTATION = Environment.getProperty(
-            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
+            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");
 
     protected final Ruleset ruleset;
 
@@ -111,15 +112,12 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Evaluates rules on the {@code QuadModel} specified, possibly invoking an optional
-     * {@code Callback}.
+     * Evaluates rules on the {@code QuadModel} specified.
      *
-     * @param callback
-     *            the optional callback
      * @param model
      *            the model the engine will operate on
      */
-    public final void eval(@Nullable final Callback callback, final QuadModel model) {
+    public final void eval(final Collection<Statement> model) {
 
         // Check parameters
         Objects.requireNonNull(model);
@@ -128,17 +126,16 @@ public abstract class RuleEngine {
         if (!LOGGER.isDebugEnabled()) {
 
             // Logging disabled: directly forward to doEval()
-            doEval(callback, model);
+            doEval(model);
 
         } else {
 
             // Logging enabled: log relevant info before and after forwarding to doEval()
             final long ts = System.currentTimeMillis();
             final int inputSize = model.size();
-            LOGGER.debug("Rule evaluation started: {} input statements, {} rule(s){}, "
-                    + "model input", inputSize, this.ruleset.getRules().size(),
-                    callback == null ? "" : ", with callback");
-            doEval(callback, model);
+            LOGGER.debug("Rule evaluation started: {} input statements, {} rule(s), model input",
+                    inputSize, this.ruleset.getRules().size());
+            doEval(model);
             LOGGER.debug(
                     "Rule evaluation completed: {} input statements, {} output statements, {} ms",
                     inputSize, model.size(), System.currentTimeMillis() - ts);
@@ -146,16 +143,14 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Evalutes rules in streaming mode, emitting resulting statements to the {@code RDFHandler}
-     * supplied and optionally invoking a given {@code Callback}.
+     * Evaluates rules in streaming mode, emitting resulting statements to the {@code RDFHandler}
+     * supplied.
      *
-     * @param callback
-     *            the optional callback
      * @param handler
      *            the handler where to emit resulting statements
      * @return an {@code RDFHandler} where input statements can be streamed into
      */
-    public final RDFHandler eval(@Nullable final Callback callback, final RDFHandler handler) {
+    public final RDFHandler eval(final RDFHandler handler) {
 
         // Check parameters
         Objects.requireNonNull(handler);
@@ -165,7 +160,7 @@ public abstract class RuleEngine {
 
             // Logging disabled: delegate to doEval(), filtering out non-matchable quads
             final RDFHandler sink = handler;
-            return new AbstractRDFHandlerWrapper(doEval(callback, handler)) {
+            return new AbstractRDFHandlerWrapper(doEval(handler)) {
 
                 @Override
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
@@ -198,7 +193,7 @@ public abstract class RuleEngine {
 
             // Delegate to doEval(), wrapping the returned handler to perform logging and filter
             // out non-matchable quads
-            return new AbstractRDFHandlerWrapper(doEval(callback, sink)) {
+            return new AbstractRDFHandlerWrapper(doEval(sink)) {
 
                 private long ts;
 
@@ -208,9 +203,8 @@ public abstract class RuleEngine {
                     numProcessed.set(0);
                     numPropagated.set(0);
                     numOut.set(0);
-                    LOGGER.debug("Rule evaluation started: {} rule(s){}, stream input",
-                            RuleEngine.this.ruleset.getRules().size(), callback == null ? ""
-                                    : ", with callback");
+                    LOGGER.debug("Rule evaluation started: {} rule(s), stream input",
+                            RuleEngine.this.ruleset.getRules().size());
                     super.startRDF();
                 }
 
@@ -241,27 +235,26 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(Callback, QuadModel)}. Its base implementation
-     * delegates to {@link #doEval(Callback, RDFHandler)}.
+     * Internal method called by {@link #eval(QuadModel)}. Its base implementation delegates to
+     * {@link #doEval(RDFHandler)}.
      *
-     * @param callback
-     *            the optional callback
      * @param model
      *            the model to operate on
      */
-    protected void doEval(@Nullable final Callback callback, final QuadModel model) {
+    protected void doEval(final Collection<Statement> model) {
 
         // Counters used for logging
         final int numInput = LOGGER.isDebugEnabled() ? model.size() : 0;
         int numPropagated = 0;
 
-        // Delegate to doEval(Callback, RDFHandler), handling two cases for performance reasons
-        if (!this.ruleset.isDeletePossible()) {
+        // Delegate to doEval(RDFHandler), handling two cases for performance reasons
+        if (!this.ruleset.isDeletePossible()
+                && (model instanceof QuadModel || model instanceof Set<?>)) {
 
             // Optimized version that adds inferred statement back to the supplied model, relying
             // on the fact that no statement can be possibly deleted
             final List<Statement> inputStmts = new ArrayList<>(model);
-            final RDFHandler handler = doEval(callback, RDFHandlers.wrap(model));
+            final RDFHandler handler = doEval(RDFHandlers.wrap(model));
             try {
                 handler.startRDF();
                 for (final Statement stmt : inputStmts) {
@@ -284,7 +277,7 @@ public abstract class RuleEngine {
             // the input model and loads those statement (this will also take into consideration
             // possible deletions)
             final List<Statement> outputStmts = new ArrayList<>();
-            final RDFHandler handler = doEval(callback, RDFHandlers.wrap(outputStmts));
+            final RDFHandler handler = doEval(RDFHandlers.wrap(outputStmts));
             try {
                 handler.startRDF();
                 for (final Statement stmt : model) {
@@ -314,18 +307,16 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(Callback, RDFHandler)}. Its base implementation
-     * delegates to {@link #doEval(Callback, QuadModel)}.
+     * Internal method called by {@link #eval(RDFHandler)}. Its base implementation delegates to
+     * {@link #doEval(QuadModel)}.
      *
-     * @param callback
-     *            the optional callback
      * @param handler
      *            the handler where to emit resulting statements
      * @return an handler accepting input statements
      */
-    protected RDFHandler doEval(@Nullable final Callback callback, final RDFHandler handler) {
+    protected RDFHandler doEval(final RDFHandler handler) {
 
-        // Return an RDFHandler that delegates to doEval(Callback, QuadModel)
+        // Return an RDFHandler that delegates to doEval(QuadModel)
         return new AbstractRDFHandlerWrapper(handler) {
 
             private QuadModel model;
@@ -344,7 +335,7 @@ public abstract class RuleEngine {
 
             @Override
             public void endRDF() throws RDFHandlerException {
-                doEval(callback, this.model);
+                doEval(this.model);
                 for (final Statement stmt : this.model) {
                     super.handleStatement(stmt);
                 }
@@ -353,33 +344,6 @@ public abstract class RuleEngine {
             }
 
         };
-    }
-
-    /**
-     * Callback interface called by the engine each time a rule is triggered.
-     */
-    public interface Callback {
-
-        /**
-         * Callback called each time a rule is triggered, i.e., its WHERE expression is matched on
-         * input statements producing certain bindings.
-         *
-         * @param deleteHandler
-         *            the handler where to send statements that have to be deleted by the engine
-         * @param insertHandler
-         *            the handler where to send statements that have to be inserted by the engine
-         * @param rule
-         *            the rule triggered
-         * @param bindings
-         *            the bindings produced by the evaluation of the WHERE expression
-         * @return true, if the engine should continue processing this rule activation, performing
-         *         the requested deletions and insertions; false otherwise (in this case,
-         *         deletions and insertions performed by the method through the two supplied
-         *         handlers will still be applied)
-         */
-        boolean ruleTriggered(final RDFHandler deleteHandler, RDFHandler insertHandler,
-                final Rule rule, final BindingSet bindings);
-
     }
 
 }

@@ -164,7 +164,7 @@ public final class RuleProcessor implements RDFProcessor {
             } catch (final RDFHandlerException ex) {
                 throw new RuntimeException(ex);
             }
-            engine.eval(null, staticClosure);
+            engine.eval(staticClosure);
             processedRuleset = processedRuleset.getDynamicRuleset(staticClosure)
                     .mergeSameWhereExpr();
             engine = RuleEngine.create(processedRuleset);
@@ -220,7 +220,7 @@ public final class RuleProcessor implements RDFProcessor {
         if (this.mapper == null) {
 
             // (1) No mapper: just invoke the rule engine
-            result = this.engine.eval(null, result);
+            result = this.engine.eval(result);
 
         } else {
 
@@ -230,9 +230,8 @@ public final class RuleProcessor implements RDFProcessor {
                 @Override
                 public void reduce(final Value key, final Statement[] stmts,
                         final RDFHandler handler) throws RDFHandlerException {
-                    final RDFHandler session = RuleProcessor.this.engine.eval(
-                            null,
-                            RDFHandlers.ignoreMethods(handler, RDFHandlers.METHOD_START_RDF
+                    final RDFHandler session = RuleProcessor.this.engine.eval(RDFHandlers
+                            .ignoreMethods(handler, RDFHandlers.METHOD_START_RDF
                                     | RDFHandlers.METHOD_END_RDF | RDFHandlers.METHOD_CLOSE));
                     try {
                         session.startRDF();

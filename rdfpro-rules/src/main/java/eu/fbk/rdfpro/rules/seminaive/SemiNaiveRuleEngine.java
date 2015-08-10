@@ -2,6 +2,7 @@ package eu.fbk.rdfpro.rules.seminaive;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -78,26 +79,31 @@ public class SemiNaiveRuleEngine extends RuleEngine {
     }
 
     @Override
-    protected void doEval(@Nullable final Callback callback, final QuadModel model) {
+    protected void doEval(final Collection<Statement> model) {
 
         // Rule evaluation is done inside a specifically-created object as some state has to be
         // kept for the whole duration of the process
-        new Evaluation(callback, model).eval();
+        if (model instanceof QuadModel) {
+            new Evaluation((QuadModel) model).eval();
+        } else {
+            final QuadModel quadModel = QuadModel.create(model);
+            new Evaluation((QuadModel) model).eval();
+            if (this.ruleset.isDeletePossible() || !(model instanceof Set<?>)) {
+                model.clear();
+            }
+            model.addAll(quadModel);
+        }
     }
 
     private class Evaluation {
-
-        @Nullable
-        private final Callback callback;
 
         private final QuadModel model;
 
         private final Map<URI, Collector> collectors;
 
-        public Evaluation(@Nullable final Callback callback, final QuadModel model) {
+        public Evaluation(final QuadModel model) {
 
-            // Store the optional callback and the model to act on
-            this.callback = callback;
+            // Store the model to act on
             this.model = model;
 
             // Initialize an empty map where to keep collectors 'optimized' for this evaluation
@@ -352,7 +358,6 @@ public class SemiNaiveRuleEngine extends RuleEngine {
 
                 // Aliases of Evaluation fields
                 final QuadModel model = Evaluation.this.model;
-                final Callback callback = Evaluation.this.callback;
                 final Map<URI, Collector> collectors = Evaluation.this.collectors;
 
                 // Take a timestamp to measure rule evaluation time
@@ -362,9 +367,8 @@ public class SemiNaiveRuleEngine extends RuleEngine {
                 Buffer.Appender deleteAppender = null;
                 Buffer.Appender insertAppender = null;
 
-                // Define counters for # activations and # activations blocked by callback
+                // Define counter for # activations
                 int numActivations = 0;
-                int numBlocked = 0;
 
                 // Start evaluating the rule
                 Iterator<BindingSet> iterator;
@@ -387,13 +391,13 @@ public class SemiNaiveRuleEngine extends RuleEngine {
                     if (iterator.hasNext()) {
 
                         // Allocate an appender for the delete buffer, if necessary
-                        if (this.rule.getDeleteExpr() != null || callback != null) {
+                        if (this.rule.getDeleteExpr() != null) {
                             deleteAppender = this.deleteBuffer.appender();
                             deleteAppender.startRDF();
                         }
 
                         // Allocate an appender for the insert buffer, if necessary
-                        if (this.rule.getInsertExpr() != null || callback != null) {
+                        if (this.rule.getInsertExpr() != null) {
                             insertAppender = this.insertBuffer.appender();
                             insertAppender.startRDF();
                         }
@@ -409,18 +413,11 @@ public class SemiNaiveRuleEngine extends RuleEngine {
                             }
                         }
 
-                        // Scan the bindings returned by the WHERE part, invoking the callback if
-                        // necessary and using the collector to compute deleted/inserted quads
+                        // Scan the bindings returned by the WHERE part, using the collector to
+                        // compute deleted/inserted quads
                         while (iterator.hasNext()) {
                             ++numActivations;
                             final BindingSet bindings = iterator.next();
-                            if (callback != null) {
-                                if (!callback.ruleTriggered(deleteAppender, insertAppender,
-                                        this.rule, bindings)) {
-                                    ++numBlocked;
-                                    continue;
-                                }
-                            }
                             collector.collect(bindings, model, deleteAppender, insertAppender);
                         }
 
@@ -444,12 +441,11 @@ public class SemiNaiveRuleEngine extends RuleEngine {
                 if (LOGGER.isTraceEnabled()) {
                     final String patternString = this.deltaPattern == null ? ""
                             : " (delta pattern " + Algebra.format(this.deltaPattern) + ")";
-                    LOGGER.trace("Rule {}{} evaluated in {} ms: {} activations ({} blocked), "
+                    LOGGER.trace("Rule {}{} evaluated in {} ms: {} activations, "
                             + "{} quads to delete, {} quads to insert", this.rule.getID()
                             .getLocalName(), patternString, System.currentTimeMillis() - ts,
-                            numActivations, numBlocked, deleteAppender == null ? 0
-                                    : deleteAppender.getSize(), insertAppender == null ? 0
-                                    : insertAppender.getSize());
+                            numActivations, deleteAppender == null ? 0 : deleteAppender.getSize(),
+                            insertAppender == null ? 0 : insertAppender.getSize());
                 }
             }
 

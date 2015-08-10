@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 
@@ -190,36 +191,36 @@ public final class Ruleset {
                                 StatementPattern.class, null, null));
                     }
 
-                    // Initialize SPOC bloom filters; null value = no constant in that position
-                    final int[] counts = new int[4];
+                    // Look for wildcard pattern
                     BloomFilter<Integer>[] filters = new BloomFilter[] { null, null, null, null };
-                    for (final StatementPattern pattern : patterns) {
-                        int numValues = 0;
-                        final List<Var> vars = pattern.getVarList();
-                        for (int i = 0; i < 4; ++i) {
-                            Integer hash = null;
-                            if (i >= vars.size()) {
-                                hash = 0; // default context sesame:nil
-                            } else if (vars.get(i).hasValue()) {
-                                hash = vars.get(i).getValue().hashCode();
-                            }
-                            if (hash != null) {
-                                BloomFilter<Integer> filter = filters[i];
-                                if (filter == null) {
-                                    filter = BloomFilter.create(Funnels.integerFunnel(),
-                                            patterns.size());
-                                    filters[i] = filter;
-                                }
-                                filter.put(hash);
-                                ++numValues;
-                                ++counts[i];
-                            }
-                        }
-                        if (numValues == 0) {
-                            // Wildcard <?s ?p ?o ?c> detected: all statements are matchable
+                    for (final StatementPattern p : patterns) {
+                        if (!p.getSubjectVar().hasValue() && !p.getPredicateVar().hasValue()
+                                && !p.getObjectVar().hasValue() && p.getContextVar() != null
+                                && !p.getContextVar().hasValue()) {
                             filters = new BloomFilter[0];
                             LOGGER.debug("Rules contain <?s ?p ?o ?c> pattern");
-                            break;
+                        }
+                    }
+
+                    // Initialize SPOC bloom filters; null value = no constant in that position
+                    final int[] counts = new int[4];
+                    for (int i = 0; i < filters.length; ++i) {
+                        final Set<Integer> hashes = Sets.newHashSet();
+                        for (final StatementPattern pattern : patterns) {
+                            final List<Var> vars = pattern.getVarList();
+                            if (i < vars.size() && vars.get(i).hasValue()) {
+                                hashes.add(vars.get(i).getValue().hashCode());
+                            }
+                        }
+                        counts[i] = hashes.size();
+                        if (!hashes.isEmpty()) {
+                            final BloomFilter<Integer> filter = BloomFilter.create(
+                                    Funnels.integerFunnel(), hashes.size());
+                            filters[i] = filter;
+                            for (final Integer hash : hashes) {
+                                filter.put(hash);
+                            }
+
                         }
                     }
 

@@ -15,6 +15,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.Iterables;
+
 import org.openrdf.model.Graph;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Model;
@@ -58,6 +60,12 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     public static QuadModel create() {
         return new MemoryQuadModel();
+    }
+
+    public static QuadModel create(final Iterable<Statement> statements) {
+        final QuadModel model = create();
+        Iterables.addAll(model, statements);
+        return model;
     }
 
     /**

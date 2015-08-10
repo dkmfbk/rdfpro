@@ -655,9 +655,10 @@ public final class Algebra {
                                         ((Filter) e).getCondition(), false));
                     }
                     if (canMove) {
-                        expr = (TupleExpr) replaceNode(expr, ext, extArg);
-                        ext.setArg(filter);
+                        final Filter lastFilter = (Filter) ext.getParentNode();
                         expr = (TupleExpr) replaceNode(expr, filter, ext);
+                        lastFilter.setArg(extArg);
+                        ext.setArg(filter);
                     }
                 }
             }
