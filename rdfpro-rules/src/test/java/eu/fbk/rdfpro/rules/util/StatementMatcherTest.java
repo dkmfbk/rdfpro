@@ -13,7 +13,7 @@ import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.RDFS;
 
-public class PatternMatcherTest {
+public class StatementMatcherTest {
 
     @Test
     public void test() {
@@ -22,9 +22,9 @@ public class PatternMatcherTest {
         final URI uri2 = new URIImpl("ex:uri2");
         final Literal lit1 = new LiteralImpl("label");
 
-        final PatternMatcher matcher = PatternMatcher.builder()
+        final StatementMatcher matcher = StatementMatcher.builder()
                 .add(null, RDF.TYPE, OWL.THING, null, "x")
-                .add(null, RDFS.LABEL, null, null, "y", "w").build();
+                .add(null, RDFS.LABEL, null, null, "y", "w").build(null);
 
         Assert.assertFalse(matcher.match(uri1, OWL.SAMEAS, uri1, null));
 

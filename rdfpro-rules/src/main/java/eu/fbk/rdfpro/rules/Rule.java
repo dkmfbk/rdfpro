@@ -85,7 +85,11 @@ public final class Rule implements Comparable<Rule> {
 
     private transient byte simple; // 0 = not computed, 1 = true, -1 = false
 
+    private transient byte streamable; // 0 = not computed, 1 = true, -1 = false
+
     private transient byte safe; // 0 = not computed, 1 = true, -1 = false
+
+    private transient byte specific; // 0 = not computed, 1 = true, -1 = false
 
     /**
      * Creates a new rule.
@@ -227,6 +231,36 @@ public final class Rule implements Comparable<Rule> {
     }
 
     /**
+     * Returns true if the rule is safe, i.e., if all the variables referenced in the DELETE and
+     * INSERT expressions are present in the bindings produced by the WHERE expression. Only safe
+     * rules can be evaluated. Non-safe rules are however allowed as they can be transformed into
+     * safe rules through variable binding (by calling method
+     * {@link #rewriteVariables(BindingSet)}).
+     *
+     * @return true, if the rule is safe
+     */
+    public boolean isSafe() {
+        if (this.safe == 0) {
+            if (this.deleteExpr == null && this.insertExpr == null) {
+                this.safe = 1;
+            } else {
+                final Set<String> vars = new HashSet<>();
+                if (this.deleteExpr != null) {
+                    vars.addAll(Algebra.extractVariables(this.deleteExpr, true));
+                }
+                if (this.insertExpr != null) {
+                    vars.addAll(Algebra.extractVariables(this.insertExpr, true));
+                }
+                if (this.whereExpr != null) {
+                    vars.removeAll(Algebra.extractVariables(this.whereExpr, true));
+                }
+                this.safe = (byte) (vars.isEmpty() ? 1 : -1);
+            }
+        }
+        return this.safe == 1;
+    }
+
+    /**
      * Returns true if the rule is simple, i.e., if the WHERE expression consists only of BGPs,
      * FILTERs (without the EXISTS construct) and outer level BINDs. Simple rules can be evaluated
      * more efficiently.
@@ -270,33 +304,59 @@ public final class Rule implements Comparable<Rule> {
     }
 
     /**
-     * Returns true if the rule is safe, i.e., if all the variables referenced in the DELETE and
-     * INSERT expressions are present in the bindings produced by the WHERE expression. Only safe
-     * rules can be evaluated. Non-safe rules are however allowed as they can be transformed into
-     * safe rules through variable binding (by calling method
-     * {@link #rewriteVariables(BindingSet)}).
+     * Returns true if the rule can be evaluated in a streaming way. A rule is streamable if: (i)
+     * it is simple (see {@link #isSimple()}); (ii) its where part contains at most one statement
+     * pattern; and (iii) the delete part is missing or it contains exactly the statement pattern
+     * of the where part (which must be non empty).
      *
-     * @return true, if the rule is safe
+     * @return true, if the rule is streamable
      */
-    public boolean isSafe() {
-        if (this.safe == 0) {
-            if (this.deleteExpr == null && this.insertExpr == null) {
-                this.safe = 1;
-            } else {
-                final Set<String> vars = new HashSet<>();
-                if (this.deleteExpr != null) {
-                    vars.addAll(Algebra.extractVariables(this.deleteExpr, true));
-                }
-                if (this.insertExpr != null) {
-                    vars.addAll(Algebra.extractVariables(this.insertExpr, true));
-                }
-                if (this.whereExpr != null) {
-                    vars.removeAll(Algebra.extractVariables(this.whereExpr, true));
-                }
-                this.safe = (byte) (vars.isEmpty() ? 1 : -1);
-            }
+    public boolean isStreamable() {
+        if (!isSimple()) {
+            return false;
         }
-        return this.safe == 1;
+        if (this.streamable == 0) {
+            boolean streamable = false;
+            final Set<StatementPattern> wherePatterns = getWherePatterns();
+            if (wherePatterns.size() < 1) {
+                if (this.deleteExpr == null) {
+                    streamable = true;
+                } else if (wherePatterns.size() == 1) {
+                    final List<StatementPattern> deletePatterns = Algebra.extractNodes(
+                            this.deleteExpr, StatementPattern.class, null, null);
+                    if (deletePatterns.size() == 1 && wherePatterns.containsAll(deletePatterns)) {
+                        streamable = true;
+                    }
+                }
+            }
+            this.streamable = (byte) (streamable ? 1 : -1);
+        }
+        return this.streamable == 1;
+    }
+
+    /**
+     * Returns true if the rule matches only specific types of statements. A rule is specific if
+     * its where part is null or it does not contain a statement pattern that could match any
+     * statement. Specific rules might be evaluated only on a subset of statements (the ones that
+     * could be matched) obtaining the same results.
+     *
+     * @return true, if the rule is specific
+     */
+    public boolean isSpecific() {
+        if (this.specific == 0) {
+            boolean specific = true;
+            for (final StatementPattern pattern : getWherePatterns()) {
+                if (!pattern.getSubjectVar().hasValue()
+                        && !pattern.getPredicateVar().hasValue()
+                        && !pattern.getObjectVar().hasValue()
+                        && (pattern.getContextVar() == null || !pattern.getContextVar().hasValue())) {
+                    specific = false;
+                    break;
+                }
+            }
+            this.specific = (byte) (specific ? 1 : -1);
+        }
+        return this.specific == 1;
     }
 
     /**
