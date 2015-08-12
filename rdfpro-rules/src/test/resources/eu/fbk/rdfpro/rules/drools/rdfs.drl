@@ -1,0 +1,109 @@
+import eu.fbk.rdfpro.rules.drools.DroolsTest.Quad;
+import eu.fbk.rdfpro.rules.drools.DroolsTest.VOC;
+import eu.fbk.rdfpro.rules.drools.DroolsTest.Helper;
+import org.openrdf.model.Resource;
+import org.openrdf.model.impl.URIImpl;
+
+rule "rdf1"
+when
+    Quad($s, $p, $o, $c;)
+then
+    Helper.ins(drools, $p, VOC.TYPE, VOC.PROPERTY, $c);
+end
+
+rule "rdfs2"
+when
+    Quad($p, VOC.DOMAIN, $x, $c;)
+    Quad($s, $p, $o, $c;)
+then
+    Helper.ins(drools, $s, VOC.TYPE, $x, $c);
+end
+
+rule "rdfs3"
+when
+    Quad($p, VOC.RANGE, $x, $c;)
+    Quad($s, $p, $o, $c; $o >= 0)
+then
+    Helper.ins(drools, $o, VOC.TYPE, $x, $c);
+end
+
+rule "rdfs4a"
+when
+    Quad($s, $p, $o, $c;)
+then
+    Helper.ins(drools, $s, VOC.TYPE, VOC.RESOURCE, $c);
+end
+
+rule "rdfs4b"
+when
+    Quad($s, $p, $o, $c; $o >= 0)
+then
+    Helper.ins(drools, $o, VOC.TYPE, VOC.RESOURCE, $c);
+end
+                 
+rule "rdfs5"
+when
+    Quad($p, VOC.SUBPROPERTYOF, $q, $c;)
+    Quad($q, VOC.SUBPROPERTYOF, $r, $c;)
+then
+    Helper.ins(drools, $p, VOC.SUBPROPERTYOF, $r, $c);
+end
+
+rule "rdfs6"
+when
+    Quad($p, VOC.TYPE, VOC.PROPERTY, $c;)
+then
+    Helper.ins(drools, $p, VOC.SUBPROPERTYOF, $p, $c);
+end
+
+rule "rdfs7"
+when
+    Quad($p, VOC.SUBPROPERTYOF, $q, $c;)
+    Quad($s, $p, $o, $c;)
+then
+    Helper.ins(drools, $s, $q, $o, $c);
+end
+
+rule "rdfs8"
+when
+    Quad($s, VOC.TYPE, VOC.CLASS, $c;)
+then
+    Helper.ins(drools, $s, VOC.SUBCLASSOF, VOC.RESOURCE, $c);
+end
+
+rule "rdfs9"
+when
+    Quad($x, VOC.SUBCLASSOF, $y, $c;)
+    Quad($s, VOC.TYPE, $x, $c;)
+then
+    Helper.ins(drools, $s, VOC.TYPE, $y, $c);
+end
+
+rule "rdfs10"
+when
+    Quad($s, VOC.TYPE, VOC.CLASS, $c;)
+then
+    Helper.ins(drools, $s, VOC.SUBCLASSOF, $s, $c);
+end
+
+rule "rdfs11"
+when
+    Quad($x, VOC.SUBCLASSOF, $y, $c;)
+    Quad($y, VOC.SUBCLASSOF, $z, $c;)
+then
+    Helper.ins(drools, $x, VOC.SUBCLASSOF, $z, $c);
+end
+
+rule "rdfs12"
+when
+    Quad($p, VOC.TYPE, VOC.CONTAINERMEMBERSHIPPROPERTY, $c;)
+then
+    Helper.ins(drools, $p, VOC.SUBPROPERTYOF, VOC.MEMBER, $c);
+end
+
+rule "rdfs13"
+when
+    Quad($o, VOC.TYPE, VOC.DATATYPE, $c;)
+then
+    Helper.ins(drools, $o, VOC.SUBCLASSOF, VOC.LITERAL, $c);
+end
