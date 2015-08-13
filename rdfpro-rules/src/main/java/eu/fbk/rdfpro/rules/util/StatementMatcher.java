@@ -19,6 +19,8 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.SESAME;
+import org.openrdf.query.algebra.StatementPattern;
+import org.openrdf.query.algebra.Var;
 
 public final class StatementMatcher {
 
@@ -33,6 +35,8 @@ public final class StatementMatcher {
 
     private final Object[] normalizedValues; // modified during use
 
+    private final URI nil;
+
     private StatementMatcher(@Nullable final Function<Object, Object> normalizer,
             final byte[] masks, final int[][] tables, final Object[] values) {
         this.normalizer = normalizer;
@@ -40,6 +44,7 @@ public final class StatementMatcher {
         this.tables = tables;
         this.values = values;
         this.normalizedValues = normalizer == null ? values : values.clone();
+        this.nil = normalizer == null ? SESAME.NIL : (URI) normalizer.apply(SESAME.NIL);
     }
 
     public StatementMatcher normalize(@Nullable final Function<Object, Object> normalizer) {
@@ -70,7 +75,7 @@ public final class StatementMatcher {
             @Nullable Resource ctx, final Class<T> clazz) {
 
         ctx = replaceNull(ctx);
-        final List<T> result = new ArrayList<>();
+        List<T> result = Collections.emptyList();
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
             final int[] table = this.tables[i];
@@ -81,6 +86,9 @@ public final class StatementMatcher {
                 if (offset >= 0) {
                     for (; this.normalizedValues[offset] != null; ++offset) {
                         if (clazz.isInstance(this.normalizedValues[offset])) {
+                            if (result.isEmpty()) {
+                                result = new ArrayList<>();
+                            }
                             result.add(clazz.cast(this.normalizedValues[offset]));
                         }
                     }
@@ -88,6 +96,11 @@ public final class StatementMatcher {
             }
         }
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends Value> T replaceNull(@Nullable final T value) {
+        return value != null ? value : (T) this.nil;
     }
 
     private int match(final Resource subj, final URI pred, final Value obj, final Resource ctx,
@@ -170,9 +183,9 @@ public final class StatementMatcher {
         return mask;
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T extends Value> T replaceNull(@Nullable final T value) {
-        return value != null ? value : (T) SESAME.NIL;
+    @Nullable
+    private static Value variableValue(final Var var) {
+        return var == null ? null : var.getValue();
     }
 
     public static Builder builder() {
@@ -195,7 +208,14 @@ public final class StatementMatcher {
             this.numMasks = 0;
         }
 
-        public Builder add(@Nullable final Resource subj, @Nullable final URI pred,
+        public Builder addPattern(final StatementPattern pattern, final Object... mappedValues) {
+            return addValues((Resource) variableValue(pattern.getSubjectVar()),
+                    (URI) variableValue(pattern.getPredicateVar()),
+                    variableValue(pattern.getObjectVar()), //
+                    (Resource) variableValue(pattern.getContextVar()), mappedValues);
+        }
+
+        public Builder addValues(@Nullable final Resource subj, @Nullable final URI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx,
                 final Object... mappedValues) {
 

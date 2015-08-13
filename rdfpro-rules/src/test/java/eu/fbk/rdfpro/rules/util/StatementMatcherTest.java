@@ -23,8 +23,8 @@ public class StatementMatcherTest {
         final Literal lit1 = new LiteralImpl("label");
 
         final StatementMatcher matcher = StatementMatcher.builder()
-                .add(null, RDF.TYPE, OWL.THING, null, "x")
-                .add(null, RDFS.LABEL, null, null, "y", "w").build(null);
+                .addValues(null, RDF.TYPE, OWL.THING, null, "x")
+                .addValues(null, RDFS.LABEL, null, null, "y", "w").build(null);
 
         Assert.assertFalse(matcher.match(uri1, OWL.SAMEAS, uri1, null));
 

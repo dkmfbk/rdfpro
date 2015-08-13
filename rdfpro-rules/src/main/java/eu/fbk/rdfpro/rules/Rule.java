@@ -81,6 +81,12 @@ public final class Rule implements Comparable<Rule> {
     private transient List<String> commonVariables;
 
     @Nullable
+    private transient Set<StatementPattern> deletePatterns;
+
+    @Nullable
+    private transient Set<StatementPattern> insertPatterns;
+
+    @Nullable
     private transient Set<StatementPattern> wherePatterns;
 
     private transient byte simple; // 0 = not computed, 1 = true, -1 = false
@@ -188,6 +194,34 @@ public final class Rule implements Comparable<Rule> {
     @Nullable
     public TupleExpr getWhereExpr() {
         return this.whereExpr;
+    }
+
+    /**
+     * Returns the statement patterns in the DELETE expression, if any.
+     *
+     * @return a non-null set with the statement patterns in the DELETE expression
+     */
+    public Set<StatementPattern> getDeletePatterns() {
+        if (this.deletePatterns == null) {
+            this.deletePatterns = this.deleteExpr == null ? ImmutableSet.of() : ImmutableSet
+                    .copyOf(Algebra.extractNodes(this.deleteExpr, StatementPattern.class, null,
+                            null));
+        }
+        return this.deletePatterns;
+    }
+
+    /**
+     * Returns the statement patterns in the INSERT expression, if any.
+     *
+     * @return a non-null set with the statement patterns in the INSERT expression
+     */
+    public Set<StatementPattern> getInsertPatterns() {
+        if (this.insertPatterns == null) {
+            this.insertPatterns = this.insertExpr == null ? ImmutableSet.of() : ImmutableSet
+                    .copyOf(Algebra.extractNodes(this.insertExpr, StatementPattern.class, null,
+                            null));
+        }
+        return this.insertPatterns;
     }
 
     /**
