@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.Objects;
 
 import org.openrdf.model.Resource;
+import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.SESAME;
@@ -50,6 +51,19 @@ public final class StatementMatcher {
     public StatementMatcher normalize(@Nullable final Function<Object, Object> normalizer) {
         return normalizer == null ? this : new StatementMatcher(normalizer, this.masks,
                 this.tables, this.values);
+    }
+
+    public boolean matchAll() {
+        for (final byte mask : this.masks) {
+            if (mask == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean match(final Statement stmt) {
+        return match(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), stmt.getContext());
     }
 
     public boolean match(final Resource subj, final URI pred, final Value obj,

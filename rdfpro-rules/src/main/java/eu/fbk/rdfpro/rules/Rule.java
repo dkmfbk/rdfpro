@@ -3,8 +3,10 @@ package eu.fbk.rdfpro.rules;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +16,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -26,6 +31,7 @@ import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Model;
 import org.openrdf.model.Namespace;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -33,6 +39,7 @@ import org.openrdf.model.ValueFactory;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.algebra.Compare;
 import org.openrdf.query.algebra.Compare.CompareOp;
 import org.openrdf.query.algebra.Exists;
@@ -46,12 +53,25 @@ import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
+import org.openrdf.query.algebra.evaluation.TripleSource;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
+import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
+import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.queryrender.sparql.SparqlTupleExprRenderer;
+import org.openrdf.rio.RDFHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import info.aduna.iteration.CloseableIteration;
+
+import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
+import eu.fbk.rdfpro.rules.util.StatementHandler;
+import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -59,6 +79,8 @@ import eu.fbk.rdfpro.util.Statements;
  * Rule definition.
  */
 public final class Rule implements Comparable<Rule> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Rule.class);
 
     private static final AtomicLong ID_COUNTER = new AtomicLong(0L);
 
@@ -88,6 +110,9 @@ public final class Rule implements Comparable<Rule> {
 
     @Nullable
     private transient Set<StatementPattern> wherePatterns;
+
+    @Nullable
+    private transient Collector collector;
 
     private transient byte simple; // 0 = not computed, 1 = true, -1 = false
 
@@ -611,6 +636,56 @@ public final class Rule implements Comparable<Rule> {
         return mergedRules;
     }
 
+    public void collect(final BindingSet bindings, @Nullable final QuadModel model,
+            @Nullable final StatementHandler deleteHandler,
+            @Nullable final StatementHandler insertHandler) {
+
+        if (this.collector == null) {
+            this.collector = Collector.create(this);
+        }
+        this.collector.collect(bindings, model, deleteHandler, insertHandler);
+    }
+
+    public void evaluate(final QuadModel model, @Nullable final QuadModel deltaModel,
+            @Nullable final StatementPattern deltaPattern,
+            @Nullable final Supplier<StatementHandler> deleteSink,
+            @Nullable final Supplier<StatementHandler> insertSink) {
+
+        new Evaluation(this, model, deltaModel, deltaPattern, deleteSink, insertSink).run();
+    }
+
+    public static int evaluate(final Iterable<Rule> rules, final QuadModel model,
+            @Nullable final QuadModel deltaModel,
+            @Nullable final Supplier<StatementHandler> deleteSink,
+            @Nullable final Supplier<StatementHandler> insertSink) {
+
+        // Evaluate all rules in parallel, collecting produced quads in the two buffers
+        int numVariants = 0;
+        final List<Evaluation> tasks = new ArrayList<>();
+        for (final Rule rule : rules) {
+            if (deltaModel == null || rule.getWhereExpr() == null) {
+                ++numVariants;
+                final Evaluation task = new Evaluation(rule, model, null, null, deleteSink,
+                        insertSink);
+                if (task.isActivable()) {
+                    tasks.add(task);
+                }
+            } else {
+                for (final StatementPattern pattern : rule.getWherePatterns()) {
+                    ++numVariants;
+                    final Evaluation task = new Evaluation(rule, model, deltaModel, pattern,
+                            deleteSink, insertSink);
+                    if (task.isActivable()) {
+                        tasks.add(task);
+                    }
+                }
+            }
+        }
+        Collections.sort(tasks);
+        Environment.run(tasks);
+        return numVariants;
+    }
+
     /**
      * {@inheritDoc} Rules with the same ID are equal. Otherwise, rules are sorted by phase (lower
      * phase index comes first), fixpoint flag (false = no fixpoint comes first) and finally ID.
@@ -822,6 +897,406 @@ public final class Rule implements Comparable<Rule> {
 
     static Var newConstVar(final Value value) {
         return new Var("_const-" + UUID.randomUUID(), value);
+    }
+
+    Collector getCollector() {
+        if (this.collector == null) {
+            this.collector = Collector.create(this);
+        }
+        return this.collector;
+    }
+
+    private static final class Evaluation implements Runnable, Comparable<Evaluation> {
+
+        private final Rule rule;
+
+        private final QuadModel model;
+
+        @Nullable
+        private final QuadModel deltaModel;
+
+        @Nullable
+        private final StatementPattern deltaPattern;
+
+        @Nullable
+        private final Supplier<StatementHandler> deleteSink;
+
+        @Nullable
+        private final Supplier<StatementHandler> insertSink;
+
+        private final EvaluationStatistics statistics;
+
+        private final double cardinality;
+
+        Evaluation(final Rule rule, final QuadModel model, @Nullable final QuadModel deltaModel,
+                @Nullable final StatementPattern deltaPattern,
+                @Nullable final Supplier<StatementHandler> deleteSink,
+                @Nullable final Supplier<StatementHandler> insertSink) {
+
+            this.rule = rule;
+            this.deleteSink = deleteSink;
+            this.insertSink = insertSink;
+            this.model = model;
+            this.deltaModel = deltaModel;
+            this.deltaPattern = deltaPattern;
+            this.statistics = deltaModel == null ? model.getEvaluationStatistics()
+                    : newSemiNaiveEvaluationStatistics();
+            this.cardinality = rule.whereExpr == null ? 1.0 : this.statistics
+                    .getCardinality(rule.whereExpr);
+        }
+
+        boolean isActivable() {
+            return this.cardinality != 0.0;
+        }
+
+        @Override
+        public int compareTo(final Evaluation other) {
+            return -Double.compare(this.cardinality, other.cardinality);
+        }
+
+        @Override
+        public void run() {
+
+            // Take a timestamp to measure rule evaluation time
+            final long ts = System.currentTimeMillis();
+
+            // Define counter for # activations
+            int numActivations = 0;
+
+            // Start evaluating the rule
+            Iterator<BindingSet> iterator;
+            if (this.cardinality == 0.0) {
+                iterator = Collections.emptyIterator();
+            } else if (this.rule.getWhereExpr() == null) {
+                iterator = Collections.singleton(EmptyBindingSet.getInstance()).iterator();
+            } else if (this.deltaModel == null) {
+                iterator = this.model.evaluate(this.rule.getWhereExpr(), null, null);
+            } else {
+                iterator = Algebra.evaluateTupleExpr(this.rule.getWhereExpr(), null, null,
+                        newSemiNaiveEvaluationStrategy(), this.statistics,
+                        this.model.getValueNormalizer());
+            }
+
+            try {
+                // Proceed only if there is some query result to process
+                if (iterator.hasNext()) {
+
+                    // Acquire a collector, normalizing its constants so to use the same Value
+                    // objects in the model
+                    final Collector collector = this.rule.getCollector().normalize(
+                            this.model.getValueNormalizer());
+
+                    // Allocate the delete handler, if possible
+                    StatementHandler deleteHandler = null;
+                    if (this.deleteSink != null && this.rule.getDeleteExpr() != null) {
+                        deleteHandler = this.deleteSink.get();
+                        deleteHandler.startRDF();
+                    }
+
+                    // Allocate the insert handler, if possible
+                    StatementHandler insertHandler = null;
+                    if (this.insertSink != null && this.rule.getInsertExpr() != null) {
+                        insertHandler = this.insertSink.get();
+                        insertHandler.startRDF();
+                    }
+
+                    // Scan the bindings returned by the WHERE part, using the collector to
+                    // compute deleted/inserted quads
+                    while (iterator.hasNext()) {
+                        ++numActivations;
+                        final BindingSet bindings = iterator.next();
+                        collector.collect(bindings, this.model, deleteHandler, insertHandler);
+                    }
+
+                    // Signal completion to the delete handler, if any
+                    if (deleteHandler != null) {
+                        deleteHandler.endRDF();
+                    }
+
+                    // Signal completion to the insert handler, if any
+                    if (insertHandler != null) {
+                        insertHandler.endRDF();
+                    }
+                }
+            } catch (final RDFHandlerException ex) {
+                // Wrap and propagate
+                throw new RuntimeException(ex);
+
+            } finally {
+                // Ensure to close the iterator (if it needs to be closed)
+                IO.closeQuietly(iterator);
+            }
+
+            // Log relevant rule evaluation statistics
+            if (LOGGER.isTraceEnabled()) {
+                final String patternString = this.deltaPattern == null ? "" : " (delta pattern "
+                        + Algebra.format(this.deltaPattern) + ")";
+                LOGGER.trace("Rule {}{} evaluated in {} ms with {} activations", this.rule.getID()
+                        .getLocalName(), patternString, System.currentTimeMillis() - ts,
+                        numActivations);
+            }
+        }
+
+        private EvaluationStrategy newSemiNaiveEvaluationStrategy() {
+
+            final AtomicReference<TripleSource> selectedSource = new AtomicReference<>();
+
+            final TripleSource baseSource = this.model.getTripleSource();
+            final TripleSource deltaSource = this.deltaModel.getTripleSource();
+            final TripleSource semiNaiveSource = new TripleSource() {
+
+                @Override
+                public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
+                        final Resource subj, final URI pred, final Value obj,
+                        final Resource... contexts) throws QueryEvaluationException {
+                    return selectedSource.get().getStatements(subj, pred, obj, contexts);
+                }
+
+                @Override
+                public ValueFactory getValueFactory() {
+                    return baseSource.getValueFactory();
+                }
+
+            };
+
+            return new EvaluationStrategyImpl(semiNaiveSource, null,
+                    Algebra.getFederatedServiceResolver()) {
+
+                @Nullable
+                private StatementPattern normalizedDeltaPattern = null;
+
+                @Override
+                public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(
+                        final StatementPattern pattern, final BindingSet bindings)
+                        throws QueryEvaluationException {
+
+                    if (this.normalizedDeltaPattern == null) {
+                        if (pattern.equals(Evaluation.this.deltaPattern)) {
+                            this.normalizedDeltaPattern = pattern;
+                        }
+                    }
+                    if (this.normalizedDeltaPattern == pattern) {
+                        selectedSource.set(deltaSource);
+                    } else {
+                        selectedSource.set(baseSource);
+                    }
+                    return super.evaluate(pattern, bindings);
+                }
+
+            };
+        }
+
+        private EvaluationStatistics newSemiNaiveEvaluationStatistics() {
+
+            return new EvaluationStatistics() {
+
+                @Override
+                protected CardinalityCalculator createCardinalityCalculator() {
+                    return new CardinalityCalculator() {
+
+                        @Override
+                        public final double getCardinality(final StatementPattern pattern) {
+                            if (pattern.equals(Evaluation.this.deltaPattern)) {
+                                return Evaluation.this.deltaModel.getEvaluationStatistics()
+                                        .getCardinality(pattern);
+                            } else {
+                                return Evaluation.this.model.getEvaluationStatistics()
+                                        .getCardinality(pattern);
+                            }
+                        }
+
+                    };
+                }
+
+            };
+        }
+
+    }
+
+    private static final class Collector {
+
+        private static final int[] EMPTY_INDEXES = new int[0];
+
+        private static final String[] EMPTY_VARS = new String[0];
+
+        private static final Value[] EMPTY_CONSTANTS = new Value[0];
+
+        private transient final int[] deleteIndexes;
+
+        private transient final int[] insertIndexes;
+
+        private transient final String[] commonVars;
+
+        private transient final Value[] constants;
+
+        static Collector create(final Rule rule) {
+
+            // Retrieve the list of variables common to the WHERE and DELETE/INSERT expressions
+            final List<String> commonVars = rule.getCommonVariables();
+            final String[] commonVarsArray = commonVars.isEmpty() ? EMPTY_VARS : commonVars
+                    .toArray(new String[commonVars.size()]);
+
+            // Compute the mappings (indexes+constants) required for translating bindings to quads
+            final List<Value> constants = new ArrayList<>();
+            final int[] deleteIndexes = createHelper(rule.getDeleteExpr(), commonVars, constants);
+            final int[] insertIndexes = createHelper(rule.getInsertExpr(), commonVars, constants);
+            final Value[] constantsArray = constants.isEmpty() ? EMPTY_CONSTANTS : constants
+                    .toArray(new Value[constants.size()]);
+
+            // Log results
+            if (LOGGER.isTraceEnabled()) {
+                final StringBuilder builder = new StringBuilder();
+                for (final Value constant : constants) {
+                    builder.append(builder.length() == 0 ? "[" : ", ");
+                    builder.append(Statements.formatValue(constant, Namespaces.DEFAULT));
+                }
+                builder.append("]");
+                LOGGER.trace("Collector for rule {}: vars={}, constants={}, delete indexes={}, "
+                        + "insert indexes={}", rule.getID().getLocalName(), commonVars, builder,
+                        deleteIndexes, insertIndexes);
+            }
+
+            // Instantiate a collector with the data structures computed above
+            return new Collector(deleteIndexes, insertIndexes, commonVarsArray, constantsArray);
+        }
+
+        private static int[] createHelper(@Nullable final TupleExpr expr,
+                final List<String> commonVars, final List<Value> constants) {
+
+            // Return an empty index array if there is no expression (-> no mapping necessary)
+            if (expr == null) {
+                return EMPTY_INDEXES;
+            }
+
+            // Otherwise, extracts all the statement patterns in the expression
+            final List<StatementPattern> patterns = Algebra.extractNodes(expr,
+                    StatementPattern.class, null, null);
+
+            // Build an index array with 4 slots for each pattern. Each slot contains either: the
+            // index (i + 1) of the variable in commonVars correspon+ding to that quad component,
+            // or the index -(i+1) of the constant in 'constants' corresponding to that component,
+            // or 0 to denote the default context constant (sesame:nil)
+            final int[] indexes = new int[4 * patterns.size()];
+            for (int i = 0; i < patterns.size(); ++i) {
+                final List<Var> patternVars = patterns.get(i).getVarList();
+                for (int j = 0; j < patternVars.size(); ++j) {
+                    final Var var = patternVars.get(j);
+                    if (var.getValue() != null) {
+                        int index = constants.indexOf(var.getValue());
+                        if (index < 0) {
+                            index = constants.size();
+                            constants.add(var.getValue());
+                        }
+                        indexes[i * 4 + j] = -index - 1;
+                    } else {
+                        final int index = commonVars.indexOf(var.getName());
+                        if (index < 0) {
+                            throw new Error("Var " + var.getName() + " not among common vars "
+                                    + commonVars);
+                        }
+                        indexes[i * 4 + j] = index + 1;
+                    }
+                }
+            }
+            return indexes;
+        }
+
+        private Collector(final int[] deleteIndexes, final int[] insertIndexes,
+                final String[] commonVars, final Value[] constants) {
+
+            // Store all the supplied parameters
+            this.deleteIndexes = deleteIndexes;
+            this.insertIndexes = insertIndexes;
+            this.commonVars = commonVars;
+            this.constants = constants;
+        }
+
+        private Value resolve(final int index, final Value[] commonValues) {
+            return index > 0 ? commonValues[index - 1] : index == 0 ? null
+                    : this.constants[-index - 1];
+        }
+
+        void collect(final BindingSet bindings, @Nullable final QuadModel model,
+                @Nullable final StatementHandler deleteHandler,
+                @Nullable final StatementHandler insertHandler) {
+
+            // Transform the var=value bindings map to a value array, using the same variable
+            // order of commonVars
+            final Value[] commonValues = new Value[this.commonVars.length];
+            for (int i = 0; i < commonValues.length; ++i) {
+                commonValues[i] = bindings.getValue(this.commonVars[i]);
+            }
+
+            try {
+                // Generate and send to the delete handler the quads that need to be removed. In
+                // case
+                // of quads in the default context, we need to explode them including all the
+                // quads
+                // with same SPO and different context (due to SESAME semantics 'default context =
+                // merge of all other contexts').
+                if (deleteHandler != null) {
+                    for (int i = 0; i < this.deleteIndexes.length; i += 4) {
+                        final Value subj = resolve(this.deleteIndexes[i], commonValues);
+                        final Value pred = resolve(this.deleteIndexes[i + 1], commonValues);
+                        final Value obj = resolve(this.deleteIndexes[i + 2], commonValues);
+                        final Value ctx = resolve(this.deleteIndexes[i + 3], commonValues);
+                        if (subj instanceof Resource && pred instanceof URI
+                                && obj instanceof Value) {
+                            if (ctx instanceof Resource || model == null) {
+                                deleteHandler.handleStatement((Resource) subj, (URI) pred, obj,
+                                        (Resource) ctx);
+                            } else if (ctx == null) {
+                                for (final Statement stmt : model.filter((Resource) subj,
+                                        (URI) pred, obj)) {
+                                    deleteHandler.handleStatement((Resource) subj, (URI) pred,
+                                            obj, stmt.getContext());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Generate and send to the insert handler the quads that need to be inserted
+                if (insertHandler != null) {
+                    for (int i = 0; i < this.insertIndexes.length; i += 4) {
+                        final Value subj = resolve(this.insertIndexes[i], commonValues);
+                        final Value pred = resolve(this.insertIndexes[i + 1], commonValues);
+                        final Value obj = resolve(this.insertIndexes[i + 2], commonValues);
+                        final Value ctx = resolve(this.insertIndexes[i + 3], commonValues);
+                        if (subj instanceof Resource && pred instanceof URI
+                                && obj instanceof Value
+                                && (ctx == null || ctx instanceof Resource)) {
+                            insertHandler.handleStatement((Resource) subj, (URI) pred, obj,
+                                    (Resource) ctx);
+                        }
+                    }
+                }
+
+            } catch (final RDFHandlerException ex) {
+                // Wrap and propagate
+                throw new RuntimeException(ex);
+            }
+        }
+
+        Collector normalize(final Function<Value, Value> normalizer) {
+
+            // Replace each Value constant in the constants array with the corresponding Value
+            // instance already stored in the quad model, if any. This may enable using identity
+            // comparison of values instead of string comparison (faster!)
+            int numReplacements = 0;
+            final Value[] normalizedConstants = new Value[this.constants.length];
+            for (int i = 0; i < this.constants.length; ++i) {
+                normalizedConstants[i] = normalizer.apply(this.constants[i]);
+                numReplacements += normalizedConstants[i] == this.constants[i] ? 0 : 1;
+            }
+            LOGGER.trace("{} constant values replaced during collector normalization",
+                    numReplacements);
+
+            // Return the collector with the same parameters except the normalized constant array
+            return new Collector(this.deleteIndexes, this.insertIndexes, this.commonVars,
+                    normalizedConstants);
+        }
+
     }
 
 }

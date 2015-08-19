@@ -24,8 +24,8 @@ public class RuleProcessorTest {
     // example: data.tql.gz -r rdfs tbox.tql.gz
 
     public static void main(final String... args) throws Throwable {
-        // mainRules(args);
-        mainTemplate(args);
+        mainRules(args);
+        // mainTemplate(args);
     }
 
     private static void mainRules(final String... args) throws Throwable {
