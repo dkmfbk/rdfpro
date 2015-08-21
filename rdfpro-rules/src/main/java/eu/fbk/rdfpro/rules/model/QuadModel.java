@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -421,6 +422,20 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     public QuadModel filter(@Nullable final Resource subj, @Nullable final URI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         return new FilteredModel(this, subj, pred, obj, ctxs);
+    }
+
+    /**
+     * Returns an <i>immutable</i> view of a subset of this model, containing the specified
+     * statements. The supplied collection of statements <b>must</b> not contain duplicates and
+     * must be a subset of the statements in this model.
+     *
+     * @param statements
+     *            the statements of this model to include in the returned immutable view, without
+     *            duplicates
+     * @return an immutable view of this model including only the statements specified
+     */
+    public QuadModel filter(final Collection<Statement> statements) {
+        return new SubQuadModel(this, statements);
     }
 
     /**

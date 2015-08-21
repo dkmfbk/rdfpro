@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
 import org.openrdf.model.Resource;
@@ -146,56 +147,64 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
     }
 
     public int toModel(final QuadModel model, final boolean add,
-            @Nullable final RDFHandler callback) throws RDFHandlerException {
+            @Nullable final RDFHandler callback) {
 
-        // Notify the callback handler, if any
-        if (callback != null) {
-            callback.startRDF();
-        }
+        try {
+            // Notify the callback handler, if any
+            if (callback != null) {
+                callback.startRDF();
+            }
 
-        // Iterate over the statements in the buffer
-        int numChanges = 0;
-        for (int index = 0; index < this.blocks.size(); ++index) {
-            final Value[] block = this.blocks.get(index);
-            final int maxOffset = index < this.blocks.size() - 1 ? BLOCK_SIZE : this.offset;
-            for (int offset = 0; offset < maxOffset; offset += 4) {
+            // Iterate over the statements in the buffer
+            int numChanges = 0;
+            for (int index = 0; index < this.blocks.size(); ++index) {
+                final Value[] block = this.blocks.get(index);
+                final int maxOffset = index < this.blocks.size() - 1 ? BLOCK_SIZE : this.offset;
+                for (int offset = 0; offset < maxOffset; offset += 4) {
 
-                // Retrieve SPOC components of current statement
-                Resource subj = (Resource) block[offset];
-                URI pred = (URI) block[offset + 1];
-                Value obj = block[offset + 2];
-                Resource ctx = (Resource) block[offset + 3];
+                    // Retrieve SPOC components of current statement
+                    Resource subj = (Resource) block[offset];
+                    URI pred = (URI) block[offset + 1];
+                    Value obj = block[offset + 2];
+                    Resource ctx = (Resource) block[offset + 3];
 
-                // Either add or remove the statement to/from the model
-                boolean modified;
-                if (add) {
-                    subj = model.normalize(subj);
-                    pred = model.normalize(pred);
-                    obj = model.normalize(obj);
-                    ctx = model.normalize(ctx);
-                    modified = model.add(subj, pred, obj, ctx);
-                } else {
-                    modified = model.remove(subj, pred, obj, ctx);
-                }
+                    // Either add or remove the statement to/from the model
+                    boolean modified;
+                    if (add) {
+                        // if (callback != null) {
+                        // subj = model.normalize(subj);
+                        // pred = model.normalize(pred);
+                        // obj = model.normalize(obj);
+                        // ctx = model.normalize(ctx);
+                        // }
+                        modified = model.add(subj, pred, obj, ctx);
+                    } else {
+                        modified = model.remove(subj, pred, obj, ctx);
+                    }
 
-                // If the model was modified as a result of the operation, increment changes
-                // counter and notify the callback, if any
-                if (modified) {
-                    ++numChanges;
-                    if (callback != null) {
-                        callback.handleStatement(new ContextStatementImpl(subj, pred, obj, ctx));
+                    // If the model was modified as a result of the operation, increment changes
+                    // counter and notify the callback, if any
+                    if (modified) {
+                        ++numChanges;
+                        if (callback != null) {
+                            callback.handleStatement(new ContextStatementImpl(subj, pred, obj, ctx));
+                        }
                     }
                 }
             }
-        }
 
-        // Notify the callback handler, if any
-        if (callback != null) {
-            callback.endRDF();
-        }
+            // Notify the callback handler, if any
+            if (callback != null) {
+                callback.endRDF();
+            }
 
-        // Return the number of statements actually added to or deleted from the model
-        return numChanges;
+            // Return the number of statements actually added to or deleted from the model
+            return numChanges;
+
+        } catch (final RDFHandlerException ex) {
+            // Wrap and propagate
+            throw Throwables.propagate(ex);
+        }
     }
 
     public void toHandler(final RDFHandler handler) throws RDFHandlerException {

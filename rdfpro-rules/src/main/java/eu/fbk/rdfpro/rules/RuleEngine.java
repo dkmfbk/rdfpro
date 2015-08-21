@@ -34,8 +34,11 @@ public abstract class RuleEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
+    // private static final String IMPLEMENTATION = Environment.getProperty(
+    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
+
     private static final String IMPLEMENTATION = Environment.getProperty(
-            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
+            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.EngineOld");
 
     // private static final String IMPLEMENTATION = Environment.getProperty(
     // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");

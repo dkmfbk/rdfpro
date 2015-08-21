@@ -36,6 +36,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.query.BindingSet;
@@ -60,6 +61,7 @@ import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
 import org.openrdf.query.impl.EmptyBindingSet;
 import org.openrdf.queryrender.sparql.SparqlTupleExprRenderer;
+import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -648,23 +650,20 @@ public final class Rule implements Comparable<Rule> {
 
     public void evaluate(final QuadModel model, @Nullable final QuadModel deltaModel,
             @Nullable final StatementPattern deltaPattern,
-            @Nullable final Supplier<StatementHandler> deleteSink,
-            @Nullable final Supplier<StatementHandler> insertSink) {
+            @Nullable final Supplier<RDFHandler> deleteSink,
+            @Nullable final Supplier<RDFHandler> insertSink) {
 
         new Evaluation(this, model, deltaModel, deltaPattern, deleteSink, insertSink).run();
     }
 
     public static int evaluate(final Iterable<Rule> rules, final QuadModel model,
-            @Nullable final QuadModel deltaModel,
-            @Nullable final Supplier<StatementHandler> deleteSink,
-            @Nullable final Supplier<StatementHandler> insertSink) {
+            @Nullable final QuadModel deltaModel, @Nullable final Supplier<RDFHandler> deleteSink,
+            @Nullable final Supplier<RDFHandler> insertSink) {
 
         // Evaluate all rules in parallel, collecting produced quads in the two buffers
-        int numVariants = 0;
         final List<Evaluation> tasks = new ArrayList<>();
         for (final Rule rule : rules) {
             if (deltaModel == null || rule.getWhereExpr() == null) {
-                ++numVariants;
                 final Evaluation task = new Evaluation(rule, model, null, null, deleteSink,
                         insertSink);
                 if (task.isActivable()) {
@@ -672,7 +671,6 @@ public final class Rule implements Comparable<Rule> {
                 }
             } else {
                 for (final StatementPattern pattern : rule.getWherePatterns()) {
-                    ++numVariants;
                     final Evaluation task = new Evaluation(rule, model, deltaModel, pattern,
                             deleteSink, insertSink);
                     if (task.isActivable()) {
@@ -683,7 +681,7 @@ public final class Rule implements Comparable<Rule> {
         }
         Collections.sort(tasks);
         Environment.run(tasks);
-        return numVariants;
+        return tasks.size();
     }
 
     /**
@@ -919,10 +917,10 @@ public final class Rule implements Comparable<Rule> {
         private final StatementPattern deltaPattern;
 
         @Nullable
-        private final Supplier<StatementHandler> deleteSink;
+        private final Supplier<RDFHandler> deleteSink;
 
         @Nullable
-        private final Supplier<StatementHandler> insertSink;
+        private final Supplier<RDFHandler> insertSink;
 
         private final EvaluationStatistics statistics;
 
@@ -930,8 +928,8 @@ public final class Rule implements Comparable<Rule> {
 
         Evaluation(final Rule rule, final QuadModel model, @Nullable final QuadModel deltaModel,
                 @Nullable final StatementPattern deltaPattern,
-                @Nullable final Supplier<StatementHandler> deleteSink,
-                @Nullable final Supplier<StatementHandler> insertSink) {
+                @Nullable final Supplier<RDFHandler> deleteSink,
+                @Nullable final Supplier<RDFHandler> insertSink) {
 
             this.rule = rule;
             this.deleteSink = deleteSink;
@@ -987,14 +985,14 @@ public final class Rule implements Comparable<Rule> {
                             this.model.getValueNormalizer());
 
                     // Allocate the delete handler, if possible
-                    StatementHandler deleteHandler = null;
+                    RDFHandler deleteHandler = null;
                     if (this.deleteSink != null && this.rule.getDeleteExpr() != null) {
                         deleteHandler = this.deleteSink.get();
                         deleteHandler.startRDF();
                     }
 
                     // Allocate the insert handler, if possible
-                    StatementHandler insertHandler = null;
+                    RDFHandler insertHandler = null;
                     if (this.insertSink != null && this.rule.getInsertExpr() != null) {
                         insertHandler = this.insertSink.get();
                         insertHandler.startRDF();
@@ -1217,8 +1215,7 @@ public final class Rule implements Comparable<Rule> {
         }
 
         void collect(final BindingSet bindings, @Nullable final QuadModel model,
-                @Nullable final StatementHandler deleteHandler,
-                @Nullable final StatementHandler insertHandler) {
+                @Nullable final RDFHandler deleteHandler, @Nullable final RDFHandler insertHandler) {
 
             // Transform the var=value bindings map to a value array, using the same variable
             // order of commonVars
@@ -1243,13 +1240,13 @@ public final class Rule implements Comparable<Rule> {
                         if (subj instanceof Resource && pred instanceof URI
                                 && obj instanceof Value) {
                             if (ctx instanceof Resource || model == null) {
-                                deleteHandler.handleStatement((Resource) subj, (URI) pred, obj,
-                                        (Resource) ctx);
+                                deleteHandler.handleStatement(new ContextStatementImpl(
+                                        (Resource) subj, (URI) pred, obj, (Resource) ctx));
                             } else if (ctx == null) {
                                 for (final Statement stmt : model.filter((Resource) subj,
                                         (URI) pred, obj)) {
-                                    deleteHandler.handleStatement((Resource) subj, (URI) pred,
-                                            obj, stmt.getContext());
+                                    deleteHandler.handleStatement(new ContextStatementImpl(
+                                            (Resource) subj, (URI) pred, obj, stmt.getContext()));
                                 }
                             }
                         }
@@ -1266,8 +1263,8 @@ public final class Rule implements Comparable<Rule> {
                         if (subj instanceof Resource && pred instanceof URI
                                 && obj instanceof Value
                                 && (ctx == null || ctx instanceof Resource)) {
-                            insertHandler.handleStatement((Resource) subj, (URI) pred, obj,
-                                    (Resource) ctx);
+                            insertHandler.handleStatement(new ContextStatementImpl(
+                                    (Resource) subj, (URI) pred, obj, (Resource) ctx));
                         }
                     }
                 }
