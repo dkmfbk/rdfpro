@@ -992,7 +992,7 @@ final class ProcessorRDFS implements RDFProcessor {
         }
 
         // TODO
-        
+
         boolean add(final Statement statement, final boolean buffer) {
 
             if (buffer || VOC.containsKey(statement.getPredicate())

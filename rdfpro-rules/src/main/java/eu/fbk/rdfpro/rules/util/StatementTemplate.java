@@ -83,7 +83,7 @@ public final class StatementTemplate implements Function<Statement, Statement> {
         }
 
         final Object ctx = resolve(this.ctx, stmt);
-        if (ctx instanceof Resource) {
+        if (ctx != null && !(ctx instanceof Resource)) {
             return null;
         }
 
@@ -115,9 +115,9 @@ public final class StatementTemplate implements Function<Statement, Statement> {
         final StringBuilder builder = new StringBuilder();
         toStringHelper(this.subj, builder);
         builder.append(' ');
-        toStringHelper(this.obj, builder);
-        builder.append(' ');
         toStringHelper(this.pred, builder);
+        builder.append(' ');
+        toStringHelper(this.obj, builder);
         builder.append(' ');
         toStringHelper(this.ctx, builder);
         return builder.toString();
@@ -127,7 +127,7 @@ public final class StatementTemplate implements Function<Statement, Statement> {
         if (component instanceof StatementComponent) {
             builder.append('?').append(((StatementComponent) component).getLetter());
         } else if (component == null) {
-            builder.append("sesame:nil");
+            builder.append("null");
         } else {
             try {
                 Statements.formatValue((Value) component, Namespaces.DEFAULT, builder);
@@ -143,7 +143,8 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     }
 
     private static Object check(final Object component) {
-        if (!(component instanceof Value) && !(component instanceof StatementComponent)) {
+        if (component != null && !(component instanceof Value)
+                && !(component instanceof StatementComponent)) {
             throw new IllegalArgumentException("Illegal component " + component);
         }
         return component;
@@ -165,7 +166,8 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             case "c":
                 return StatementComponent.CONTEXT;
             default:
-                throw new IllegalArgumentException("Could not extract component from " + var);
+                throw new IllegalArgumentException("Could not extract component from "
+                        + var.getName());
             }
         }
     }
@@ -190,8 +192,8 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             } else if (ctxVar != null && !ctxVar.hasValue() && name.equals(ctxVar.getName())) {
                 return StatementComponent.CONTEXT;
             }
-            throw new IllegalArgumentException("Could not extract component from " + var);
+            throw new IllegalArgumentException("Could not find variable " + var.getName()
+                    + " in pattern " + body);
         }
     }
-
 }

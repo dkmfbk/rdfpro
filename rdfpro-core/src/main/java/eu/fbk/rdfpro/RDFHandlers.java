@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -33,12 +33,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 
 import org.openrdf.model.Model;
 import org.openrdf.model.Namespace;
@@ -240,7 +246,7 @@ public final class RDFHandlers {
             final RDFFormat format = Statements.toRDFFormat(location);
             final boolean parallel = Statements.isRDFFormatLineBased(format);
             handlers[i] = parallel ? new ParallelWriteHandler(actualConfig, location)
-                    : new SequentialWriteHandler(actualConfig, location);
+            : new SequentialWriteHandler(actualConfig, location);
         }
         return handlers.length == 0 ? NIL : handlers.length == 1 ? handlers[0]
                 : dispatchRoundRobin(chunkSize, handlers);
@@ -461,7 +467,7 @@ public final class RDFHandlers {
         if (count == 1 && (operation == SetOperator.SUM_MULTISET //
                 || operation == SetOperator.UNION_MULTISET //
                 || operation == SetOperator.INTERSECTION_MULTISET //
-        /*    */|| operation == SetOperator.DIFFERENCE_MULTISET)) {
+                /*    */|| operation == SetOperator.DIFFERENCE_MULTISET)) {
             result[0] = handler;
         } else if (count == 1 && operation == SetOperator.SYMMETRIC_DIFFERENCE
                 || operation == SetOperator.SYMMETRIC_DIFFERENCE_MULTISET) {
@@ -498,7 +504,30 @@ public final class RDFHandlers {
     }
 
     /**
-     * Wraps the supplied {@code RDFHAndler} (if necessary) so that {@code handleXXX()} calls are
+     * Wraps the supplied {@code RDFHandelr} (if necessary) using a queue to decouple threads
+     * submitting statements from threads consuming them. A positive number of consumer threads
+     * should be specified. Wrapping does not occur if the handler is already decoupled using a
+     * queue.
+     *
+     * @param handler
+     *            the handler to wrap
+     * @param numConsumerThreads
+     *            the number of consumer threads, positive
+     * @return the (possibly) wrapped handler
+     */
+    public static RDFHandler decouple(final RDFHandler handler, final int numConsumerThreads) {
+        if (numConsumerThreads <= 0) {
+            throw new IllegalArgumentException("Invalid number of consumer threads: "
+                    + numConsumerThreads);
+        }
+        if (handler == NIL || handler instanceof DecoupleQueueHandler) {
+            return handler;
+        }
+        return new DecoupleQueueHandler(handler, numConsumerThreads);
+    }
+
+    /**
+     * Wraps the supplied {@code RDFHandler} (if necessary) so that {@code handleXXX()} calls are
      * invoked in a mutually exclusive way. This method can be used with {@code RDFHandler}s that
      * are not thread-safe.
      *
@@ -1517,6 +1546,123 @@ public final class RDFHandlers {
         public synchronized void handleStatement(final Statement statement)
                 throws RDFHandlerException {
             super.handleStatement(statement);
+        }
+
+    }
+
+    private static final class DecoupleQueueHandler extends AbstractRDFHandlerWrapper {
+
+        private static final int CAPACITY = 4 * 1024;
+
+        private static final Object EOF = new Object();
+
+        private final int numConsumers;
+
+        private AtomicReference<Throwable> exception;
+
+        private BlockingQueue<Object> queue;
+
+        private List<Future<?>> futures;
+
+        DecoupleQueueHandler(final RDFHandler delegate, final int numConsumers) {
+            super(delegate);
+            this.numConsumers = numConsumers;
+        }
+
+        @Override
+        public void startRDF() throws RDFHandlerException {
+            super.startRDF();
+            this.exception = new AtomicReference<>(null);
+            this.queue = new ArrayBlockingQueue<>(CAPACITY);
+            this.futures = Lists.newArrayList();
+            for (int i = 0; i < this.numConsumers; ++i) {
+                this.futures.add(Environment.getPool().submit(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            final RDFHandler handler = DecoupleQueueHandler.this.handler;
+                            while (true) {
+                                if (DecoupleQueueHandler.this.exception.get() != null) {
+                                    break;
+                                }
+                                final Object element = DecoupleQueueHandler.this.queue.take();
+                                if (element instanceof Statement) {
+                                    handler.handleStatement((Statement) element);
+                                } else if (element instanceof NamespaceImpl) {
+                                    final NamespaceImpl ns = (NamespaceImpl) element;
+                                    handler.handleNamespace(ns.getPrefix(), ns.getName());
+                                } else if (element instanceof String) {
+                                    handler.handleComment((String) element);
+                                } else if (element == EOF) {
+                                    break;
+                                }
+                            }
+                        } catch (final Throwable ex) {
+                            DecoupleQueueHandler.this.exception.set(ex);
+                            DecoupleQueueHandler.this.queue.clear();
+                        }
+                    }
+
+                }));
+            }
+        }
+
+        @Override
+        public void handleComment(final String comment) throws RDFHandlerException {
+            check();
+            put(comment);
+        }
+
+        @Override
+        public void handleNamespace(final String prefix, final String uri)
+                throws RDFHandlerException {
+            check();
+            put(new NamespaceImpl(prefix, uri));
+        }
+
+        @Override
+        public void handleStatement(final Statement statement) throws RDFHandlerException {
+            check();
+            put(statement);
+        }
+
+        @Override
+        public void endRDF() throws RDFHandlerException {
+            try {
+                check();
+                put(EOF);
+                for (final Future<?> future : this.futures) {
+                    try {
+                        future.get();
+                    } catch (final Throwable ex) {
+                        this.exception.compareAndSet(null, ex);
+                    }
+                }
+                check();
+                super.endRDF();
+            } finally {
+                this.exception = null;
+                this.queue = null;
+                this.futures = null;
+            }
+        }
+
+        private void put(final Object object) throws RDFHandlerException {
+            try {
+                this.queue.put(object);
+            } catch (final InterruptedException ex) {
+                this.exception.set(ex);
+                throw new RDFHandlerException(ex);
+            }
+        }
+
+        private void check() throws RDFHandlerException {
+            final Throwable ex = this.exception.get();
+            if (ex != null) {
+                Throwables.propagateIfPossible(ex, RDFHandlerException.class);
+                throw new RDFHandlerException(ex);
+            }
         }
 
     }

@@ -26,7 +26,7 @@ import org.openrdf.query.algebra.Var;
 public final class StatementMatcher {
 
     @Nullable
-    private final Function<Object, Object> normalizer;
+    private final Function<Value, Value> normalizer;
 
     private final byte[] masks;
 
@@ -38,19 +38,26 @@ public final class StatementMatcher {
 
     private final URI nil;
 
-    private StatementMatcher(@Nullable final Function<Object, Object> normalizer,
-            final byte[] masks, final int[][] tables, final Object[] values) {
+    private final int numPatterns;
+
+    private final int numValues;
+
+    private StatementMatcher(@Nullable final Function<Value, Value> normalizer,
+            final byte[] masks, final int[][] tables, final Object[] values,
+            final int numPatterns, final int numValues) {
         this.normalizer = normalizer;
         this.masks = masks;
         this.tables = tables;
         this.values = values;
         this.normalizedValues = normalizer == null ? values : values.clone();
         this.nil = normalizer == null ? SESAME.NIL : (URI) normalizer.apply(SESAME.NIL);
+        this.numPatterns = numPatterns;
+        this.numValues = numValues;
     }
 
-    public StatementMatcher normalize(@Nullable final Function<Object, Object> normalizer) {
+    public StatementMatcher normalize(@Nullable final Function<Value, Value> normalizer) {
         return normalizer == null ? this : new StatementMatcher(normalizer, this.masks,
-                this.tables, this.values);
+                this.tables, this.values, this.numPatterns, this.numValues);
     }
 
     public boolean matchAll() {
@@ -86,10 +93,15 @@ public final class StatementMatcher {
     }
 
     public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
-            @Nullable Resource ctx, final Class<T> clazz) {
+            @Nullable final Resource ctx, final Class<T> clazz) {
+        return map(subj, pred, obj, ctx, clazz, null);
+    }
+
+    public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
+            @Nullable Resource ctx, final Class<T> clazz, @Nullable final List<T> list) {
 
         ctx = replaceNull(ctx);
-        List<T> result = Collections.emptyList();
+        List<T> result = list;
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
             final int[] table = this.tables[i];
@@ -98,10 +110,11 @@ public final class StatementMatcher {
                     slot, table.length)) {
                 int offset = match(subj, pred, obj, ctx, mask, hash, table[slot]);
                 if (offset >= 0) {
-                    for (; this.normalizedValues[offset] != null; ++offset) {
+                    for (; this.normalizedValues[offset] != null
+                            && this.normalizedValues[offset] != this.normalizer; ++offset) {
                         if (clazz.isInstance(this.normalizedValues[offset])) {
-                            if (result.isEmpty()) {
-                                result = new ArrayList<>();
+                            if (result == null) {
+                                result = new ArrayList<>(16);
                             }
                             result.add(clazz.cast(this.normalizedValues[offset]));
                         }
@@ -109,7 +122,12 @@ public final class StatementMatcher {
                 }
             }
         }
-        return result;
+        return result != null ? result : Collections.emptyList();
+    }
+
+    @Override
+    public String toString() {
+        return this.numPatterns + " patterns, " + this.numValues + " values";
     }
 
     @SuppressWarnings("unchecked")
@@ -120,7 +138,7 @@ public final class StatementMatcher {
     private int match(final Resource subj, final URI pred, final Value obj, final Resource ctx,
             final byte mask, final int hash, final int cell) {
 
-        // Check that lower 12 bits of the hash matches with lower 12 bits of cell
+        // Check that lower 12 bits of the hash match with lower 12 bits of cell
         if (((hash ^ cell) & 0x00000FFF) != 0) {
             return -1;
         }
@@ -132,7 +150,16 @@ public final class StatementMatcher {
         if (this.normalizer != null
                 && !Objects.equal(this.normalizedValues[offset - 1], this.normalizer)) {
             for (int i = offset; this.normalizedValues[i] != null; ++i) {
-                this.normalizedValues[i] = this.normalizer.apply(i);
+                final Object value = this.normalizedValues[i];
+                if (value instanceof Value) {
+                    this.normalizedValues[i] = this.normalizer.apply((Value) value);
+                } else if (value instanceof StatementMatcher) {
+                    this.normalizedValues[i] = ((StatementMatcher) value)
+                            .normalize(this.normalizer);
+                } else if (value instanceof StatementTemplate) {
+                    this.normalizedValues[i] = ((StatementTemplate) value)
+                            .normalize(this.normalizer);
+                }
             }
             this.normalizedValues[offset - 1] = this.normalizer;
         }
@@ -270,7 +297,7 @@ public final class StatementMatcher {
             return this;
         }
 
-        public StatementMatcher build(@Nullable final Function<Object, Object> normalizer) {
+        public StatementMatcher build(@Nullable final Function<Value, Value> normalizer) {
 
             // Compute the total size of the values array
             int valuesSize = this.numValues + 1;
@@ -285,6 +312,10 @@ public final class StatementMatcher {
             final byte[] masks = new byte[this.numMasks];
             final int[][] tables = new int[this.numMasks][];
             final Object[] values = new Object[valuesSize];
+
+            // Initialize counters
+            int numPatterns = 0;
+            int numValues = 0;
 
             // Initialize mask and value indexes
             int maskIndex = 0;
@@ -305,8 +336,10 @@ public final class StatementMatcher {
                         + Math.max(1, patternMap.size() >> 1)];
 
                 // Populate the hash table, appending pattern and value data to the value array
+                numPatterns += patternMap.size();
                 for (final Map.Entry<List<Value>, Collection<Object>> entry : patternMap
                         .entrySet()) {
+                    numValues += entry.getValue().size();
                     final int hash = hash((Resource) entry.getKey().get(0), (URI) entry.getKey()
                             .get(1), entry.getKey().get(2), (Resource) entry.getKey().get(3), mask);
                     int slot = (hash & 0x7FFFFFFF) % table.length;
@@ -332,7 +365,7 @@ public final class StatementMatcher {
             }
 
             // Build a pattern matcher using the created data structures
-            return new StatementMatcher(normalizer, masks, tables, values);
+            return new StatementMatcher(normalizer, masks, tables, values, numPatterns, numValues);
         }
 
     }

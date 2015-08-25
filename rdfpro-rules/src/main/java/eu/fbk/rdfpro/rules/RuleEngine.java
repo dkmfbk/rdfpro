@@ -38,7 +38,7 @@ public abstract class RuleEngine {
     // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
 
     private static final String IMPLEMENTATION = Environment.getProperty(
-            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.EngineOld");
+            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.Engine");
 
     // private static final String IMPLEMENTATION = Environment.getProperty(
     // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");

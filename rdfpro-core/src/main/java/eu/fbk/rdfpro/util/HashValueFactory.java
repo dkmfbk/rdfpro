@@ -3,6 +3,7 @@ package eu.fbk.rdfpro.util;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Objects;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -75,6 +76,17 @@ final class HashValueFactory extends ValueFactoryBase {
                 normalize(context));
     }
 
+    public static Function<Value, Value> getValueNormalizer() {
+        return new Function<Value, Value>() {
+
+            @Override
+            public Value apply(final Value value) {
+                return normalize(value);
+            }
+
+        };
+    }
+
     @SuppressWarnings("unchecked")
     @Nullable
     public static <T extends Value> T normalize(@Nullable final T value) {
@@ -138,20 +150,25 @@ final class HashValueFactory extends ValueFactoryBase {
     }
 
     private static Hash doHash(final Value value) {
+        Hash hash;
         if (value instanceof URI) {
-            return Hash.murmur3("\u0001", value.stringValue());
+            hash = Hash.murmur3("\u0001", value.stringValue());
         } else if (value instanceof BNode) {
-            return Hash.murmur3("\u0002", ((BNode) value).getID());
+            hash = Hash.murmur3("\u0002", ((BNode) value).getID());
         } else {
             final Literal l = (Literal) value;
             if (l.getLanguage() != null) {
-                return Hash.murmur3("\u0003", l.getLanguage(), l.getLabel());
+                hash = Hash.murmur3("\u0003", l.getLanguage(), l.getLabel());
             } else if (l.getDatatype() != null) {
-                return Hash.murmur3("\u0004", l.getDatatype().stringValue(), l.getLabel());
+                hash = Hash.murmur3("\u0004", l.getDatatype().stringValue(), l.getLabel());
             } else {
-                return Hash.murmur3("\u0005", l.getLabel());
+                hash = Hash.murmur3("\u0005", l.getLabel());
             }
         }
+        if (hash.getLow() == 0) {
+            hash = Hash.fromLongs(hash.getHigh(), 1L);
+        }
+        return hash;
     }
 
     private static Hash doHash(final Statement statement) {
@@ -166,18 +183,28 @@ final class HashValueFactory extends ValueFactoryBase {
 
         private static final long serialVersionUID = 1L;
 
-        @Nullable
-        private transient Hash hash;
+        transient long hashLo;
 
-        HashValue() {
-            this.hash = null;
+        transient long hashHi;
+
+        final void initHash() {
+            if (this.hashLo == 0L) {
+                final Hash hash = doHash(this);
+                this.hashLo = hash.getLow();
+                this.hashHi = hash.getHigh();
+            }
         }
 
         final Hash getHash() {
-            if (this.hash == null) {
-                this.hash = doHash(this);
+            Hash hash;
+            if (this.hashLo != 0L) {
+                hash = Hash.fromLongs(this.hashLo, this.hashHi);
+            } else {
+                hash = doHash(this);
+                this.hashLo = hash.getLow();
+                this.hashHi = hash.getHigh();
             }
-            return this.hash;
+            return hash;
         }
 
     }
@@ -281,10 +308,10 @@ final class HashValueFactory extends ValueFactoryBase {
             if (object == this) {
                 return true;
             } else if (object instanceof HashLiteral) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashLiteral) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+                final HashLiteral other = (HashLiteral) object;
+                initHash();
+                other.initHash();
+                return this.hashHi == other.hashHi && this.hashLo == other.hashLo;
             } else if (object instanceof Literal) {
                 final Literal other = (Literal) object;
                 return this.label.equals(other.getLabel())
@@ -345,10 +372,10 @@ final class HashValueFactory extends ValueFactoryBase {
             if (object == this) {
                 return true;
             } else if (object instanceof HashBNode) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashBNode) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+                final HashBNode other = (HashBNode) object;
+                initHash();
+                other.initHash();
+                return this.hashHi == other.hashHi && this.hashLo == other.hashLo;
             } else if (object instanceof BNode) {
                 final BNode other = (BNode) object;
                 return this.id.equals(other.getID());
@@ -425,10 +452,10 @@ final class HashValueFactory extends ValueFactoryBase {
             if (object == this) {
                 return true;
             } else if (object instanceof HashURI) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashURI) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+                final HashURI other = (HashURI) object;
+                initHash();
+                other.initHash();
+                return this.hashHi == other.hashHi && this.hashLo == other.hashLo;
             } else if (object instanceof URI) {
                 return this.uri.equals(object.toString());
             } else {

@@ -379,7 +379,7 @@ public final class Rule implements Comparable<Rule> {
         if (this.streamable == 0) {
             boolean streamable = false;
             final Set<StatementPattern> wherePatterns = getWherePatterns();
-            if (wherePatterns.size() < 1) {
+            if (wherePatterns.size() <= 1) {
                 if (this.deleteExpr == null) {
                     streamable = true;
                 } else if (wherePatterns.size() == 1) {

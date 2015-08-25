@@ -18,7 +18,7 @@ import eu.fbk.rdfpro.rules.RuleEngine;
 import eu.fbk.rdfpro.rules.Ruleset;
 import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.StatementBuffer;
-import eu.fbk.rdfpro.rules.util.StatementDeduplicator;
+import eu.fbk.rdfpro.util.StatementDeduplicator;
 
 public class EngineOld extends RuleEngine {
 
@@ -232,8 +232,9 @@ public class EngineOld extends RuleEngine {
 
         private Supplier<RDFHandler> deduplicate(final StatementBuffer buffer) {
             return () -> {
-                return StatementDeduplicator.newPartialDeduplicator(1 * 1024, false, false)
-                        .deduplicate(buffer.get());
+                return StatementDeduplicator.newPartialDeduplicator(
+                        StatementDeduplicator.ComparisonMethod.EQUALS, 1 * 1024).deduplicate(
+                        buffer.get(), true);
             };
         }
 
