@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,8 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ContextStatementImpl;
+import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
@@ -57,8 +60,22 @@ public final class Statements {
     static {
         final boolean hashfactory = Boolean.parseBoolean(Environment.getProperty(
                 "rdfpro.hashfactory", "false"));
-        VALUE_FACTORY = hashfactory ? HashValueFactory.INSTANCE : ValueFactoryImpl.getInstance();
+        if (hashfactory) {
+            VALUE_FACTORY = HashValueFactory.INSTANCE;
+        } else {
+            VALUE_FACTORY = ValueFactoryImpl.getInstance();
+        }
     }
+
+    public static final Function<Value, Value> VALUE_NORMALIZER = new Function<Value, Value>() {
+
+        @Override
+        public Value apply(final Value value) {
+            return normalize(value);
+        }
+
+    };
+
     public static final DatatypeFactory DATATYPE_FACTORY;
 
     public static final Set<URI> TBOX_CLASSES = Collections.unmodifiableSet(new HashSet<URI>(
@@ -110,6 +127,8 @@ public final class Statements {
         }
     }
 
+    private static final Hash NIL_HASH = Hash.murmur3("\u0001");
+
     public static Comparator<Value> valueComparator(final String... rankedNamespaces) {
         return rankedNamespaces == null || rankedNamespaces.length == 0 ? DEFAULT_VALUE_ORDERING
                 : new ValueComparator(rankedNamespaces);
@@ -136,6 +155,70 @@ public final class Statements {
         } else {
             return new StatementMatcher(spec);
         }
+    }
+
+    public static Statement normalize(final Statement statement) {
+        final Resource subj = normalize(statement.getSubject());
+        final URI pred = normalize(statement.getPredicate());
+        final Value obj = normalize(statement.getObject());
+        final Resource ctx = normalize(statement.getContext());
+        if (subj == statement.getSubject() && pred == statement.getPredicate()
+                && obj == statement.getObject() && ctx == statement.getContext()) {
+            return statement;
+        } else if (ctx != null) {
+            return new ContextStatementImpl(subj, pred, obj, ctx);
+        } else {
+            return new StatementImpl(subj, pred, obj);
+        }
+    }
+
+    @Nullable
+    public static <T extends Value> T normalize(@Nullable final T value) {
+        if (VALUE_FACTORY instanceof HashValueFactory) {
+            return HashValueFactory.normalize(value);
+        }
+        return value;
+    }
+
+    public static Hash hash(final Statement statement) {
+        final Hash subjHash = hash(statement.getSubject());
+        final Hash predHash = hash(statement.getPredicate());
+        final Hash objHash = hash(statement.getObject());
+        final Hash ctxHash = hash(statement.getContext());
+        return Hash.combine(subjHash, predHash, objHash, ctxHash);
+    }
+
+    @Nullable
+    public static Hash hash(@Nullable final Value value) {
+        if (VALUE_FACTORY instanceof HashValueFactory) {
+            return HashValueFactory.hash(value);
+        }
+        return doHash(value);
+    }
+
+    static Hash doHash(final Value value) {
+        if (value == null) {
+            return NIL_HASH;
+        }
+        Hash hash;
+        if (value instanceof URI) {
+            hash = Hash.murmur3("\u0001", value.stringValue());
+        } else if (value instanceof BNode) {
+            hash = Hash.murmur3("\u0002", ((BNode) value).getID());
+        } else {
+            final Literal l = (Literal) value;
+            if (l.getLanguage() != null) {
+                hash = Hash.murmur3("\u0003", l.getLanguage(), l.getLabel());
+            } else if (l.getDatatype() != null) {
+                hash = Hash.murmur3("\u0004", l.getDatatype().stringValue(), l.getLabel());
+            } else {
+                hash = Hash.murmur3("\u0005", l.getLabel());
+            }
+        }
+        if (hash.getLow() == 0) {
+            hash = Hash.fromLongs(hash.getHigh(), 1L);
+        }
+        return hash;
     }
 
     @Nullable
@@ -714,14 +797,6 @@ public final class Statements {
 
     private static boolean isNumber(final int c) {
         return c >= 48 && c <= 57;
-    }
-
-    @Nullable
-    public static <T extends Value> T normalize(@Nullable final T value) {
-        if (VALUE_FACTORY instanceof HashValueFactory) {
-            return HashValueFactory.normalize(value);
-        }
-        return value;
     }
 
     /**

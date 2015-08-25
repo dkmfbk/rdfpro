@@ -277,6 +277,31 @@ public final class Algebra {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    @Nullable
+    public static <T extends TupleExpr> T normalize(@Nullable T expr,
+            final Function<Value, Value> normalizer) {
+        if (expr != null) {
+            expr = (T) expr.clone();
+            expr.visit(new QueryModelVisitorBase<RuntimeException>() {
+
+                @Override
+                public void meet(final Var node) throws RuntimeException {
+                    if (node.hasValue()) {
+                        node.setValue(normalizer.apply(node.getValue()));
+                    }
+                }
+
+                @Override
+                public void meet(final ValueConstant node) throws RuntimeException {
+                    node.setValue(normalizer.apply(node.getValue()));
+                }
+
+            });
+        }
+        return expr;
+    }
+
     public static Iterator<BindingSet> evaluateTupleExpr(TupleExpr expr,
             @Nullable final Dataset dataset, @Nullable BindingSet bindings,
             @Nullable EvaluationStrategy evaluationStrategy,

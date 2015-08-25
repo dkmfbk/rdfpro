@@ -67,30 +67,105 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     @Nullable
     public Statement apply(final Statement stmt) {
 
-        final Object subj = resolve(this.subj, stmt);
-        if (!(subj instanceof Resource)) {
+        // NOTE: although not very elegant, the code below runs faster than the much compact code
+        // commented at the end of the method (and this is a hot spot)
+
+        Resource ss = stmt.getSubject();
+        URI sp = stmt.getPredicate();
+        Value so = stmt.getObject();
+        Resource sc = stmt.getContext();
+
+        Resource s;
+        if (this.subj instanceof Resource) {
+            s = (Resource) this.subj;
+        } else if (this.subj == StatementComponent.SUBJECT) {
+            s = ss;
+        } else if (this.subj == StatementComponent.PREDICATE) {
+            s = sp;
+        } else if (this.subj == StatementComponent.OBJECT && so instanceof Resource) {
+            s = (Resource) so;
+        } else if (this.subj == StatementComponent.CONTEXT && sc != null) {
+            s = sc;
+        } else {
             return null;
         }
 
-        final Object pred = resolve(this.pred, stmt);
-        if (!(pred instanceof URI)) {
+        URI p;
+        if (this.pred instanceof URI) {
+            p = (URI) this.pred;
+        } else if (this.pred == StatementComponent.SUBJECT && ss instanceof URI) {
+            p = (URI) ss;
+        } else if (this.pred == StatementComponent.PREDICATE) {
+            p = sp;
+        } else if (this.pred == StatementComponent.OBJECT && so instanceof URI) {
+            p = (URI) so;
+        } else if (this.pred == StatementComponent.CONTEXT && sc instanceof URI) {
+            p = (URI) sc;
+        } else {
             return null;
         }
 
-        final Object obj = resolve(this.obj, stmt);
-        if (!(obj instanceof Value)) {
+        Value o;
+        if (this.obj instanceof Value) {
+            o = (Value) this.obj;
+        } else if (this.obj == StatementComponent.SUBJECT) {
+            o = ss;
+        } else if (this.obj == StatementComponent.PREDICATE) {
+            o = sp;
+        } else if (this.obj == StatementComponent.OBJECT) {
+            o = so;
+        } else if (this.obj == StatementComponent.CONTEXT && sc != null) {
+            o = sc;
+        } else {
             return null;
         }
 
-        final Object ctx = resolve(this.ctx, stmt);
-        if (ctx != null && !(ctx instanceof Resource)) {
+        Resource c;
+        if (this.ctx instanceof Resource || this.ctx == null) {
+            c = (Resource) this.ctx;
+        } else if (this.ctx == StatementComponent.SUBJECT) {
+            c = ss;
+        } else if (this.ctx == StatementComponent.PREDICATE) {
+            c = sp;
+        } else if (this.ctx == StatementComponent.OBJECT && so instanceof Resource) {
+            c = (Resource) so;
+        } else if (this.ctx == StatementComponent.CONTEXT) {
+            c = sc;
+        } else {
             return null;
         }
 
-        return ctx == null ? Statements.VALUE_FACTORY.createStatement((Resource) subj, (URI) pred,
-                (Value) obj) : Statements.VALUE_FACTORY.createStatement((Resource) subj,
-                (URI) pred, (Value) obj, (Resource) ctx);
+        return Statements.VALUE_FACTORY.createStatement(s, p, o, c);
+
+        // final Object subj = resolve(this.subj, stmt);
+        // if (!(subj instanceof Resource)) {
+        // return null;
+        // }
+        //
+        // final Object pred = resolve(this.pred, stmt);
+        // if (!(pred instanceof URI)) {
+        // return null;
+        // }
+        //
+        // final Object obj = resolve(this.obj, stmt);
+        // if (!(obj instanceof Value)) {
+        // return null;
+        // }
+        //
+        // final Object ctx = resolve(this.ctx, stmt);
+        // if (ctx != null && !(ctx instanceof Resource)) {
+        // return null;
+        // }
+        //
+        // return Statements.VALUE_FACTORY.createStatement((Resource) subj, (URI) pred, (Value)
+        // obj,
+        // (Resource) ctx);
     }
+
+    // private static Object resolve(final Object component, final Statement stmt) {
+    // return component instanceof StatementComponent ? ((StatementComponent) component)
+    // .apply(stmt) : component;
+    // }
 
     @Override
     public boolean equals(final Object object) {
@@ -135,11 +210,6 @@ public final class StatementTemplate implements Function<Statement, Statement> {
                 throw new Error(ex);
             }
         }
-    }
-
-    private static Object resolve(final Object component, final Statement stmt) {
-        return component instanceof StatementComponent ? ((StatementComponent) component)
-                .apply(stmt) : component;
     }
 
     private static Object check(final Object component) {

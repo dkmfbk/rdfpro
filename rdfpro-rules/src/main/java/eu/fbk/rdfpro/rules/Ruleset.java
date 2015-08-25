@@ -184,18 +184,16 @@ public final class Ruleset {
                     // Extract all statement patterns from WHERE and DELETE exprs
                     final List<StatementPattern> patterns = new ArrayList<>();
                     for (final Rule rule : this.rules) {
-                        patterns.addAll(Algebra.extractNodes(rule.getDeleteExpr(),
-                                StatementPattern.class, null, null));
-                        patterns.addAll(Algebra.extractNodes(rule.getInsertExpr(),
-                                StatementPattern.class, null, null));
+                        patterns.addAll(rule.getDeletePatterns());
+                        patterns.addAll(rule.getWherePatterns());
                     }
 
                     // Look for wildcard pattern
                     BloomFilter<Integer>[] filters = new BloomFilter[] { null, null, null, null };
                     for (final StatementPattern p : patterns) {
                         if (!p.getSubjectVar().hasValue() && !p.getPredicateVar().hasValue()
-                                && !p.getObjectVar().hasValue() && p.getContextVar() != null
-                                && !p.getContextVar().hasValue()) {
+                                && !p.getObjectVar().hasValue()
+                                && (p.getContextVar() == null || !p.getContextVar().hasValue())) {
                             filters = new BloomFilter[0];
                             LOGGER.debug("Rules contain <?s ?p ?o ?c> pattern");
                         }
@@ -317,9 +315,15 @@ public final class Ruleset {
                     final Iterable<? extends BindingSet> list = bindingsMap.get(id);
                     if (list != null) {
                         for (final BindingSet b : list) {
-                            final TupleExpr delete = Algebra.rewrite(split.dynamicDeleteExpr, b);
-                            final TupleExpr insert = Algebra.rewrite(split.dynamicInsertExpr, b);
-                            final TupleExpr where = Algebra.rewrite(split.dynamicWhereExpr, b);
+                            final TupleExpr delete = Algebra.normalize(
+                                    Algebra.rewrite(split.dynamicDeleteExpr, b),
+                                    Statements.VALUE_NORMALIZER);
+                            final TupleExpr insert = Algebra.normalize(
+                                    Algebra.rewrite(split.dynamicInsertExpr, b),
+                                    Statements.VALUE_NORMALIZER);
+                            final TupleExpr where = Algebra.normalize(
+                                    Algebra.rewrite(split.dynamicWhereExpr, b),
+                                    Statements.VALUE_NORMALIZER);
                             if (!Objects.equals(insert, where) || delete != null) {
                                 final URI newID = Rule.newID(id.stringValue());
                                 rules.add(new Rule(newID, fixpoint, phase, delete, insert, where));

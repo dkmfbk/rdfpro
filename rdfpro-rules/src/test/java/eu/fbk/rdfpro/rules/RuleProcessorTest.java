@@ -17,7 +17,6 @@ import eu.fbk.rdfpro.RDFProcessor;
 import eu.fbk.rdfpro.RDFProcessors;
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.rules.seminaive.Engine;
 
 public class RuleProcessorTest {
 

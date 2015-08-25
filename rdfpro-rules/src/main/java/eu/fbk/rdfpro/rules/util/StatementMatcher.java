@@ -36,6 +36,10 @@ public final class StatementMatcher {
 
     private final Object[] normalizedValues; // modified during use
 
+    private final Object[] wildcardValues;
+
+    private final Object[] normalizedWildcardValues; // modified during use
+
     private final URI nil;
 
     private final int numPatterns;
@@ -43,30 +47,34 @@ public final class StatementMatcher {
     private final int numValues;
 
     private StatementMatcher(@Nullable final Function<Value, Value> normalizer,
-            final byte[] masks, final int[][] tables, final Object[] values,
-            final int numPatterns, final int numValues) {
+            final byte[] masks, final int[][] tables, @Nullable final Object[] values,
+            final Object[] wildcardValues, final int numPatterns, final int numValues) {
         this.normalizer = normalizer;
         this.masks = masks;
         this.tables = tables;
         this.values = values;
         this.normalizedValues = normalizer == null ? values : values.clone();
+        this.wildcardValues = wildcardValues;
+        this.normalizedWildcardValues = normalizer == null || wildcardValues == null ? wildcardValues
+                : wildcardValues.clone();
         this.nil = normalizer == null ? SESAME.NIL : (URI) normalizer.apply(SESAME.NIL);
         this.numPatterns = numPatterns;
         this.numValues = numValues;
+
+        if (normalizer != null && this.normalizedWildcardValues != null) {
+            for (int i = 0; i < this.normalizedWildcardValues.length; ++i) {
+                this.normalizedWildcardValues[i] = normalize(this.normalizedWildcardValues[i]);
+            }
+        }
     }
 
     public StatementMatcher normalize(@Nullable final Function<Value, Value> normalizer) {
         return normalizer == null ? this : new StatementMatcher(normalizer, this.masks,
-                this.tables, this.values, this.numPatterns, this.numValues);
+                this.tables, this.values, this.wildcardValues, this.numPatterns, this.numValues);
     }
 
     public boolean matchAll() {
-        for (final byte mask : this.masks) {
-            if (mask == 0) {
-                return true;
-            }
-        }
-        return false;
+        return this.wildcardValues != null;
     }
 
     public boolean match(final Statement stmt) {
@@ -75,6 +83,10 @@ public final class StatementMatcher {
 
     public boolean match(final Resource subj, final URI pred, final Value obj,
             @Nullable Resource ctx) {
+
+        if (this.wildcardValues != null) {
+            return true;
+        }
 
         ctx = replaceNull(ctx);
         for (int i = 0; i < this.masks.length; ++i) {
@@ -97,11 +109,24 @@ public final class StatementMatcher {
         return map(subj, pred, obj, ctx, clazz, null);
     }
 
+    @SuppressWarnings("unchecked")
     public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
             @Nullable Resource ctx, final Class<T> clazz, @Nullable final List<T> list) {
 
         ctx = replaceNull(ctx);
         List<T> result = list;
+
+        if (this.normalizedWildcardValues != null) {
+            if (result == null) {
+                result = new ArrayList<>(16);
+            }
+            for (final Object value : this.normalizedWildcardValues) {
+                if (clazz.isInstance(value)) {
+                    result.add((T) value);
+                }
+            }
+        }
+
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
             final int[] table = this.tables[i];
@@ -110,14 +135,18 @@ public final class StatementMatcher {
                     slot, table.length)) {
                 int offset = match(subj, pred, obj, ctx, mask, hash, table[slot]);
                 if (offset >= 0) {
-                    for (; this.normalizedValues[offset] != null
-                            && this.normalizedValues[offset] != this.normalizer; ++offset) {
-                        if (clazz.isInstance(this.normalizedValues[offset])) {
+                    while (true) {
+                        final Object value = this.normalizedValues[offset];
+                        if (value == null || value == this.normalizer) {
+                            break;
+                        }
+                        if (clazz.isInstance(value)) {
                             if (result == null) {
                                 result = new ArrayList<>(16);
                             }
-                            result.add(clazz.cast(this.normalizedValues[offset]));
+                            result.add((T) value);
                         }
+                        ++offset;
                     }
                 }
             }
@@ -150,16 +179,7 @@ public final class StatementMatcher {
         if (this.normalizer != null
                 && !Objects.equal(this.normalizedValues[offset - 1], this.normalizer)) {
             for (int i = offset; this.normalizedValues[i] != null; ++i) {
-                final Object value = this.normalizedValues[i];
-                if (value instanceof Value) {
-                    this.normalizedValues[i] = this.normalizer.apply((Value) value);
-                } else if (value instanceof StatementMatcher) {
-                    this.normalizedValues[i] = ((StatementMatcher) value)
-                            .normalize(this.normalizer);
-                } else if (value instanceof StatementTemplate) {
-                    this.normalizedValues[i] = ((StatementTemplate) value)
-                            .normalize(this.normalizer);
-                }
+                this.normalizedValues[i] = normalize(this.normalizedValues[i]);
             }
             this.normalizedValues[offset - 1] = this.normalizer;
         }
@@ -179,6 +199,18 @@ public final class StatementMatcher {
             return -1;
         }
         return offset + Integer.bitCount(mask);
+    }
+
+    private Object normalize(final Object value) {
+        if (value instanceof Value) {
+            return this.normalizer.apply((Value) value);
+        } else if (value instanceof StatementMatcher) {
+            return ((StatementMatcher) value).normalize(this.normalizer);
+        } else if (value instanceof StatementTemplate) {
+            return ((StatementTemplate) value).normalize(this.normalizer);
+        } else {
+            return value;
+        }
     }
 
     private static int next(final int slot, final int numSlots) {
@@ -235,6 +267,8 @@ public final class StatementMatcher {
 
     public static final class Builder {
 
+        private Set<Object> wildcardValues;
+
         private final Map<List<Value>, Collection<Object>>[] patternMaps;
 
         private int numValues;
@@ -244,6 +278,7 @@ public final class StatementMatcher {
         @SuppressWarnings("unchecked")
         Builder() {
             // There are at most 16 masks to consider
+            this.wildcardValues = null;
             this.patternMaps = new Map[16];
             this.numValues = 0;
             this.numMasks = 0;
@@ -259,6 +294,14 @@ public final class StatementMatcher {
         public Builder addValues(@Nullable final Resource subj, @Nullable final URI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx,
                 final Object... mappedValues) {
+
+            // Handle the case of wildcard patterns
+            if (subj == null && pred == null && obj == null && ctx == null) {
+                this.wildcardValues = this.wildcardValues != null ? this.wildcardValues
+                        : new HashSet<>();
+                this.wildcardValues.addAll(Arrays.asList(mappedValues));
+                return this;
+            }
 
             // Compute mask and pattern list starting from the four components specified
             final byte mask = mask(subj, pred, obj, ctx);
@@ -365,7 +408,10 @@ public final class StatementMatcher {
             }
 
             // Build a pattern matcher using the created data structures
-            return new StatementMatcher(normalizer, masks, tables, values, numPatterns, numValues);
+            return new StatementMatcher(normalizer, masks, tables, values,
+                    this.wildcardValues == null ? null : this.wildcardValues
+                            .toArray(new Object[this.wildcardValues.size()]),
+                    numPatterns, numValues);
         }
 
     }

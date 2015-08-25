@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -140,7 +141,7 @@ public class Engine extends RuleEngine {
             return;
         }
 
-        if (!fixpoint) {
+        if (!fixpoint || insertMatcher == null) {
             // Emit the statement only if it does not match a delete pattern
             if (deleteMatcher == null
                     || !deleteMatcher.match(stmt.getSubject(), stmt.getPredicate(),
@@ -163,12 +164,12 @@ public class Engine extends RuleEngine {
 
         } else {
             // Perform breadth-first processing
-            StatementDeduplicator chainedDeduplicator = null; // created on demand
+            StatementDeduplicator totalDeduplicator = null;
             List<StatementTemplate> templates = null; // created on demand
             List<Statement> queue = null; // created on demand
             int index = 0;
             Statement s = stmt;
-            do {
+            while (true) {
                 // Emit the statement only if it does not match a delete pattern
                 if (deleteMatcher == null
                         || !deleteMatcher.match(s.getSubject(), s.getPredicate(), s.getObject(),
@@ -177,38 +178,40 @@ public class Engine extends RuleEngine {
                 }
 
                 // Apply insert part by looking up and applying insert templates.
-                if (insertMatcher != null) {
-                    templates = insertMatcher.map(s.getSubject(), s.getPredicate(), s.getObject(),
-                            s.getContext(), StatementTemplate.class, templates);
-                    for (final StatementTemplate template : templates) {
-                        final Statement stmt2 = template.apply(s);
-                        if (stmt2 != null) {
-                            if (chainedDeduplicator == null) {
-                                final StatementDeduplicator totalDeduplicator = StatementDeduplicator
-                                        .newTotalDeduplicator(StatementDeduplicator.ComparisonMethod.EQUALS);
-                                chainedDeduplicator = StatementDeduplicator
-                                        .newChainedDeduplicator(deduplicator, totalDeduplicator);
-                                totalDeduplicator.add(stmt);
-                            }
-                            if (chainedDeduplicator.add(stmt2)) {
-                                if (queue == null) {
-                                    queue = new ArrayList<>(64);
-                                }
-                                queue.add(stmt2);
-                            }
+                templates = insertMatcher.map(s.getSubject(), s.getPredicate(), s.getObject(),
+                        s.getContext(), StatementTemplate.class, templates);
+                for (final StatementTemplate template : templates) {
+                    final Statement stmt2 = template.apply(s);
+                    if (stmt2 != null && deduplicator.add(stmt2)) {
+                        if (totalDeduplicator == null) {
+                            totalDeduplicator = StatementDeduplicator
+                                    .newTotalDeduplicator(StatementDeduplicator.ComparisonMethod.EQUALS);
+                            totalDeduplicator.add(stmt);
                         }
-                    }
-                    if (templates instanceof ArrayList<?>) {
-                        templates.clear();
-                    } else {
-                        templates = null;
+                        if (totalDeduplicator.add(stmt2)) {
+                            if (queue == null) {
+                                queue = new ArrayList<>(64);
+                            }
+                            queue.add(stmt2);
+                        }
                     }
                 }
 
-                // Pick up the next statement to process from the queue (null = done)
-                s = queue != null && index < queue.size() ? s = queue.get(index++) : null;
+                // Terminate if there are no more statements to process
+                if (queue == null || index == queue.size()) {
+                    break;
+                }
 
-            } while (s != null);
+                // Otherwise, pick up the next statement to process from the queue
+                s = queue.get(index++);
+
+                // Restore cached templates list
+                if (templates instanceof ArrayList<?>) {
+                    templates.clear();
+                } else {
+                    templates = null;
+                }
+            }
         }
     }
 
@@ -684,31 +687,35 @@ public class Engine extends RuleEngine {
                 evalRules(model, null, deduplicator);
 
             } else {
+
+                // TODO -Drdfpro.hashfactory=true
+                final long ts = System.currentTimeMillis();
+                final StatementBuffer insertBuffer = new StatementBuffer();
+                final RDFHandler sink = insertBuffer.get();
+                try {
+                    sink.startRDF();
+                    for (final Statement stmt : model) {
+                        expand(stmt, sink, deduplicator, null, this.streamMatcher, true);
+                    }
+                    sink.endRDF();
+                } catch (final RDFHandlerException ex) {
+                    Throwables.propagate(ex);
+                }
+                // StatementBuffer deltaBuffer = new StatementBuffer();
+                insertBuffer.toModel(model, true, null);
+                // System.out.println(deltaBuffer);
+                System.out.println(System.currentTimeMillis() - ts);
+
                 // (2) Semi-naive fixpoint evaluation
                 QuadModel delta = null;
                 while (true) {
-                    delta = evalRules(model, delta, deduplicator);
-                    // delta = evalRules(model, delta, deduplicator, null);
+                    // delta = evalRules(model, delta, deduplicator);
+                    delta = evalRules(model, delta, deduplicator, null);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
                 }
 
-                // TODO
-                // StatementBuffer insertBuffer = new StatementBuffer();
-                // RDFHandler sink = insertBuffer.get();
-                // try {
-                // sink.startRDF();
-                // for (final Statement stmt : model) {
-                // expand(stmt, sink, deduplicator, null, this.streamMatcher, true);
-                // }
-                // sink.endRDF();
-                // } catch (final RDFHandlerException ex) {
-                // Throwables.propagate(ex);
-                // }
-                // StatementBuffer deltaBuffer = new StatementBuffer();
-                // insertBuffer.toModel(model, true, deltaBuffer.get());
-                // System.out.println(deltaBuffer);
             }
         }
 
@@ -785,20 +792,20 @@ public class Engine extends RuleEngine {
 
                     };
                 }
-                // handler = new AbstractRDFHandlerWrapper(handler) {
-                //
-                // @Override
-                // public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                // expand(stmt, this.handler, deduplicator, null,
-                // SemiNaivePhase.this.streamMatcher, true);
-                // }
-                //
-                // };
+                handler = new AbstractRDFHandlerWrapper(handler) {
+
+                    @Override
+                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                        expand(stmt, this.handler, deduplicator, null,
+                                SemiNaivePhase.this.streamMatcher, true);
+                    }
+
+                };
                 return handler;
             };
 
             // Evaluate join rules in parallel using the supplier created before
-            final int numVariants = Rule.evaluate(SemiNaivePhase.this.allRules, model, delta,
+            final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, delta,
                     null, supplier);
 
             // Take another timestamp and measure size of join buffer after evaluation

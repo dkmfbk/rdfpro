@@ -217,7 +217,7 @@ public abstract class RuleEngine {
                         super.handleStatement(stmt);
                         numProcessed.incrementAndGet();
                     } else {
-                        this.handler.handleStatement(stmt);
+                        // this.handler.handleStatement(stmt);
                         numPropagated.incrementAndGet();
                     }
                 }
