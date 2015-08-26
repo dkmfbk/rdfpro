@@ -18,6 +18,7 @@ import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.ValueFactoryBase;
 import org.openrdf.model.util.URIUtil;
+import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 
 final class HashValueFactory extends ValueFactoryBase {
@@ -63,21 +64,13 @@ final class HashValueFactory extends ValueFactoryBase {
     }
 
     @Override
-    public Statement createStatement(final Resource subject, final URI predicate,
-            final Value object) {
-        final Resource subj = normalize(subject);
-        final URI pred = normalize(predicate);
-        final Value obj = normalize(object);
+    public Statement createStatement(final Resource subj, final URI pred, final Value obj) {
         return new StatementImpl(subj, pred, obj);
     }
 
     @Override
-    public Statement createStatement(final Resource subject, final URI predicate,
-            final Value object, final Resource context) {
-        final Resource subj = normalize(subject);
-        final URI pred = normalize(predicate);
-        final Value obj = normalize(object);
-        final Resource ctx = normalize(context);
+    public Statement createStatement(final Resource subj, final URI pred, final Value obj,
+            final Resource ctx) {
         return ctx == null ? new StatementImpl(subj, pred, obj) //
                 : new ContextStatementImpl(subj, pred, obj, ctx);
     }
@@ -179,7 +172,13 @@ final class HashValueFactory extends ValueFactoryBase {
 
         @Override
         public URI getDatatype() {
-            return this.languageOrDatatype instanceof URI ? (URI) this.languageOrDatatype : null;
+            if (this.languageOrDatatype instanceof URI) {
+                return (URI) this.languageOrDatatype;
+            } else if (this.languageOrDatatype instanceof String) {
+                return RDF.LANGSTRING;
+            } else {
+                return XMLSchema.STRING;
+            }
         }
 
         @Override
@@ -246,8 +245,8 @@ final class HashValueFactory extends ValueFactoryBase {
             } else if (object instanceof Literal) {
                 final Literal other = (Literal) object;
                 return this.label.equals(other.getLabel())
-                        && (Objects.equals(this.languageOrDatatype, other.getDatatype()) //
-                        || Objects.equals(this.languageOrDatatype, other.getLanguage()));
+                        && Objects.equals(getDatatype(), other.getDatatype())
+                        && Objects.equals(getLanguage(), other.getLanguage());
             } else {
                 return false;
             }
@@ -257,13 +256,11 @@ final class HashValueFactory extends ValueFactoryBase {
         public int hashCode() {
             if (this.hashCode == 0) {
                 int hashCode = this.label.hashCode();
-                if (this.languageOrDatatype instanceof String) {
-                    hashCode = 31 * hashCode + this.languageOrDatatype.hashCode();
+                final String language = getLanguage();
+                if (language != null) {
+                    hashCode = 31 * hashCode + language.hashCode();
                 }
-                hashCode = 31
-                        * hashCode
-                        + (this.languageOrDatatype instanceof URI ? (URI) this.languageOrDatatype
-                                : XMLSchema.STRING).hashCode();
+                hashCode = 31 * hashCode + getDatatype().hashCode();
                 this.hashCode = hashCode;
             }
             return this.hashCode;
@@ -275,14 +272,17 @@ final class HashValueFactory extends ValueFactoryBase {
             sb.append('"');
             sb.append(this.label);
             sb.append('"');
-            if (this.languageOrDatatype instanceof String) {
+            final String language = getLanguage();
+            if (language != null) {
                 sb.append('@');
-                sb.append(this.languageOrDatatype);
-            }
-            if (this.languageOrDatatype instanceof URI) {
-                sb.append("^^<");
-                sb.append(this.languageOrDatatype.toString());
-                sb.append(">");
+                sb.append(language);
+            } else {
+                final URI datatype = getDatatype();
+                if (datatype != null && !datatype.equals(XMLSchema.STRING)) {
+                    sb.append("^^<");
+                    sb.append(datatype.stringValue());
+                    sb.append(">");
+                }
             }
             return sb.toString();
         }
@@ -397,7 +397,7 @@ final class HashValueFactory extends ValueFactoryBase {
                 final HashURI other = (HashURI) object;
                 return sameHash(other);
             } else if (object instanceof URI) {
-                return this.uri.equals(object.toString());
+                return this.uri.equals(((URI) object).stringValue());
             } else {
                 return false;
             }

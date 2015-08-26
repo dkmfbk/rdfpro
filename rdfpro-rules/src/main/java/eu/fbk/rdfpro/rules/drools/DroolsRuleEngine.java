@@ -81,8 +81,8 @@ public class DroolsRuleEngine extends RuleEngine {
     }
 
     @Override
-    protected RDFHandler doEval(final RDFHandler handler) {
-        return new Handler(handler);
+    protected RDFHandler doEval(final RDFHandler handler, final boolean deduplicate) {
+        return new Handler(handler); // deduplicate ignored: output always deduplicated
     }
 
     public final class Handler extends AbstractRDFHandlerWrapper {

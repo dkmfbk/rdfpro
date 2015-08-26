@@ -74,7 +74,7 @@ public final class StatementMatcher {
     }
 
     public boolean matchAll() {
-        return this.wildcardValues != null;
+        return this.normalizedWildcardValues != null;
     }
 
     public boolean match(final Statement stmt) {
@@ -84,7 +84,7 @@ public final class StatementMatcher {
     public boolean match(final Resource subj, final URI pred, final Value obj,
             @Nullable Resource ctx) {
 
-        if (this.wildcardValues != null) {
+        if (this.normalizedWildcardValues != null) {
             return true;
         }
 

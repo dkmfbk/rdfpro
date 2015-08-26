@@ -47,10 +47,12 @@ public final class RuleProcessor implements RDFProcessor {
 
     private final boolean dropBNodeTypes;
 
+    private final boolean deduplicate;
+
     static RDFProcessor create(final String name, final String... args) throws RDFHandlerException {
 
         // Validate and parse options
-        final Options options = Options.parse("r!|B!|p!|g!|t|C|c!|b!|w|*", args);
+        final Options options = Options.parse("r!|B!|p!|g!|t|C|c!|b!|w|u|*", args);
 
         // Read base and preserve BNodes settings
         final boolean preserveBNodes = !options.hasOption("w");
@@ -136,19 +138,23 @@ public final class RuleProcessor implements RDFProcessor {
                         "%d static triples read (%d tr/s, %d tr/s avg)")).wrap(
                 RDFSources.read(true, preserveBNodes, base, null, staticSpecs));
 
+        // Read deduplicate flag
+        final boolean deduplicate = options.hasOption("u");
+
         // Build processor
-        return new RuleProcessor(ruleset, mapper, dropBNodeTypes, staticData, emitStatic,
-                staticContext);
+        return new RuleProcessor(ruleset, mapper, dropBNodeTypes, deduplicate, staticData,
+                emitStatic, staticContext);
     }
 
     public RuleProcessor(final Ruleset ruleset, @Nullable final Mapper mapper,
-            final boolean dropBNodeTypes) {
-        this(ruleset, mapper, dropBNodeTypes, null, false, null);
+            final boolean dropBNodeTypes, final boolean deduplicate) {
+        this(ruleset, mapper, dropBNodeTypes, deduplicate, null, false, null);
     }
 
     public RuleProcessor(final Ruleset ruleset, @Nullable final Mapper mapper,
-            final boolean dropBNodeTypes, @Nullable final RDFSource staticData,
-            final boolean emitStatic, @Nullable final URI staticContext) {
+            final boolean dropBNodeTypes, final boolean deduplicate,
+            @Nullable final RDFSource staticData, final boolean emitStatic,
+            @Nullable final URI staticContext) {
 
         // Process ruleset and static data
         LOGGER.info("Processing {} rules {} static data", ruleset.getRules().size(),
@@ -188,6 +194,7 @@ public final class RuleProcessor implements RDFProcessor {
         this.mapper = mapper;
         this.staticClosure = staticClosure;
         this.dropBNodeTypes = dropBNodeTypes;
+        this.deduplicate = deduplicate;
     }
 
     @Override
@@ -216,11 +223,14 @@ public final class RuleProcessor implements RDFProcessor {
             result = RDFProcessors.inject(RDFSources.wrap(this.staticClosure)).wrap(result);
         }
 
+        // Add decoupler so to ensure that output is dispatched to parallel threads
+        result = RDFHandlers.decouple(result);
+
         // Filter the handler to perform inference. Handle two cases.
         if (this.mapper == null) {
 
             // (1) No mapper: just invoke the rule engine
-            result = this.engine.eval(result);
+            result = this.engine.eval(result, this.deduplicate);
 
         } else {
 
@@ -230,9 +240,10 @@ public final class RuleProcessor implements RDFProcessor {
                 @Override
                 public void reduce(final Value key, final Statement[] stmts,
                         final RDFHandler handler) throws RDFHandlerException {
-                    final RDFHandler session = RuleProcessor.this.engine.eval(RDFHandlers
-                            .ignoreMethods(handler, RDFHandlers.METHOD_START_RDF
-                                    | RDFHandlers.METHOD_END_RDF | RDFHandlers.METHOD_CLOSE));
+                    final RDFHandler session = RuleProcessor.this.engine.eval(
+                            RDFHandlers.ignoreMethods(handler, RDFHandlers.METHOD_START_RDF
+                                    | RDFHandlers.METHOD_END_RDF | RDFHandlers.METHOD_CLOSE),
+                            RuleProcessor.this.deduplicate);
                     try {
                         session.startRDF();
                         for (final Statement stmt : stmts) {

@@ -196,6 +196,7 @@ public final class Ruleset {
                                 && (p.getContextVar() == null || !p.getContextVar().hasValue())) {
                             filters = new BloomFilter[0];
                             LOGGER.debug("Rules contain <?s ?p ?o ?c> pattern");
+                            break;
                         }
                     }
 
@@ -584,7 +585,7 @@ public final class Ruleset {
                 this.staticWhereExpr = whereExprs[0];
                 this.dynamicWhereExpr = whereExprs[1];
 
-                LOGGER.debug("{}", this);
+                LOGGER.trace("{}", this);
 
             } catch (final Throwable ex) {
                 throw new IllegalArgumentException("Cannot split rule " + rule.getID(), ex);

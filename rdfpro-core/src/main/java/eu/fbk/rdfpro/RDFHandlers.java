@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- *
+ * 
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- *
+ * 
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- *
+ * 
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -138,8 +138,8 @@ public final class RDFHandlers {
 
     /**
      * Returns an {@code RDFHandler} that populates the supplied statement collection. Namespaces
-     * and comments are dropped. Access to the collection is externally synchronized, so it does
-     * not need to be thread-safe.
+     * and comments are dropped. Access to the collection is not synchronized, so the collection
+     * must be thread-safe.
      *
      * @param statements
      *            the statement collection to populate, not null
@@ -246,7 +246,7 @@ public final class RDFHandlers {
             final RDFFormat format = Statements.toRDFFormat(location);
             final boolean parallel = Statements.isRDFFormatLineBased(format);
             handlers[i] = parallel ? new ParallelWriteHandler(actualConfig, location)
-            : new SequentialWriteHandler(actualConfig, location);
+                    : new SequentialWriteHandler(actualConfig, location);
         }
         return handlers.length == 0 ? NIL : handlers.length == 1 ? handlers[0]
                 : dispatchRoundRobin(chunkSize, handlers);
@@ -467,7 +467,7 @@ public final class RDFHandlers {
         if (count == 1 && (operation == SetOperator.SUM_MULTISET //
                 || operation == SetOperator.UNION_MULTISET //
                 || operation == SetOperator.INTERSECTION_MULTISET //
-                /*    */|| operation == SetOperator.DIFFERENCE_MULTISET)) {
+        /*    */|| operation == SetOperator.DIFFERENCE_MULTISET)) {
             result[0] = handler;
         } else if (count == 1 && operation == SetOperator.SYMMETRIC_DIFFERENCE
                 || operation == SetOperator.SYMMETRIC_DIFFERENCE_MULTISET) {

@@ -1,6 +1,7 @@
 package eu.fbk.rdfpro.rules.seminaive;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 import eu.fbk.rdfpro.RDFHandlers;
+import eu.fbk.rdfpro.RDFSources;
 import eu.fbk.rdfpro.rules.Rule;
 import eu.fbk.rdfpro.rules.RuleEngine;
 import eu.fbk.rdfpro.rules.Ruleset;
@@ -33,7 +35,9 @@ import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.StatementBuffer;
 import eu.fbk.rdfpro.rules.util.StatementMatcher;
 import eu.fbk.rdfpro.rules.util.StatementTemplate;
+import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.StatementDeduplicator;
+import eu.fbk.rdfpro.util.StatementDeduplicator.ComparisonMethod;
 import eu.fbk.rdfpro.util.Statements;
 
 public class Engine extends RuleEngine {
@@ -44,9 +48,17 @@ public class Engine extends RuleEngine {
 
     private final List<Phase> phases;
 
+    private final boolean unique;
+
     public Engine(final Ruleset ruleset) {
         super(ruleset);
         this.phases = buildPhases(ruleset);
+
+        boolean unique = false;
+        for (final Phase phase : this.phases) {
+            unique = phase.isHandlerOutputUnique(unique);
+        }
+        this.unique = unique;
     }
 
     @Override
@@ -66,7 +78,7 @@ public class Engine extends RuleEngine {
     }
 
     @Override
-    protected RDFHandler doEval(final RDFHandler handler) {
+    protected RDFHandler doEval(final RDFHandler handler, final boolean deduplicate) {
 
         // Determine the phase index range [i, j] (i,j included) where evaluation should be done
         // on a fully indexed model (i for necessity, up to j for necessity or convenience)
@@ -83,7 +95,8 @@ public class Engine extends RuleEngine {
         // Build the handler chain for [j+1, #phases-1]
         RDFHandler result = handler;
         for (int k = this.phases.size() - 1; k > j; --k) {
-            result = this.phases.get(k).eval(result);
+            result = this.phases.get(k).eval(result,
+                    deduplicate && !this.unique && k == this.phases.size() - 1);
         }
 
         // Build the handler for interval [i, j], if non empty
@@ -91,11 +104,14 @@ public class Engine extends RuleEngine {
             final List<Phase> modelPhases = this.phases.subList(i, j + 1);
             result = RDFHandlers.decouple(new AbstractRDFHandlerWrapper(result) {
 
+                private long ts;
+
                 private QuadModel model;
 
                 @Override
                 public void startRDF() throws RDFHandlerException {
                     super.startRDF();
+                    this.ts = System.currentTimeMillis();
                     this.model = QuadModel.create();
                 }
 
@@ -106,8 +122,12 @@ public class Engine extends RuleEngine {
 
                 @Override
                 public void endRDF() throws RDFHandlerException {
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Model populated in {} ms, {} statements",
+                                System.currentTimeMillis() - this.ts, this.model.size());
+                    }
                     for (final Phase phase : modelPhases) {
-                        phase.eval(this.model);
+                        phase.normalize(this.model.getValueNormalizer()).eval(this.model);
                     }
                     for (final Statement stmt : this.model) {
                         super.handleStatement(stmt);
@@ -120,7 +140,8 @@ public class Engine extends RuleEngine {
 
         // Build the handler chain for [0, i-1]
         for (int k = i - 1; k >= 0; --k) {
-            result = this.phases.get(k).eval(result);
+            result = this.phases.get(k).eval(result,
+                    deduplicate && !this.unique && k == this.phases.size() - 1);
         }
 
         // Return the constructed handler chain
@@ -130,8 +151,8 @@ public class Engine extends RuleEngine {
     private static void expand(final Statement stmt, final RDFHandler sink,
             final StatementDeduplicator deduplicator,
             @Nullable final StatementMatcher deleteMatcher,
-            @Nullable final StatementMatcher insertMatcher, final boolean fixpoint)
-            throws RDFHandlerException {
+            @Nullable final StatementMatcher insertMatcher, final boolean fixpoint,
+            final boolean emitStmt) throws RDFHandlerException {
 
         // NOTE: this method has a great impact on overall performances. In particular,
         // deduplication speed is critical for overall performances.
@@ -141,42 +162,38 @@ public class Engine extends RuleEngine {
             return;
         }
 
-        if (!fixpoint || insertMatcher == null) {
-            // Emit the statement only if it does not match a delete pattern
-            if (deleteMatcher == null
-                    || !deleteMatcher.match(stmt.getSubject(), stmt.getPredicate(),
-                            stmt.getObject(), stmt.getContext())) {
-                sink.handleStatement(stmt);
-            }
+        // Emit the supplied statements if authorized and if it does not match delete patterns
+        if (emitStmt
+                && (deleteMatcher == null || !deleteMatcher.match(stmt.getSubject(),
+                        stmt.getPredicate(), stmt.getObject(), stmt.getContext()))) {
+            sink.handleStatement(stmt);
+        }
 
-            // Apply insert part by looking up and applying insert templates. Inferred statements
-            // are directly emitted if they might be new
-            if (insertMatcher != null) {
-                for (final StatementTemplate template : insertMatcher.map(stmt.getSubject(),
-                        stmt.getPredicate(), stmt.getObject(), stmt.getContext(),
-                        StatementTemplate.class)) {
-                    final Statement stmt2 = template.apply(stmt);
-                    if (stmt2 != null && deduplicator.add(stmt2)) {
-                        sink.handleStatement(stmt2);
-                    }
+        // Abort if there is no way to infer new statements
+        if (insertMatcher == null) {
+            return;
+        }
+
+        // Otherwise handle two cases based on whether evaluation should be done till fixpoint
+        if (!fixpoint) {
+            // No fixpoint. Inferred statements are directly emitted if they might be new
+            for (final StatementTemplate template : insertMatcher.map(stmt.getSubject(),
+                    stmt.getPredicate(), stmt.getObject(), stmt.getContext(),
+                    StatementTemplate.class)) {
+                final Statement stmt2 = template.apply(stmt);
+                if (stmt2 != null && deduplicator.add(stmt2)) {
+                    sink.handleStatement(stmt2);
                 }
             }
 
         } else {
-            // Perform breadth-first processing
+            // Fixpoint. We proceed in a breadth-first way
             StatementDeduplicator totalDeduplicator = null;
             List<StatementTemplate> templates = null; // created on demand
             List<Statement> queue = null; // created on demand
             int index = 0;
             Statement s = stmt;
             while (true) {
-                // Emit the statement only if it does not match a delete pattern
-                if (deleteMatcher == null
-                        || !deleteMatcher.match(s.getSubject(), s.getPredicate(), s.getObject(),
-                                s.getContext())) {
-                    sink.handleStatement(s);
-                }
-
                 // Apply insert part by looking up and applying insert templates.
                 templates = insertMatcher.map(s.getSubject(), s.getPredicate(), s.getObject(),
                         s.getContext(), StatementTemplate.class, templates);
@@ -185,7 +202,7 @@ public class Engine extends RuleEngine {
                     if (stmt2 != null && deduplicator.add(stmt2)) {
                         if (totalDeduplicator == null) {
                             totalDeduplicator = StatementDeduplicator
-                                    .newTotalDeduplicator(StatementDeduplicator.ComparisonMethod.EQUALS);
+                                    .newTotalDeduplicator(ComparisonMethod.EQUALS);
                             totalDeduplicator.add(stmt);
                         }
                         if (totalDeduplicator.add(stmt2)) {
@@ -193,6 +210,12 @@ public class Engine extends RuleEngine {
                                 queue = new ArrayList<>(64);
                             }
                             queue.add(stmt2);
+                            if (deleteMatcher == null
+                                    || !deleteMatcher.match(stmt2.getSubject(),
+                                            stmt2.getPredicate(), stmt2.getObject(),
+                                            stmt2.getContext())) {
+                                sink.handleStatement(stmt2);
+                            }
                         }
                     }
                 }
@@ -234,9 +257,8 @@ public class Engine extends RuleEngine {
 
     private static Supplier<RDFHandler> deduplicate(final StatementBuffer buffer) {
         return () -> {
-            return StatementDeduplicator.newPartialDeduplicator(
-                    StatementDeduplicator.ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE)
-                    .deduplicate(buffer.get(), true);
+            return StatementDeduplicator.newPartialDeduplicator(ComparisonMethod.EQUALS,
+                    DEDUPLICATION_CACHE_SIZE).deduplicate(buffer.get(), true);
         };
     }
 
@@ -301,12 +323,16 @@ public class Engine extends RuleEngine {
             return this;
         }
 
-        public RDFHandler eval(final RDFHandler handler) {
+        public RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
             throw new Error();
         }
 
         public void eval(final QuadModel model) {
             throw new Error();
+        }
+
+        public boolean isHandlerOutputUnique(final boolean inputUnique) {
+            return true;
         }
 
         public final boolean isHandlerSupported() {
@@ -404,6 +430,11 @@ public class Engine extends RuleEngine {
         }
 
         @Override
+        public boolean isHandlerOutputUnique(final boolean inputUnique) {
+            return inputUnique && this.insertMatcher == null;
+        }
+
+        @Override
         public Phase normalize(final Function<Value, Value> normalizer) {
 
             // Normalize delete matchers and insert matchers with associated templates
@@ -421,15 +452,17 @@ public class Engine extends RuleEngine {
         }
 
         @Override
-        public RDFHandler eval(final RDFHandler handler) {
+        public RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
+
+            final StatementDeduplicator deduplicator;
+            if (deduplicate) {
+                deduplicator = StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH);
+            } else {
+                deduplicator = StatementDeduplicator.newPartialDeduplicator(
+                        ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+            }
+
             return new AbstractRDFHandlerWrapper(handler) {
-
-                private final StatementDeduplicator deduplicator = StatementDeduplicator
-                        .newPartialDeduplicator(StatementDeduplicator.ComparisonMethod.EQUALS,
-                                DEDUPLICATION_CACHE_SIZE);
-
-                // private final StatementDeduplicator deduplicator = StatementDeduplicator
-                // .newTotalDeduplicator(StatementDeduplicator.ComparisonMethod.HASH);
 
                 @Override
                 public void startRDF() throws RDFHandlerException {
@@ -439,9 +472,9 @@ public class Engine extends RuleEngine {
 
                     // Emit axioms
                     for (final Statement axiom : StreamPhase.this.axioms) {
-                        expand(axiom, this.handler, this.deduplicator,
+                        expand(axiom, this.handler, deduplicator,
                                 StreamPhase.this.fixpoint ? StreamPhase.this.deleteMatcher : null,
-                                StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint);
+                                StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
                     }
                 }
 
@@ -449,13 +482,12 @@ public class Engine extends RuleEngine {
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
 
                     // Delegate to recursive method expand(), marking the statement as explicit
-                    expand(stmt, this.handler, this.deduplicator, StreamPhase.this.deleteMatcher,
-                            StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint);
+                    expand(stmt, this.handler, deduplicator, StreamPhase.this.deleteMatcher,
+                            StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
                 }
 
             };
         }
-
     }
 
     private static final class NaivePhase extends Phase {
@@ -651,133 +683,119 @@ public class Engine extends RuleEngine {
         }
 
         @Override
+        public boolean isHandlerOutputUnique(final boolean inputUnique) {
+            return this.fixpoint && this.joinMatcher.matchAll();
+        }
+
+        @Override
         public Phase normalize(final Function<Value, Value> normalizer) {
 
             final StatementMatcher normStreamMatcher = this.streamMatcher.normalize(normalizer);
             final StatementMatcher normModelMatcher = this.joinMatcher.normalize(normalizer);
             final Statement[] normAxioms = Engine.normalize(this.axioms, normalizer);
 
-            if (normStreamMatcher == this.streamMatcher && normModelMatcher == this.joinMatcher
-                    && normAxioms == this.axioms) {
-                return this;
-            } else {
-                return new SemiNaivePhase(this.allRules, this.joinRules, normStreamMatcher,
+            Phase result = this;
+            if (normStreamMatcher != this.streamMatcher || normModelMatcher != this.joinMatcher
+                    || normAxioms != this.axioms) {
+                result = new SemiNaivePhase(this.allRules, this.joinRules, normStreamMatcher,
                         normModelMatcher, normAxioms, this.fixpoint);
             }
+            return result;
         }
 
         @SuppressWarnings("resource")
         @Override
-        public RDFHandler eval(final RDFHandler handler) {
+        public RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
 
             // Instantiate and return a wrapper, depending on whether fixpoint evaluation is used
-            return this.fixpoint ? new FixpointHandler(handler) : new NonFixpointHandler(handler);
+            return this.fixpoint ? new FixpointHandler(handler, deduplicate)
+                    : new NonFixpointHandler(handler, deduplicate);
         }
 
         @Override
         public void eval(final QuadModel model) {
 
+            // Allocate a partial deduplicator to use during all the phase evaluation
             final StatementDeduplicator deduplicator = StatementDeduplicator
-                    .newPartialDeduplicator(StatementDeduplicator.ComparisonMethod.EQUALS,
-                            DEDUPLICATION_CACHE_SIZE);
+                    .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
 
             // Handle three case
             if (!this.fixpoint) {
-                // (1) One-shot evaluation
-                evalRules(model, null, deduplicator);
+                // (1) Single iteration of both join and stream rules
+                evalJoinStreamIteration(deduplicator, model);
 
             } else {
-
-                // TODO -Drdfpro.hashfactory=true
-                final long ts = System.currentTimeMillis();
-                final StatementBuffer insertBuffer = new StatementBuffer();
-                final RDFHandler sink = insertBuffer.get();
-                try {
-                    sink.startRDF();
-                    for (final Statement stmt : model) {
-                        expand(stmt, sink, deduplicator, null, this.streamMatcher, true);
-                    }
-                    sink.endRDF();
-                } catch (final RDFHandlerException ex) {
-                    Throwables.propagate(ex);
+                // (2) Semi-naive fixpoint evaluation. Expand the model evaluating stream
+                // rules first, then evaluate join rules + stream rules in fixpoint
+                if (this.joinRules.size() < this.allRules.size()) {
+                    evalStreamFixpoint(deduplicator, model);
                 }
-                // StatementBuffer deltaBuffer = new StatementBuffer();
-                insertBuffer.toModel(model, true, null);
-                // System.out.println(deltaBuffer);
-                System.out.println(System.currentTimeMillis() - ts);
-
-                // (2) Semi-naive fixpoint evaluation
                 QuadModel delta = null;
                 while (true) {
-                    // delta = evalRules(model, delta, deduplicator);
-                    delta = evalRules(model, delta, deduplicator, null);
+                    delta = evalJoinIterationStreamFixpoint(deduplicator, model, delta, null);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
                 }
-
             }
         }
 
-        private QuadModel evalRules(final QuadModel model, @Nullable final QuadModel delta,
-                final StatementDeduplicator deduplicator) {
+        private void evalJoinStreamIteration(final StatementDeduplicator deduplicator,
+                final QuadModel model) {
 
-            // Take a timestamp
-            final long ts1 = System.currentTimeMillis();
+            // Take a timestamp before evaluating rules
+            final long ts0 = System.currentTimeMillis();
 
             // Allocate insert buffer (initially empty)
-            final StatementBuffer insertBuffer = new StatementBuffer();
+            final StatementBuffer buffer = new StatementBuffer();
 
-            // Evaluate all rules in parallel, collecting produced quads in the two buffers
-            final int numVariants = Rule.evaluate(this.allRules, model, delta, null, () -> {
-                return deduplicator.deduplicate(insertBuffer.get(), true);
-            });
+            // Evaluate stream rules, including axioms, single iteration (no fixpoint)
+            buffer.addAll(Arrays.asList(this.axioms));
+            applyStreamRules(deduplicator, model, buffer, false);
 
-            // Take another timestamp and measure insert buffer size after rule evaluation
-            final long ts2 = System.currentTimeMillis();
-            final int insertBufferSize = insertBuffer.size();
+            // Evaluate join rules, single iteration (no fixpoint)
+            final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, null,
+                    null, buffer);
 
-            // Insert the quads resulting from rule evaluation.
-            final StatementBuffer deltaBuffer = new StatementBuffer();
+            // Take a timestamp after evaluating rules
+            final long ts1 = System.currentTimeMillis();
+
+            // Apply changes to the model
             final int size0 = model.size();
-            insertBuffer.toModel(model, true, deltaBuffer.get());
+            buffer.toModel(model, true, null);
             final int size1 = model.size();
-            final long ts3 = System.currentTimeMillis();
 
-            // Compute new delta model
-            final QuadModel newDelta = model.filter(deltaBuffer);
+            // Take a timestamp after modifying the model
+            final long ts2 = System.currentTimeMillis();
 
-            // Take a final timestamp and log relevant statistics if enabled
-            final long ts4 = System.currentTimeMillis();
+            // Log evaluation statistics
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("{} rule variants (for {} rules) evaluated in "
-                        + "{} ms ({} ms query, {} ms modify, {} ms delta), {} insertions "
-                        + "({} buffered), {} quads in, {} quads out", numVariants,
-                        this.allRules.size(), ts4 - ts1, ts2 - ts1, ts3 - ts2, ts4 - ts3, size1
-                                - size0, insertBufferSize, size0, size1);
+                LOGGER.debug("Iteration of {} join rules ({} variants) and {} stream rules "
+                        + "performed in {} ms ({} ms evaluation, {} ms model update), "
+                        + "{} insertions ({} buffered), {} quads in, {} quads out",
+                        this.joinRules.size(), numVariants,
+                        this.allRules.size() - this.joinRules.size(), ts2 - ts0, ts1 - ts0, ts2
+                                - ts1, size1 - size0, buffer.size(), size0, size1);
             }
-
-            // Return true if the model has changed
-            return newDelta;
         }
 
-        // TODO
-        private QuadModel evalRules(final QuadModel model, @Nullable final QuadModel delta,
-                final StatementDeduplicator deduplicator, @Nullable final RDFHandler sink) {
+        private QuadModel evalJoinIterationStreamFixpoint(
+                final StatementDeduplicator deduplicator, final QuadModel model,
+                @Nullable final QuadModel delta, @Nullable final RDFHandler unmatcheableSink) {
 
             // Take a timestamp
-            final long ts1 = System.currentTimeMillis();
+            final long ts0 = System.currentTimeMillis();
 
             // Allocate insert buffer (initially empty)
-            final StatementBuffer joinBuffer = new StatementBuffer();
+            final StatementBuffer buffer = new StatementBuffer();
 
             // Build a supplier of RDFHandlers to be used for handling inferred statements.
             // Produced handlers will expand statements applying streamable rules with partial
             // result deduplication. Expanded statements are either emitted (if not further
             // processable) or accumulated in a buffer
             final Supplier<RDFHandler> supplier = () -> {
-                RDFHandler handler = joinBuffer.get();
-                if (sink != null) {
+                RDFHandler handler = buffer.get();
+                if (unmatcheableSink != null) {
                     handler = new AbstractRDFHandlerWrapper(handler) {
 
                         @Override
@@ -786,7 +804,7 @@ public class Engine extends RuleEngine {
                             if (SemiNaivePhase.this.joinMatcher.match(stmt)) {
                                 super.handleStatement(stmt);
                             } else {
-                                sink.handleStatement(stmt);
+                                unmatcheableSink.handleStatement(stmt);
                             }
                         }
 
@@ -797,7 +815,7 @@ public class Engine extends RuleEngine {
                     @Override
                     public void handleStatement(final Statement stmt) throws RDFHandlerException {
                         expand(stmt, this.handler, deduplicator, null,
-                                SemiNaivePhase.this.streamMatcher, true);
+                                SemiNaivePhase.this.streamMatcher, true, true);
                     }
 
                 };
@@ -805,40 +823,103 @@ public class Engine extends RuleEngine {
             };
 
             // Evaluate join rules in parallel using the supplier created before
-            final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, delta,
-                    null, supplier);
+            final int numVariants = Rule.evaluate(this.joinRules, model, delta, null, supplier);
 
             // Take another timestamp and measure size of join buffer after evaluation
-            final long ts2 = System.currentTimeMillis();
-            final int joinBufferSize = joinBuffer.size();
+            final long ts1 = System.currentTimeMillis();
+            final int joinBufferSize = buffer.size();
 
             // Insert the quads resulting from rule evaluation.
             final StatementBuffer deltaBuffer = new StatementBuffer();
             final int size0 = model.size();
-            joinBuffer.toModel(model, true, deltaBuffer.get());
+            buffer.toModel(model, true, deltaBuffer.get());
             final int size1 = model.size();
-            final long ts3 = System.currentTimeMillis();
+            final long ts2 = System.currentTimeMillis();
 
             // Compute new delta model
             final QuadModel newDelta = model.filter(deltaBuffer);
 
             // Take a final timestamp and log relevant statistics if enabled
-            final long ts4 = System.currentTimeMillis();
+            final long ts3 = System.currentTimeMillis();
             if (LOGGER.isDebugEnabled()) {
-                final int numRules = SemiNaivePhase.this.allRules.size();
-                final int numJoinRules = SemiNaivePhase.this.joinRules.size();
-                LOGGER.debug("{} rule variants of {} join rules and {} streamable rules "
-                        + "evaluated in {} ms ({} ms query, {} ms modify, {} ms delta), {} "
-                        + "insertions ({} buffered), {} quads in, {} quads out", numVariants,
-                        numJoinRules, numRules - numJoinRules, ts4 - ts1, ts2 - ts1, ts3 - ts2,
-                        ts4 - ts3, size1 - size0, joinBufferSize, size0, size1);
+                final int numJoinRules = this.joinRules.size();
+                final int numStreamRules = this.allRules.size() - this.joinRules.size();
+                LOGGER.debug("Iteration of {} join rules ({} variants) and fixpoint of {} stream "
+                        + "rules evaluated in {} ms ({} ms evaluation, {} ms model update, {} ms "
+                        + "delta), {} insertions ({} buffered), {} quads in, {} quads out",
+                        numJoinRules, numVariants, numStreamRules, ts3 - ts0, ts1 - ts0,
+                        ts2 - ts1, ts3 - ts2, size1 - size0, joinBufferSize, size0, size1);
             }
 
             // Return the new delta model
             return newDelta;
         }
 
+        private void evalStreamFixpoint(final StatementDeduplicator deduplicator,
+                final QuadModel model) {
+
+            // Take a timestamp for tracking execution time
+            final long ts0 = System.currentTimeMillis();
+
+            // Allocate a buffer where to accumulate the result of rule evaluation
+            final StatementBuffer buffer = new StatementBuffer();
+            buffer.addAll(Arrays.asList(this.axioms));
+            applyStreamRules(deduplicator, Iterables.concat(Arrays.asList(this.axioms), model),
+                    buffer, true);
+
+            // Take a timestamp before modifying the model
+            final long ts1 = System.currentTimeMillis();
+
+            // Apply changes to the model
+            final int size0 = model.size();
+            buffer.toModel(model, true, null);
+            final int size1 = model.size();
+
+            // Take a final timestamp
+            final long ts2 = System.currentTimeMillis();
+
+            // Log statistics
+            if (LOGGER.isDebugEnabled()) {
+                final int numStreamRules = this.allRules.size() - this.joinRules.size();
+                LOGGER.debug("Fixpoint of {} stream rules evaluated in {} ms ({} ms evaluation, "
+                        + "{} ms model update), {} insertions ({} buffered), {} quads in, "
+                        + "{} quads out", numStreamRules, ts2 - ts0, ts1 - ts0, ts2 - ts1, size1
+                        - size0, buffer.size(), size0, size1);
+            }
+        }
+
+        private void applyStreamRules(final StatementDeduplicator deduplicator,
+                final Iterable<Statement> statements, final Supplier<RDFHandler> sink,
+                final boolean fixpoint) {
+
+            // Prepare a tree of RDFHandlers to process model statements. The root handler
+            // dispatches statements in a round robin way to child handler sequences, each one
+            // delegating work to another thread that perform expansion and populates the buffer
+            final RDFHandler[] sinks = new RDFHandler[Environment.getCores()];
+            for (int i = 0; i < sinks.length; ++i) {
+                sinks[i] = RDFHandlers.decouple(new AbstractRDFHandlerWrapper(sink.get()) {
+
+                    @Override
+                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                        expand(stmt, this.handler, deduplicator, null,
+                                SemiNaivePhase.this.streamMatcher, fixpoint, false);
+                    }
+
+                }, 1);
+            }
+            final RDFHandler handler = RDFHandlers.dispatchRoundRobin(64, sinks);
+
+            // Evaluate rules
+            try {
+                RDFSources.wrap(statements).emit(handler, 1);
+            } catch (final RDFHandlerException ex) {
+                Throwables.propagate(ex);
+            }
+        }
+
         private final class FixpointHandler extends AbstractRDFHandlerWrapper {
+
+            private final boolean deduplicate;
 
             private QuadModel joinModel;
 
@@ -846,8 +927,9 @@ public class Engine extends RuleEngine {
 
             private RDFHandler sink;
 
-            FixpointHandler(final RDFHandler handler) {
+            FixpointHandler(final RDFHandler handler, final boolean deduplicate) {
                 super(handler);
+                this.deduplicate = deduplicate;
             }
 
             @Override
@@ -860,8 +942,9 @@ public class Engine extends RuleEngine {
                 this.joinModel = QuadModel.create();
 
                 // Allocate a deduplicator
-                this.deduplicator = StatementDeduplicator.newPartialDeduplicator(
-                        StatementDeduplicator.ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                this.deduplicator = this.deduplicate ? StatementDeduplicator
+                        .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
+                        .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
 
                 // Setup the sink where to emit output of stream rules
                 this.sink = new AbstractRDFHandlerWrapper(this.handler) {
@@ -891,7 +974,7 @@ public class Engine extends RuleEngine {
                 // Apply stream rules with output deduplication. Inferred statements are either
                 // emitted (if not further processable) or accumulated in a model
                 expand(stmt, this.sink, this.deduplicator, null,
-                        SemiNaivePhase.this.streamMatcher, true);
+                        SemiNaivePhase.this.streamMatcher, true, true);
             }
 
             @Override
@@ -900,7 +983,8 @@ public class Engine extends RuleEngine {
                 // Semi-naive fixpoint evaluation
                 QuadModel delta = null;
                 while (true) {
-                    delta = evalRules(delta);
+                    delta = evalJoinIterationStreamFixpoint(this.deduplicator, this.joinModel,
+                            delta, this.handler);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
@@ -921,89 +1005,19 @@ public class Engine extends RuleEngine {
                 super.endRDF();
             }
 
-            private QuadModel evalRules(@Nullable final QuadModel delta) {
-
-                // Take a timestamp
-                final long ts1 = System.currentTimeMillis();
-
-                // Allocate insert buffer (initially empty)
-                final StatementBuffer joinBuffer = new StatementBuffer();
-
-                // Build a supplier of RDFHandlers to be used for handling inferred statements.
-                // Produced handlers will expand statements applying streamable rules with partial
-                // result deduplication. Expanded statements are either emitted (if not further
-                // processable) or accumulated in a buffer
-                final RDFHandler sink = this.handler;
-                final Supplier<RDFHandler> supplier = () -> {
-                    final RDFHandler handler = new AbstractRDFHandlerWrapper(joinBuffer.get()) {
-
-                        @Override
-                        public void handleStatement(final Statement stmt)
-                                throws RDFHandlerException {
-                            if (SemiNaivePhase.this.joinMatcher.match(stmt)) {
-                                super.handleStatement(stmt);
-                            } else {
-                                sink.handleStatement(stmt);
-                            }
-                        }
-
-                    };
-                    return new AbstractRDFHandlerWrapper(handler) {
-
-                        @Override
-                        public void handleStatement(final Statement stmt)
-                                throws RDFHandlerException {
-                            expand(stmt, this.handler, FixpointHandler.this.deduplicator, null,
-                                    SemiNaivePhase.this.streamMatcher, true);
-                        }
-
-                    };
-                };
-
-                // Evaluate join rules in parallel using the supplier created before
-                final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules,
-                        this.joinModel, delta, null, supplier);
-
-                // Take another timestamp and measure size of join buffer after evaluation
-                final long ts2 = System.currentTimeMillis();
-                final int joinBufferSize = joinBuffer.size();
-
-                // Insert the quads resulting from rule evaluation.
-                final StatementBuffer deltaBuffer = new StatementBuffer();
-                final int size0 = this.joinModel.size();
-                joinBuffer.toModel(this.joinModel, true, deltaBuffer.get());
-                final int size1 = this.joinModel.size();
-                final long ts3 = System.currentTimeMillis();
-
-                // Compute new delta model
-                final QuadModel newDelta = this.joinModel.filter(deltaBuffer);
-
-                // Take a final timestamp and log relevant statistics if enabled
-                final long ts4 = System.currentTimeMillis();
-                if (LOGGER.isDebugEnabled()) {
-                    final int numRules = SemiNaivePhase.this.allRules.size();
-                    final int numJoinRules = SemiNaivePhase.this.joinRules.size();
-                    LOGGER.debug("{} rule variants of {} join rules and {} streamable rules "
-                            + "evaluated in {} ms ({} ms query, {} ms modify, {} ms delta), {} "
-                            + "insertions ({} buffered), {} quads in, {} quads out", numVariants,
-                            numJoinRules, numRules - numJoinRules, ts4 - ts1, ts2 - ts1,
-                            ts3 - ts2, ts4 - ts3, size1 - size0, joinBufferSize, size0, size1);
-                }
-
-                // Return the new delta model
-                return newDelta;
-            }
-
         }
 
         private final class NonFixpointHandler extends AbstractRDFHandlerWrapper {
+
+            private final boolean deduplicate;
 
             private QuadModel joinModel;
 
             private StatementDeduplicator deduplicator;
 
-            NonFixpointHandler(final RDFHandler handler) {
+            NonFixpointHandler(final RDFHandler handler, final boolean deduplicate) {
                 super(handler);
+                this.deduplicate = deduplicate;
             }
 
             @Override
@@ -1014,8 +1028,9 @@ public class Engine extends RuleEngine {
 
                 // Allocate model and deduplicator
                 this.joinModel = QuadModel.create();
-                this.deduplicator = StatementDeduplicator.newPartialDeduplicator(
-                        StatementDeduplicator.ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                this.deduplicator = this.deduplicate ? StatementDeduplicator
+                        .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
+                        .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
 
                 // Emit axioms
                 for (final Statement axiom : SemiNaivePhase.this.axioms) {
@@ -1028,7 +1043,7 @@ public class Engine extends RuleEngine {
 
                 // Apply stream rules to all incoming statements
                 expand(stmt, this.handler, this.deduplicator, null,
-                        SemiNaivePhase.this.streamMatcher, false);
+                        SemiNaivePhase.this.streamMatcher, false, true);
 
                 // Statements matching WHERE part of join rules are accumulated in a model
                 if (SemiNaivePhase.this.joinMatcher.match(stmt)) {

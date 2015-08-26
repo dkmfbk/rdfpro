@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -151,9 +152,11 @@ public abstract class RuleEngine {
      *
      * @param handler
      *            the handler where to emit resulting statements
+     * @param deduplicate
+     *            true if the output should not contain duplicate statements
      * @return an {@code RDFHandler} where input statements can be streamed into
      */
-    public final RDFHandler eval(final RDFHandler handler) {
+    public final RDFHandler eval(final RDFHandler handler, boolean deduplicate) {
 
         // Check parameters
         Objects.requireNonNull(handler);
@@ -163,7 +166,7 @@ public abstract class RuleEngine {
 
             // Logging disabled: delegate to doEval(), filtering out non-matchable quads
             final RDFHandler sink = handler;
-            return new AbstractRDFHandlerWrapper(doEval(handler)) {
+            return new AbstractRDFHandlerWrapper(doEval(handler, deduplicate)) {
 
                 @Override
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
@@ -196,7 +199,7 @@ public abstract class RuleEngine {
 
             // Delegate to doEval(), wrapping the returned handler to perform logging and filter
             // out non-matchable quads
-            return new AbstractRDFHandlerWrapper(doEval(sink)) {
+            return new AbstractRDFHandlerWrapper(doEval(sink, deduplicate)) {
 
                 private long ts;
 
@@ -257,7 +260,8 @@ public abstract class RuleEngine {
             // Optimized version that adds inferred statement back to the supplied model, relying
             // on the fact that no statement can be possibly deleted
             final List<Statement> inputStmts = new ArrayList<>(model);
-            final RDFHandler handler = doEval(RDFHandlers.wrap(model));
+            final RDFHandler handler = doEval(RDFHandlers.decouple(RDFHandlers.wrap(Collections
+                    .synchronizedCollection(model))), false);
             try {
                 handler.startRDF();
                 for (final Statement stmt : inputStmts) {
@@ -280,7 +284,8 @@ public abstract class RuleEngine {
             // the input model and loads those statement (this will also take into consideration
             // possible deletions)
             final List<Statement> outputStmts = new ArrayList<>();
-            final RDFHandler handler = doEval(RDFHandlers.wrap(outputStmts));
+            final RDFHandler handler = doEval(RDFHandlers.decouple(RDFHandlers.wrap(Collections
+                    .synchronizedCollection(outputStmts))), true);
             try {
                 handler.startRDF();
                 for (final Statement stmt : model) {
@@ -315,9 +320,11 @@ public abstract class RuleEngine {
      *
      * @param handler
      *            the handler where to emit resulting statements
+     * @param deduplicate
+     *            true if output should not contain duplicate statements
      * @return an handler accepting input statements
      */
-    protected RDFHandler doEval(final RDFHandler handler) {
+    protected RDFHandler doEval(final RDFHandler handler, final boolean deduplicate) {
 
         // Return an RDFHandler that delegates to doEval(QuadModel)
         return new AbstractRDFHandlerWrapper(handler) {
