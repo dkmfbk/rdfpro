@@ -23,8 +23,8 @@ public class StatementMatcherTest {
         final Literal lit1 = new LiteralImpl("label");
 
         final StatementMatcher matcher = StatementMatcher.builder()
-                .addValues(null, RDF.TYPE, OWL.THING, null, "x")
-                .addValues(null, RDFS.LABEL, null, null, "y", "w").build(null);
+                .addValues(null, RDF.TYPE, OWL.THING, null, null, "x")
+                .addValues(null, RDFS.LABEL, null, null, null, "y", "w").build(null);
 
         Assert.assertFalse(matcher.match(uri1, OWL.SAMEAS, uri1, null));
 
@@ -42,6 +42,26 @@ public class StatementMatcherTest {
 
         Assert.assertTrue(matcher.match(uri1, RDFS.LABEL, lit1, uri2));
         Assert.assertEquals(ImmutableSet.of("y", "w"),
+                ImmutableSet.copyOf(matcher.map(uri1, RDFS.LABEL, lit1, uri2, String.class)));
+    }
+
+    @Test
+    public void test2() {
+
+        final URI uri1 = new URIImpl("ex:uri1");
+        final URI uri2 = new URIImpl("ex:uri2");
+        final Literal lit1 = new LiteralImpl("label");
+
+        final StatementMatcher matcher = StatementMatcher.builder()
+                .addValues(null, null, null, null, null, "x")
+                .addValues(null, RDFS.LABEL, null, null, null, "y", "w").build(null);
+
+        Assert.assertTrue(matcher.match(uri1, RDF.TYPE, RDFS.CLASS, uri2));
+        Assert.assertEquals(ImmutableList.of("x"),
+                matcher.map(uri1, RDF.TYPE, RDFS.CLASS, uri2, String.class));
+
+        Assert.assertTrue(matcher.match(uri1, RDFS.LABEL, lit1, uri2));
+        Assert.assertEquals(ImmutableSet.of("x", "y", "w"),
                 ImmutableSet.copyOf(matcher.map(uri1, RDFS.LABEL, lit1, uri2, String.class)));
     }
 

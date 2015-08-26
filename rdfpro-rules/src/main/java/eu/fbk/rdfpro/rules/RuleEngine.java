@@ -35,11 +35,11 @@ public abstract class RuleEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
-    // private static final String IMPLEMENTATION = Environment.getProperty(
-    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.SemiNaiveRuleEngine");
-
     private static final String IMPLEMENTATION = Environment.getProperty(
             "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.Engine");
+
+    // private static final String IMPLEMENTATION = Environment.getProperty(
+    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.Engine2");
 
     // private static final String IMPLEMENTATION = Environment.getProperty(
     // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");
@@ -156,7 +156,7 @@ public abstract class RuleEngine {
      *            true if the output should not contain duplicate statements
      * @return an {@code RDFHandler} where input statements can be streamed into
      */
-    public final RDFHandler eval(final RDFHandler handler, boolean deduplicate) {
+    public final RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
 
         // Check parameters
         Objects.requireNonNull(handler);

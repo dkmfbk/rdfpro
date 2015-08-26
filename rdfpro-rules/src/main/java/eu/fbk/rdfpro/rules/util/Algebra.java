@@ -107,7 +107,7 @@ public final class Algebra {
     private static final EvaluationStatistics DEFAULT_EVALUATION_STATISTICS = new EvaluationStatistics();
 
     private static final FederatedServiceResolverImpl FEDERATED_SERVICE_RESOLVER = //
-    new FederatedServiceResolverImpl();
+            new FederatedServiceResolverImpl();
 
     private static final TripleSource EMPTY_TRIPLE_SOURCE = new TripleSource() {
 
@@ -119,7 +119,7 @@ public final class Algebra {
         @Override
         public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
                 final Resource subj, final URI pred, final Value obj, final Resource... contexts)
-                throws QueryEvaluationException {
+                        throws QueryEvaluationException {
             return new EmptyIteration<Statement, QueryEvaluationException>();
         }
 
@@ -279,7 +279,7 @@ public final class Algebra {
 
     @SuppressWarnings("unchecked")
     @Nullable
-    public static <T extends TupleExpr> T normalize(@Nullable T expr,
+    public static <T extends QueryModelNode> T normalize(@Nullable T expr,
             final Function<Value, Value> normalizer) {
         if (expr != null) {
             expr = (T) expr.clone();
@@ -720,11 +720,11 @@ public final class Algebra {
                         if (join.getLeftArg().getAssuredBindingNames().containsAll(elemVars)) {
                             newArg = join.getLeftArg() instanceof Extension ? (Extension) join
                                     .getLeftArg() : new Extension(join.getLeftArg());
-                            join.setLeftArg(newArg);
+                                    join.setLeftArg(newArg);
                         } else if (join.getRightArg().getAssuredBindingNames().contains(elemVars)) {
                             newArg = join.getRightArg() instanceof Extension ? (Extension) join
                                     .getRightArg() : new Extension(join.getRightArg());
-                            join.setRightArg(newArg);
+                                    join.setRightArg(newArg);
                         }
                         if (newArg != null) {
                             newArg.addElement(elem.clone());
@@ -869,7 +869,7 @@ public final class Algebra {
 
     public static String format(final TupleExpr expr) {
         return expr == null ? "null" : new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-                .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
+        .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
     }
 
     private static class QNameProcessor extends ASTVisitorBase {

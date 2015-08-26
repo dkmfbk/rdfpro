@@ -2,7 +2,6 @@ package eu.fbk.rdfpro.rules.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,17 +12,33 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Table;
 
+import org.openrdf.model.Literal;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.SESAME;
+import org.openrdf.query.BindingSet;
+import org.openrdf.query.algebra.And;
+import org.openrdf.query.algebra.QueryModelNode;
 import org.openrdf.query.algebra.StatementPattern;
+import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.impl.ListBindingSet;
 
 public final class StatementMatcher {
+
+    private static final Object NORMALIZED_MARKER = new Object();
+
+    private static final Object UNNORMALIZED_MARKER = new Object();
+
+    private static final List<String> VAR_NAMES = ImmutableList.of("s", "p", "o", "c");
 
     @Nullable
     private final Function<Value, Value> normalizer;
@@ -36,45 +51,37 @@ public final class StatementMatcher {
 
     private final Object[] normalizedValues; // modified during use
 
-    private final Object[] wildcardValues;
-
-    private final Object[] normalizedWildcardValues; // modified during use
-
     private final URI nil;
 
     private final int numPatterns;
 
     private final int numValues;
 
+    private final boolean matchAll;
+
     private StatementMatcher(@Nullable final Function<Value, Value> normalizer,
             final byte[] masks, final int[][] tables, @Nullable final Object[] values,
-            final Object[] wildcardValues, final int numPatterns, final int numValues) {
+            final int numPatterns, final int numValues, final boolean matchAll) {
+
+        // Initialize object state
         this.normalizer = normalizer;
         this.masks = masks;
         this.tables = tables;
         this.values = values;
         this.normalizedValues = normalizer == null ? values : values.clone();
-        this.wildcardValues = wildcardValues;
-        this.normalizedWildcardValues = normalizer == null || wildcardValues == null ? wildcardValues
-                : wildcardValues.clone();
         this.nil = normalizer == null ? SESAME.NIL : (URI) normalizer.apply(SESAME.NIL);
         this.numPatterns = numPatterns;
         this.numValues = numValues;
-
-        if (normalizer != null && this.normalizedWildcardValues != null) {
-            for (int i = 0; i < this.normalizedWildcardValues.length; ++i) {
-                this.normalizedWildcardValues[i] = normalize(this.normalizedWildcardValues[i]);
-            }
-        }
+        this.matchAll = matchAll;
     }
 
     public StatementMatcher normalize(@Nullable final Function<Value, Value> normalizer) {
         return normalizer == null ? this : new StatementMatcher(normalizer, this.masks,
-                this.tables, this.values, this.wildcardValues, this.numPatterns, this.numValues);
+                this.tables, this.values, this.numPatterns, this.numValues, this.matchAll);
     }
 
     public boolean matchAll() {
-        return this.normalizedWildcardValues != null;
+        return this.matchAll;
     }
 
     public boolean match(final Statement stmt) {
@@ -84,23 +91,50 @@ public final class StatementMatcher {
     public boolean match(final Resource subj, final URI pred, final Value obj,
             @Nullable Resource ctx) {
 
-        if (this.normalizedWildcardValues != null) {
+        if (this.matchAll) {
             return true;
         }
 
         ctx = replaceNull(ctx);
+        List<ValueExpr> filters = null;
+
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
             final int[] table = this.tables[i];
             final int hash = hash(subj, pred, obj, ctx, mask);
             for (int slot = (hash & 0x7FFFFFFF) % table.length; table[slot] != 0; slot = next(
                     slot, table.length)) {
-                final int offset = match(subj, pred, obj, ctx, mask, hash, table[slot]);
-                if (offset >= 0) {
+                final int token = table[slot];
+                int offset = match(subj, pred, obj, ctx, mask, hash, token);
+                if (offset != 0) {
+                    if (tokenToUnfiltered(token)) {
+                        return true;
+                    }
+                    while (true) {
+                        final Object value = this.normalizedValues[offset++];
+                        if (value == NORMALIZED_MARKER || value == UNNORMALIZED_MARKER) {
+                            break;
+                        } else if (value instanceof Filter) {
+                            if (filters == null) {
+                                filters = new ArrayList<>();
+                            }
+                            filters.add(((Filter) value).expr);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (filters != null) {
+            final BindingSet bindings = new ListBindingSet(VAR_NAMES, subj, pred, obj, ctx);
+            for (final ValueExpr filter : filters) {
+                if (((Literal) Algebra.evaluateValueExpr(filter, bindings)).booleanValue()) {
                     return true;
                 }
             }
         }
+
         return false;
     }
 
@@ -116,41 +150,48 @@ public final class StatementMatcher {
         ctx = replaceNull(ctx);
         List<T> result = list;
 
-        if (this.normalizedWildcardValues != null) {
-            if (result == null) {
-                result = new ArrayList<>(16);
+        BindingSet bindings = null;
+        outer: for (int i = 0; i < this.masks.length; ++i) {
+
+            final byte mask = this.masks[i];
+
+            int offset = 0;
+            if (mask == 0) {
+                normalizeIfNecessary(1);
+                offset = 1;
+            } else {
+                final int[] table = this.tables[i];
+                final int hash = hash(subj, pred, obj, ctx, mask);
+                for (int slot = (hash & 0x7FFFFFFF) % table.length;; slot = next(slot,
+                        table.length)) {
+                    final int token = table[slot];
+                    if (token == 0) {
+                        continue outer;
+                    }
+                    offset = match(subj, pred, obj, ctx, mask, hash, token);
+                    if (offset != 0) {
+                        break;
+                    }
+                }
             }
-            for (final Object value : this.normalizedWildcardValues) {
-                if (clazz.isInstance(value)) {
+
+            boolean add = true;
+            while (true) {
+                final Object value = this.normalizedValues[offset++];
+                if (value == NORMALIZED_MARKER || value == UNNORMALIZED_MARKER) {
+                    break;
+                } else if (value instanceof Filter) {
+                    bindings = bindings != null ? bindings : new ListBindingSet(VAR_NAMES, subj,
+                            pred, obj, ctx);
+                    add = ((Literal) Algebra.evaluateValueExpr(((Filter) value).expr, bindings))
+                            .booleanValue();
+                } else if (add && clazz.isInstance(value)) {
+                    result = result != null ? result : new ArrayList<>(16);
                     result.add((T) value);
                 }
             }
         }
 
-        for (int i = 0; i < this.masks.length; ++i) {
-            final byte mask = this.masks[i];
-            final int[] table = this.tables[i];
-            final int hash = hash(subj, pred, obj, ctx, mask);
-            for (int slot = (hash & 0x7FFFFFFF) % table.length; table[slot] != 0; slot = next(
-                    slot, table.length)) {
-                int offset = match(subj, pred, obj, ctx, mask, hash, table[slot]);
-                if (offset >= 0) {
-                    while (true) {
-                        final Object value = this.normalizedValues[offset];
-                        if (value == null || value == this.normalizer) {
-                            break;
-                        }
-                        if (clazz.isInstance(value)) {
-                            if (result == null) {
-                                result = new ArrayList<>(16);
-                            }
-                            result.add((T) value);
-                        }
-                        ++offset;
-                    }
-                }
-            }
-        }
         return result != null ? result : Collections.emptyList();
     }
 
@@ -165,51 +206,54 @@ public final class StatementMatcher {
     }
 
     private int match(final Resource subj, final URI pred, final Value obj, final Resource ctx,
-            final byte mask, final int hash, final int cell) {
+            final byte mask, final int hash, final int token) {
 
         // Check that lower 12 bits of the hash match with lower 12 bits of cell
-        if (((hash ^ cell) & 0x00000FFF) != 0) {
-            return -1;
+        if (!tokenMatchHash(hash, token)) {
+            return 0;
         }
 
         // Use the higher 20 bits of the cell as an index in the value array
-        final int offset = cell >>> 12;
+        final int offset = tokenToOffset(token);
 
         // Normalize if necessary (the lack of synchronization is deliberate)
-        if (this.normalizer != null
-                && !Objects.equal(this.normalizedValues[offset - 1], this.normalizer)) {
-            for (int i = offset; this.normalizedValues[i] != null; ++i) {
-                this.normalizedValues[i] = normalize(this.normalizedValues[i]);
-            }
-            this.normalizedValues[offset - 1] = this.normalizer;
-        }
+        normalizeIfNecessary(offset);
 
         // Check that the quad matches the constants in the value array
         int index = offset;
         if ((mask & 0x01) != 0 && !this.normalizedValues[index++].equals(subj)) {
-            return -1;
+            return 0;
         }
         if ((mask & 0x02) != 0 && !this.normalizedValues[index++].equals(pred)) {
-            return -1;
+            return 0;
         }
         if ((mask & 0x04) != 0 && !this.normalizedValues[index++].equals(obj)) {
-            return -1;
+            return 0;
         }
         if ((mask & 0x08) != 0 && !this.normalizedValues[index].equals(ctx)) {
-            return -1;
+            return 0;
         }
-        return offset + Integer.bitCount(mask);
+        return index;
     }
 
-    private Object normalize(final Object value) {
-        if (value instanceof Value) {
-            return this.normalizer.apply((Value) value);
-        } else if (value instanceof StatementMatcher) {
-            return ((StatementMatcher) value).normalize(this.normalizer);
-        } else if (value instanceof StatementTemplate) {
-            return ((StatementTemplate) value).normalize(this.normalizer);
-        } else {
-            return value;
+    private void normalizeIfNecessary(final int offset) {
+        if (this.normalizer != null && this.normalizedValues[offset - 1] == UNNORMALIZED_MARKER) {
+            for (int i = offset;; ++i) {
+                Object value = this.normalizedValues[i];
+                if (value == UNNORMALIZED_MARKER || value == NORMALIZED_MARKER) {
+                    break;
+                } else if (value instanceof Filter) {
+                    value = new Filter(Algebra.normalize(((Filter) value).expr, this.normalizer));
+                } else if (value instanceof Value) {
+                    value = this.normalizer.apply((Value) value);
+                } else if (value instanceof StatementMatcher) {
+                    value = ((StatementMatcher) value).normalize(this.normalizer);
+                } else if (value instanceof StatementTemplate) {
+                    value = ((StatementTemplate) value).normalize(this.normalizer);
+                }
+                this.normalizedValues[i] = value;
+            }
+            this.normalizedValues[offset - 1] = NORMALIZED_MARKER;
         }
     }
 
@@ -261,144 +305,225 @@ public final class StatementMatcher {
         return var == null ? null : var.getValue();
     }
 
+    private static void variableReplacement(final Var from, final String to,
+            final Map<String, Var> map) {
+        if (from != null && from.getValue() == null) {
+            map.put(from.getName(), new Var(to));
+        }
+    }
+
+    private static int tokenEncode(final int hash, final int offset, final boolean unfiltered) {
+        assert offset < 0x1000000;
+        return hash & 0x7FF00000 | offset & 0xFFFFF | (unfiltered ? 0x80000000 : 0);
+    }
+
+    private static boolean tokenToUnfiltered(final int token) {
+        return (token & 0x80000000) != 0;
+    }
+
+    private static int tokenToOffset(final int token) {
+        return token & 0xFFFFF;
+    }
+
+    private static boolean tokenMatchHash(final int hash, final int token) {
+        return ((hash ^ token) & 0x7FF00000) == 0;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
 
     public static final class Builder {
 
-        private Set<Object> wildcardValues;
+        private static final Object EMPTY_FILTER = new Object();
 
-        private final Map<List<Value>, Collection<Object>>[] patternMaps;
+        private final Table<List<Value>, Object, Set<Object>>[] maskData;
 
         private int numValues;
 
         private int numMasks;
 
+        private int numFilters;
+
         @SuppressWarnings("unchecked")
         Builder() {
             // There are at most 16 masks to consider
-            this.wildcardValues = null;
-            this.patternMaps = new Map[16];
+            this.maskData = new Table[16];
             this.numValues = 0;
             this.numMasks = 0;
         }
 
-        public Builder addPattern(final StatementPattern pattern, final Object... mappedValues) {
-            return addValues((Resource) variableValue(pattern.getSubjectVar()),
-                    (URI) variableValue(pattern.getPredicateVar()),
-                    variableValue(pattern.getObjectVar()), //
-                    (Resource) variableValue(pattern.getContextVar()), mappedValues);
+        public Builder addExpr(final TupleExpr expr, final Object... mappedValues) {
+
+            // Identify the statement pattern in the expression
+            final List<StatementPattern> patterns = Algebra.extractNodes(expr,
+                    StatementPattern.class, null, null);
+            Preconditions.checkArgument(patterns.size() == 1);
+            final StatementPattern pattern = patterns.get(0);
+
+            // Identify the filter conditions in the expression
+            ValueExpr filter = null;
+            for (QueryModelNode node = pattern.getParentNode(); node != null; node = node
+                    .getParentNode()) {
+                if (node instanceof org.openrdf.query.algebra.Filter) {
+                    final ValueExpr f = ((org.openrdf.query.algebra.Filter) node).getCondition();
+                    if (filter == null) {
+                        filter = f;
+                    } else {
+                        filter = new And(filter, f);
+                    }
+                } else {
+                    throw new IllegalArgumentException("Invalid expression: " + expr);
+                }
+            }
+
+            // Delegate
+            return addPattern(pattern, filter, mappedValues);
+        }
+
+        public Builder addPattern(final StatementPattern pattern, @Nullable ValueExpr filter,
+                final Object... mappedValues) {
+
+            // Extract components
+            final Resource subj = (Resource) variableValue(pattern.getSubjectVar());
+            final URI pred = (URI) variableValue(pattern.getPredicateVar());
+            final Value obj = variableValue(pattern.getObjectVar());
+            final Resource ctx = (Resource) variableValue(pattern.getContextVar());
+
+            // Rewrite filter if necessary
+            if (filter != null) {
+                final Map<String, Var> replacements = new HashMap<>();
+                variableReplacement(pattern.getSubjectVar(), "s", replacements);
+                variableReplacement(pattern.getPredicateVar(), "p", replacements);
+                variableReplacement(pattern.getObjectVar(), "o", replacements);
+                variableReplacement(pattern.getContextVar(), "c", replacements);
+                filter = Algebra.rewrite(filter, replacements);
+            }
+
+            // Delegate
+            return addValues(subj, pred, obj, ctx, filter, mappedValues);
         }
 
         public Builder addValues(@Nullable final Resource subj, @Nullable final URI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx,
-                final Object... mappedValues) {
+                @Nullable final ValueExpr filter, final Object... mappedValues) {
 
-            // Handle the case of wildcard patterns
-            if (subj == null && pred == null && obj == null && ctx == null) {
-                this.wildcardValues = this.wildcardValues != null ? this.wildcardValues
-                        : new HashSet<>();
-                this.wildcardValues.addAll(Arrays.asList(mappedValues));
-                return this;
-            }
+            // Map the filter to a non-null key
+            final Object filterKey = filter == null ? EMPTY_FILTER : filter;
 
-            // Compute mask and pattern list starting from the four components specified
+            // Compute mask and pattern list
             final byte mask = mask(subj, pred, obj, ctx);
             final List<Value> pattern = Arrays.asList(subj, pred, obj, ctx);
 
-            // Retrieve the pattern map for the mask. Create it if necessary
-            Map<List<Value>, Collection<Object>> patternMap = this.patternMaps[mask];
-            if (patternMap == null) {
-                patternMap = new HashMap<>();
-                this.patternMaps[mask] = patternMap;
+            // Retrieve the table for the mask. Create it if necessary
+            Table<List<Value>, Object, Set<Object>> sets = this.maskData[mask];
+            if (sets == null) {
+                sets = HashBasedTable.create();
+                this.maskData[mask] = sets;
                 this.numMasks++;
             }
 
-            // Retrieved the previous list of values associated to the pattern, if any
-            final Collection<Object> oldMappedValues = patternMap.get(pattern);
-            final int oldSize = oldMappedValues == null ? 0 : oldMappedValues.size();
-
-            // Update the patterns map handling two cases
-            if (mappedValues.length > 0) {
-                // (1) There are values to add, in which case we perform merging and deduplication
-                final Set<Object> set = new HashSet<>(Arrays.asList(mappedValues));
-                if (oldSize != 0) {
-                    set.addAll(oldMappedValues);
+            // Retrieve the values set for the (pattern, filter) pair. Create it if necessary
+            Set<Object> set = sets.get(pattern, filterKey);
+            if (set == null) {
+                set = new HashSet<>();
+                sets.put(pattern, filterKey, set);
+                if (filterKey != EMPTY_FILTER) {
+                    this.numFilters++;
                 }
-                if (set.size() > oldSize) {
-                    final List<Object> list = Arrays.asList(set.toArray(new Object[set.size()]));
-                    patternMap.put(pattern, list);
-                    this.numValues += list.size() - oldSize;
-                }
-
-            } else if (oldMappedValues == null) {
-                // (2) It is enough to add a pattern entry mapping it to an empty value list
-                patternMap.put(pattern, Collections.emptyList());
             }
 
+            // Add the mapped values to the set
+            this.numValues -= set.size();
+            set.addAll(Arrays.asList(mappedValues));
+            this.numValues += set.size();
+
+            // Return this builder object for call chaining
             return this;
         }
 
         public StatementMatcher build(@Nullable final Function<Value, Value> normalizer) {
 
             // Compute the total size of the values array
-            int valuesSize = this.numValues + 1;
-            for (int mask = 0; mask < this.patternMaps.length; ++mask) {
-                final Map<List<Value>, Collection<Object>> patternMap = this.patternMaps[mask];
-                if (patternMap != null) {
-                    valuesSize += patternMap.size() * (Integer.bitCount(mask) + 1);
+            int valuesSize = this.numFilters + this.numValues + 1;
+            for (int mask = 0; mask < this.maskData.length; ++mask) {
+                final Table<List<Value>, Object, Set<Object>> table = this.maskData[mask];
+                if (table != null) {
+                    valuesSize += table.rowKeySet().size() * (Integer.bitCount(mask) + 1);
                 }
             }
 
             // Allocate data structures
             final byte[] masks = new byte[this.numMasks];
             final int[][] tables = new int[this.numMasks][];
-            final Object[] values = new Object[valuesSize];
+            final Object[] values = new Object[valuesSize * 4];
 
             // Initialize counters
             int numPatterns = 0;
-            int numValues = 0;
 
             // Initialize mask and value indexes
             int maskIndex = 0;
-            int valueIndex = 1; // leave a null marker at beginning
+            int valueIndex = 0;
+
+            // Emit an initial marker
+            values[valueIndex++] = UNNORMALIZED_MARKER;
 
             // Consider the patterns for each mask, starting from least selective mask
+            boolean matchAll = false;
             for (final byte mask : new byte[] { 0, 8, 2, 4, 1, 10, 12, 9, 6, 3, 5, 14, 11, 13, 7,
                     15 }) {
 
-                // Retrieve the patterns for the current mask. Abort if no patterns are defined
-                final Map<List<Value>, Collection<Object>> patternMap = this.patternMaps[mask];
-                if (patternMap == null) {
+                // Retrieve the table for the current mask. Abort if undefined
+                final Table<List<Value>, Object, Set<Object>> sets = this.maskData[mask];
+                if (sets == null) {
                     continue;
                 }
 
                 // Allocate the hash table for the mask (load factor 0.66)
-                final int[] table = new int[patternMap.size()
-                        + Math.max(1, patternMap.size() >> 1)];
+                final int maskPatterns = sets.rowKeySet().size();
+                final int[] table = new int[maskPatterns + Math.max(1, maskPatterns >> 1)];
 
-                // Populate the hash table, appending pattern and value data to the value array
-                numPatterns += patternMap.size();
-                for (final Map.Entry<List<Value>, Collection<Object>> entry : patternMap
-                        .entrySet()) {
-                    numValues += entry.getValue().size();
-                    final int hash = hash((Resource) entry.getKey().get(0), (URI) entry.getKey()
-                            .get(1), entry.getKey().get(2), (Resource) entry.getKey().get(3), mask);
+                // Populate the hash table and the values array
+                numPatterns += maskPatterns;
+                for (final List<Value> pattern : sets.rowKeySet()) {
+
+                    // Compute hash
+                    final int hash = hash((Resource) pattern.get(0), (URI) pattern.get(1),
+                            pattern.get(2), (Resource) pattern.get(3), mask);
+
+                    // Identify whether the pattern is used unfiltered
+                    final Map<Object, Set<Object>> map = sets.rowMap().get(pattern);
+                    final boolean unfiltered = map.containsKey(EMPTY_FILTER);
+                    if (unfiltered && mask == 0) {
+                        matchAll = true;
+                    }
+
+                    // Update hash map
                     int slot = (hash & 0x7FFFFFFF) % table.length;
                     while (table[slot] != 0) {
                         slot = next(slot, table.length);
                     }
-                    table[slot] = hash & 0x00000FFF | valueIndex << 12;
-                    for (final Value component : entry.getKey()) {
+                    table[slot] = tokenEncode(hash, valueIndex, unfiltered);
+
+                    // Append the constants used in the pattern
+                    for (final Value component : pattern) {
                         if (component != null) {
                             values[valueIndex++] = component;
                         }
                     }
-                    for (final Object mappedValue : entry.getValue()) {
-                        values[valueIndex++] = mappedValue;
+
+                    // Append filters and mapped values
+                    for (final Map.Entry<Object, Set<Object>> entry : map.entrySet()) {
+                        if (entry.getKey() != EMPTY_FILTER) {
+                            values[valueIndex++] = new Filter((ValueExpr) entry.getKey());
+                        }
+                        for (final Object value : entry.getValue()) {
+                            values[valueIndex++] = value;
+                        }
                     }
-                    values[valueIndex++] = null; // mark end of entry
+
+                    // Append marker
+                    values[valueIndex++] = UNNORMALIZED_MARKER;
                 }
 
                 // Update masks and tables structures
@@ -408,10 +533,18 @@ public final class StatementMatcher {
             }
 
             // Build a pattern matcher using the created data structures
-            return new StatementMatcher(normalizer, masks, tables, values,
-                    this.wildcardValues == null ? null : this.wildcardValues
-                            .toArray(new Object[this.wildcardValues.size()]),
-                    numPatterns, numValues);
+            return new StatementMatcher(normalizer, masks, tables, values, numPatterns,
+                    this.numValues, matchAll);
+        }
+
+    }
+
+    private static final class Filter {
+
+        final ValueExpr expr;
+
+        Filter(final ValueExpr expr) {
+            this.expr = expr;
         }
 
     }

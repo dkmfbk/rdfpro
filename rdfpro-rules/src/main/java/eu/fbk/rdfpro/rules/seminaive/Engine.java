@@ -389,11 +389,11 @@ public class Engine extends RuleEngine {
                     final StatementPattern wp = rule.getWherePatterns().iterator().next();
                     for (final StatementPattern ip : rule.getInsertPatterns()) {
                         ib = ib != null ? ib : StatementMatcher.builder();
-                        ib.addPattern(wp, new StatementTemplate(ip, wp));
+                        ib.addExpr(rule.getWhereExpr(), new StatementTemplate(ip, wp));
                     }
                     if (!rule.getDeletePatterns().isEmpty()) {
                         db = db != null ? db : StatementMatcher.builder();
-                        db.addPattern(wp);
+                        db.addExpr(rule.getWhereExpr());
                     }
                 } else {
                     for (final StatementPattern ip : rule.getInsertPatterns()) {
@@ -643,12 +643,12 @@ public class Engine extends RuleEngine {
                 if (!rule.isStreamable()) {
                     joinRules.add(rule);
                     for (final StatementPattern wp : rule.getWherePatterns()) {
-                        joinBuilder.addPattern(wp);
+                        joinBuilder.addPattern(wp, null);
                     }
                 } else if (!rule.getWherePatterns().isEmpty()) {
                     final StatementPattern wp = rule.getWherePatterns().iterator().next();
                     for (final StatementPattern ip : rule.getInsertPatterns()) {
-                        streamBuilder.addPattern(wp, new StatementTemplate(ip, wp));
+                        streamBuilder.addExpr(rule.getWhereExpr(), new StatementTemplate(ip, wp));
                     }
                 } else {
                     for (final StatementPattern ip : rule.getInsertPatterns()) {

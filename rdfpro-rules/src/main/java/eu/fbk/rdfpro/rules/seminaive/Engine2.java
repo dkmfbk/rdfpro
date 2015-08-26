@@ -20,11 +20,11 @@ import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.StatementBuffer;
 import eu.fbk.rdfpro.util.StatementDeduplicator;
 
-public class EngineOld extends RuleEngine {
+public class Engine2 extends RuleEngine {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EngineOld.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Engine2.class);
 
-    public EngineOld(final Ruleset ruleset) {
+    public Engine2(final Ruleset ruleset) {
         super(ruleset);
     }
 
@@ -59,7 +59,7 @@ public class EngineOld extends RuleEngine {
             // Scan rules (which are ordered by phase, fixpoint, id) and identify the rules for
             // each phase/fixpoint combination, delegating to evalPhase() their execution
             final List<Rule> rules = new ArrayList<>();
-            for (final Rule rule : EngineOld.this.ruleset.getRules()) {
+            for (final Rule rule : Engine2.this.ruleset.getRules()) {
                 if (!rules.isEmpty() && (rule.isFixpoint() != rules.get(0).isFixpoint() //
                         || rule.getPhase() != rules.get(0).getPhase())) {
                     evalPhase(rules);
