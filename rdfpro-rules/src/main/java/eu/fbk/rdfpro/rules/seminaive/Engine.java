@@ -154,7 +154,7 @@ public class Engine extends RuleEngine {
             @Nullable final StatementMatcher insertMatcher, final boolean fixpoint,
             final boolean emitStmt) throws RDFHandlerException {
 
-        // NOTE: this method has a great impact on overall performances. In particular,
+        // NOTE: this method has a HUGE impact on overall performances. In particular,
         // deduplication speed is critical for overall performances.
 
         // If statement was already processed, abort
@@ -190,50 +190,58 @@ public class Engine extends RuleEngine {
             // Fixpoint. We proceed in a breadth-first way
             StatementDeduplicator totalDeduplicator = null;
             List<StatementTemplate> templates = null; // created on demand
-            List<Statement> queue = null; // created on demand
+            Statement[] stack = null;
             int index = 0;
+            int capacity = 0;
             Statement s = stmt;
             while (true) {
+
+                // Emit statement if it does not match delete patterns
+                if (stack != null
+                        && (deleteMatcher == null || !deleteMatcher.match(s.getSubject(),
+                                s.getPredicate(), s.getObject(), s.getContext()))) {
+                    sink.handleStatement(s);
+                }
+
                 // Apply insert part by looking up and applying insert templates.
                 templates = insertMatcher.map(s.getSubject(), s.getPredicate(), s.getObject(),
                         s.getContext(), StatementTemplate.class, templates);
                 for (final StatementTemplate template : templates) {
-                    final Statement stmt2 = template.apply(s);
-                    if (stmt2 != null && deduplicator.add(stmt2)) {
-                        if (totalDeduplicator == null) {
-                            totalDeduplicator = StatementDeduplicator
-                                    .newTotalDeduplicator(ComparisonMethod.EQUALS);
-                            totalDeduplicator.add(stmt);
-                        }
-                        if (totalDeduplicator.add(stmt2)) {
-                            if (queue == null) {
-                                queue = new ArrayList<>(64);
+                    final Statement stmt2 = template.apply(s, deduplicator);
+                    if (stmt2 != null) {
+                        if (!deduplicator.isTotal()) {
+                            if (totalDeduplicator == null) {
+                                totalDeduplicator = StatementDeduplicator
+                                        .newTotalDeduplicator(ComparisonMethod.EQUALS);
+                                totalDeduplicator.add(stmt);
                             }
-                            queue.add(stmt2);
-                            if (deleteMatcher == null
-                                    || !deleteMatcher.match(stmt2.getSubject(),
-                                            stmt2.getPredicate(), stmt2.getObject(),
-                                            stmt2.getContext())) {
-                                sink.handleStatement(stmt2);
+                            if (!totalDeduplicator.add(stmt2)) {
+                                continue;
                             }
                         }
+                        if (index == capacity) {
+                            if (capacity == 0) {
+                                capacity = 16;
+                                stack = new Statement[capacity];
+                            } else {
+                                capacity *= 2;
+                                stack = Arrays.copyOf(stack, capacity);
+                            }
+                        }
+                        stack[index++] = stmt2;
                     }
                 }
 
                 // Terminate if there are no more statements to process
-                if (queue == null || index == queue.size()) {
+                if (index == 0) {
                     break;
                 }
 
-                // Otherwise, pick up the next statement to process from the queue
-                s = queue.get(index++);
+                // Otherwise, pick up the next statement to process from the stack
+                s = stack[--index];
 
                 // Restore cached templates list
-                if (templates instanceof ArrayList<?>) {
-                    templates.clear();
-                } else {
-                    templates = null;
-                }
+                templates.clear();
             }
         }
     }
@@ -454,15 +462,9 @@ public class Engine extends RuleEngine {
         @Override
         public RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
 
-            final StatementDeduplicator deduplicator;
-            if (deduplicate) {
-                deduplicator = StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH);
-            } else {
-                deduplicator = StatementDeduplicator.newPartialDeduplicator(
-                        ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
-            }
-
             return new AbstractRDFHandlerWrapper(handler) {
+
+                private StatementDeduplicator deduplicator;
 
                 @Override
                 public void startRDF() throws RDFHandlerException {
@@ -470,9 +472,18 @@ public class Engine extends RuleEngine {
                     // Delegate
                     super.startRDF();
 
+                    // Initialize deduplicator
+                    if (deduplicate) {
+                        this.deduplicator = StatementDeduplicator
+                                .newTotalDeduplicator(ComparisonMethod.HASH);
+                    } else {
+                        this.deduplicator = StatementDeduplicator.newPartialDeduplicator(
+                                ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                    }
+
                     // Emit axioms
                     for (final Statement axiom : StreamPhase.this.axioms) {
-                        expand(axiom, this.handler, deduplicator,
+                        expand(axiom, this.handler, this.deduplicator,
                                 StreamPhase.this.fixpoint ? StreamPhase.this.deleteMatcher : null,
                                 StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
                     }
@@ -482,7 +493,7 @@ public class Engine extends RuleEngine {
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
 
                     // Delegate to recursive method expand(), marking the statement as explicit
-                    expand(stmt, this.handler, deduplicator, StreamPhase.this.deleteMatcher,
+                    expand(stmt, this.handler, this.deduplicator, StreamPhase.this.deleteMatcher,
                             StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
                 }
 

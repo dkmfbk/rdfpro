@@ -14,6 +14,7 @@ import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.Var;
 
 import eu.fbk.rdfpro.util.Namespaces;
+import eu.fbk.rdfpro.util.StatementDeduplicator;
 import eu.fbk.rdfpro.util.Statements;
 
 public final class StatementTemplate implements Function<Statement, Statement> {
@@ -27,26 +28,40 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     @Nullable
     private final Object ctx;
 
+    private final byte subjIndex;
+
+    private final byte predIndex;
+
+    private final byte objIndex;
+
+    private final byte ctxIndex;
+
     public StatementTemplate(final Object subj, final Object pred, final Object obj,
             @Nullable final Object ctx) {
+
         this.subj = check(subj);
         this.pred = check(pred);
         this.obj = check(obj);
         this.ctx = check(ctx);
+
+        this.subjIndex = this.subj instanceof Resource ? 4 : ((StatementComponent) this.subj)
+                .getIndex();
+        this.predIndex = this.pred instanceof Resource ? 5 : ((StatementComponent) this.pred)
+                .getIndex();
+        this.objIndex = this.obj instanceof Resource ? 6 : ((StatementComponent) this.obj)
+                .getIndex();
+        this.ctxIndex = this.ctx == null || this.ctx instanceof Resource ? 7
+                : ((StatementComponent) this.ctx).getIndex();
     }
 
     public StatementTemplate(final StatementPattern head) {
-        this.subj = componentFor(head.getSubjectVar());
-        this.pred = componentFor(head.getPredicateVar());
-        this.obj = componentFor(head.getObjectVar());
-        this.ctx = componentFor(head.getContextVar());
+        this(componentFor(head.getSubjectVar()), componentFor(head.getPredicateVar()),
+                componentFor(head.getObjectVar()), componentFor(head.getContextVar()));
     }
 
     public StatementTemplate(final StatementPattern head, final StatementPattern body) {
-        this.subj = componentFor(head.getSubjectVar(), body);
-        this.pred = componentFor(head.getPredicateVar(), body);
-        this.obj = componentFor(head.getObjectVar(), body);
-        this.ctx = componentFor(head.getContextVar(), body);
+        this(componentFor(head.getSubjectVar(), body), componentFor(head.getPredicateVar(), body),
+                componentFor(head.getObjectVar(), body), componentFor(head.getContextVar(), body));
     }
 
     public StatementTemplate normalize(final Function<? super Value, ?> normalizer) {
@@ -64,31 +79,65 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     }
 
     @Override
-    @Nullable
     public Statement apply(final Statement stmt) {
+        try {
+            final URI p = (URI) resolve(stmt, this.predIndex);
+            final Resource s = (Resource) resolve(stmt, this.subjIndex);
+            final Resource c = (Resource) resolve(stmt, this.ctxIndex);
+            final Value o = (Value) resolve(stmt, this.objIndex);
+            return Statements.VALUE_FACTORY.createStatement(s, p, o, c);
+        } catch (final Throwable ex) {
+            return null;
+        }
+    }
+
+    public Statement apply(final Statement stmt, final StatementDeduplicator deduplicator) {
+        try {
+            final URI p = (URI) resolve(stmt, this.predIndex);
+            final Resource s = (Resource) resolve(stmt, this.subjIndex);
+            final Resource c = (Resource) resolve(stmt, this.ctxIndex);
+            final Value o = (Value) resolve(stmt, this.objIndex);
+            if (deduplicator.add(s, p, o, c)) {
+                return Statements.VALUE_FACTORY.createStatement(s, p, o, c);
+            }
+        } catch (final Throwable ex) {
+        }
+        return null;
+    }
+
+    private Object resolve(final Statement stmt, final byte index) {
+        switch (index) {
+        case 0:
+            return stmt.getSubject();
+        case 1:
+            return stmt.getPredicate();
+        case 2:
+            return stmt.getObject();
+        case 3:
+            return stmt.getContext();
+        case 4:
+            return this.subj;
+        case 5:
+            return this.pred;
+        case 6:
+            return this.obj;
+        case 7:
+            return this.ctx;
+        default:
+            throw new Error();
+        }
+    }
+
+    @Nullable
+    public Statement apply2(final Statement stmt) {
 
         // NOTE: although not very elegant, the code below runs faster than the much compact code
         // commented at the end of the method (and this is a hot spot)
 
-        Resource ss = stmt.getSubject();
-        URI sp = stmt.getPredicate();
-        Value so = stmt.getObject();
-        Resource sc = stmt.getContext();
-
-        Resource s;
-        if (this.subj instanceof Resource) {
-            s = (Resource) this.subj;
-        } else if (this.subj == StatementComponent.SUBJECT) {
-            s = ss;
-        } else if (this.subj == StatementComponent.PREDICATE) {
-            s = sp;
-        } else if (this.subj == StatementComponent.OBJECT && so instanceof Resource) {
-            s = (Resource) so;
-        } else if (this.subj == StatementComponent.CONTEXT && sc != null) {
-            s = sc;
-        } else {
-            return null;
-        }
+        final Resource ss = stmt.getSubject();
+        final URI sp = stmt.getPredicate();
+        final Value so = stmt.getObject();
+        final Resource sc = stmt.getContext();
 
         URI p;
         if (this.pred instanceof URI) {
@@ -105,6 +154,36 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             return null;
         }
 
+        Resource s;
+        if (this.subj instanceof Resource) {
+            s = (Resource) this.subj;
+        } else if (this.subj == StatementComponent.SUBJECT) {
+            s = ss;
+        } else if (this.subj == StatementComponent.PREDICATE) {
+            s = sp;
+        } else if (this.subj == StatementComponent.OBJECT && so instanceof Resource) {
+            s = (Resource) so;
+        } else if (this.subj == StatementComponent.CONTEXT && sc != null) {
+            s = sc;
+        } else {
+            return null;
+        }
+
+        Resource c;
+        if (this.ctx == null || this.ctx instanceof Resource) {
+            c = (Resource) this.ctx;
+        } else if (this.ctx == StatementComponent.SUBJECT) {
+            c = ss;
+        } else if (this.ctx == StatementComponent.PREDICATE) {
+            c = sp;
+        } else if (this.ctx == StatementComponent.OBJECT && so instanceof Resource) {
+            c = (Resource) so;
+        } else if (this.ctx == StatementComponent.CONTEXT) {
+            c = sc;
+        } else {
+            return null;
+        }
+
         Value o;
         if (this.obj instanceof Value) {
             o = (Value) this.obj;
@@ -116,21 +195,6 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             o = so;
         } else if (this.obj == StatementComponent.CONTEXT && sc != null) {
             o = sc;
-        } else {
-            return null;
-        }
-
-        Resource c;
-        if (this.ctx instanceof Resource || this.ctx == null) {
-            c = (Resource) this.ctx;
-        } else if (this.ctx == StatementComponent.SUBJECT) {
-            c = ss;
-        } else if (this.ctx == StatementComponent.PREDICATE) {
-            c = sp;
-        } else if (this.ctx == StatementComponent.OBJECT && so instanceof Resource) {
-            c = (Resource) so;
-        } else if (this.ctx == StatementComponent.CONTEXT) {
-            c = sc;
         } else {
             return null;
         }

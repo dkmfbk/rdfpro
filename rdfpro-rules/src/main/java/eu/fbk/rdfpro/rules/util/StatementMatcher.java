@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -25,9 +26,12 @@ import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.algebra.And;
+import org.openrdf.query.algebra.Compare;
+import org.openrdf.query.algebra.Compare.CompareOp;
 import org.openrdf.query.algebra.QueryModelNode;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.ListBindingSet;
@@ -95,8 +99,11 @@ public final class StatementMatcher {
             return true;
         }
 
-        ctx = replaceNull(ctx);
-        List<ValueExpr> filters = null;
+        if (ctx == null) {
+            ctx = this.nil;
+        }
+
+        List<Filter> filters = null;
 
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
@@ -118,7 +125,7 @@ public final class StatementMatcher {
                             if (filters == null) {
                                 filters = new ArrayList<>();
                             }
-                            filters.add(((Filter) value).expr);
+                            filters.add((Filter) value);
                         }
                     }
                     break;
@@ -127,9 +134,8 @@ public final class StatementMatcher {
         }
 
         if (filters != null) {
-            final BindingSet bindings = new ListBindingSet(VAR_NAMES, subj, pred, obj, ctx);
-            for (final ValueExpr filter : filters) {
-                if (((Literal) Algebra.evaluateValueExpr(filter, bindings)).booleanValue()) {
+            for (final Filter filter : filters) {
+                if (filter.eval(subj, pred, obj, ctx)) {
                     return true;
                 }
             }
@@ -147,10 +153,12 @@ public final class StatementMatcher {
     public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
             @Nullable Resource ctx, final Class<T> clazz, @Nullable final List<T> list) {
 
-        ctx = replaceNull(ctx);
+        if (ctx == null) {
+            ctx = this.nil;
+        }
+
         List<T> result = list;
 
-        BindingSet bindings = null;
         outer: for (int i = 0; i < this.masks.length; ++i) {
 
             final byte mask = this.masks[i];
@@ -181,10 +189,7 @@ public final class StatementMatcher {
                 if (value == NORMALIZED_MARKER || value == UNNORMALIZED_MARKER) {
                     break;
                 } else if (value instanceof Filter) {
-                    bindings = bindings != null ? bindings : new ListBindingSet(VAR_NAMES, subj,
-                            pred, obj, ctx);
-                    add = ((Literal) Algebra.evaluateValueExpr(((Filter) value).expr, bindings))
-                            .booleanValue();
+                    add = ((Filter) value).eval(subj, pred, obj, ctx);
                 } else if (add && clazz.isInstance(value)) {
                     result = result != null ? result : new ArrayList<>(16);
                     result.add((T) value);
@@ -198,11 +203,6 @@ public final class StatementMatcher {
     @Override
     public String toString() {
         return this.numPatterns + " patterns, " + this.numValues + " values";
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T extends Value> T replaceNull(@Nullable final T value) {
-        return value != null ? value : (T) this.nil;
     }
 
     private int match(final Resource subj, final URI pred, final Value obj, final Resource ctx,
@@ -243,7 +243,7 @@ public final class StatementMatcher {
                 if (value == UNNORMALIZED_MARKER || value == NORMALIZED_MARKER) {
                     break;
                 } else if (value instanceof Filter) {
-                    value = new Filter(Algebra.normalize(((Filter) value).expr, this.normalizer));
+                    value = ((Filter) value).normalize(this.normalizer);
                 } else if (value instanceof Value) {
                     value = this.normalizer.apply((Value) value);
                 } else if (value instanceof StatementMatcher) {
@@ -515,7 +515,7 @@ public final class StatementMatcher {
                     // Append filters and mapped values
                     for (final Map.Entry<Object, Set<Object>> entry : map.entrySet()) {
                         if (entry.getKey() != EMPTY_FILTER) {
-                            values[valueIndex++] = new Filter((ValueExpr) entry.getKey());
+                            values[valueIndex++] = Filter.create((ValueExpr) entry.getKey());
                         }
                         for (final Object value : entry.getValue()) {
                             values[valueIndex++] = value;
@@ -539,12 +539,137 @@ public final class StatementMatcher {
 
     }
 
-    private static final class Filter {
+    private static abstract class Filter {
 
-        final ValueExpr expr;
+        static Filter create(final ValueExpr expr) {
+            if (expr instanceof And) {
+                final And and = (And) expr;
+                return new AndFilter(create(and.getLeftArg()), create(and.getRightArg()));
+            } else if (expr instanceof Compare) {
+                final Compare cmp = (Compare) expr;
+                if (cmp.getOperator() == CompareOp.EQ || cmp.getOperator() == CompareOp.NE) {
+                    ValueExpr left = cmp.getLeftArg();
+                    ValueExpr right = cmp.getRightArg();
+                    if (left instanceof ValueConstant) {
+                        left = new Var("l", ((ValueConstant) left).getValue());
+                    }
+                    if (right instanceof ValueConstant) {
+                        right = new Var("r", ((ValueConstant) right).getValue());
+                    }
+                    if (left instanceof Var && right instanceof Var) {
+                        return new CompareFilter((Var) left, (Var) right,
+                                cmp.getOperator() == CompareOp.EQ);
+                    }
+                }
+            }
+            return new ValueExprFilter(expr);
+        }
 
-        Filter(final ValueExpr expr) {
-            this.expr = expr;
+        Filter normalize(final Function<Value, Value> normalizer) {
+            return this;
+        }
+
+        abstract boolean eval(final Resource subj, final URI pred, final Value obj,
+                final Resource ctx);
+
+        private static final class ValueExprFilter extends Filter {
+
+            private final ValueExpr expr;
+
+            ValueExprFilter(final ValueExpr expr) {
+                this.expr = expr;
+            }
+
+            @Override
+            Filter normalize(final Function<Value, Value> normalizer) {
+                return new ValueExprFilter(Algebra.normalize(this.expr, normalizer));
+            }
+
+            @Override
+            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
+                final BindingSet bindings = new ListBindingSet(VAR_NAMES, subj, pred, obj, ctx);
+                return ((Literal) Algebra.evaluateValueExpr(this.expr, bindings)).booleanValue();
+            }
+
+        }
+
+        private static final class CompareFilter extends Filter {
+
+            private final Value leftValue;
+
+            private final Value rightValue;
+
+            private final char left;
+
+            private final char right;
+
+            private final boolean negate;
+
+            CompareFilter(final Var left, final Var right, final boolean equal) {
+                this.leftValue = left.getValue();
+                this.rightValue = right.getValue();
+                this.left = left.hasValue() ? 'l' //
+                        : Character.toLowerCase(left.getName().charAt(0));
+                this.right = right.hasValue() ? 'r' //
+                        : Character.toLowerCase(right.getName().charAt(0));
+                this.negate = !equal;
+            }
+
+            @Override
+            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
+                final Value left = select(subj, pred, obj, ctx, this.left);
+                final Value right = select(subj, pred, obj, ctx, this.right);
+                final boolean equals = Objects.equals(left, right);
+                return equals ^ this.negate;
+            }
+
+            private Value select(final Resource subj, final URI pred, final Value obj,
+                    final Resource ctx, final char c) {
+                switch (c) {
+                case 's':
+                    return subj;
+                case 'p':
+                    return pred;
+                case 'o':
+                    return obj;
+                case 'c':
+                    return ctx;
+                case 'l':
+                    return this.leftValue;
+                case 'r':
+                    return this.rightValue;
+                default:
+                    throw new Error();
+                }
+            }
+
+        }
+
+        private static final class AndFilter extends Filter {
+
+            private final Filter left;
+
+            private final Filter right;
+
+            AndFilter(final Filter left, final Filter right) {
+                this.left = left;
+                this.right = right;
+            }
+
+            @Override
+            Filter normalize(final Function<Value, Value> normalizer) {
+                final Filter left = this.left.normalize(normalizer);
+                final Filter right = this.right.normalize(normalizer);
+                return left == this.left && right == this.right ? this
+                        : new AndFilter(left, right);
+            }
+
+            @Override
+            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
+                return this.left.eval(subj, pred, obj, ctx)
+                        && this.right.eval(subj, pred, obj, ctx);
+            }
+
         }
 
     }

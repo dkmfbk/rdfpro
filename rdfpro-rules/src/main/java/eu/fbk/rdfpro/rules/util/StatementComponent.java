@@ -17,7 +17,7 @@ import eu.fbk.rdfpro.util.Statements;
 
 public enum StatementComponent implements Function<Statement, Value>, Comparator<Statement> {
 
-    SUBJECT('s') {
+    SUBJECT('s', (byte) 0) {
 
         @Override
         public Resource apply(final Statement statement) {
@@ -40,7 +40,7 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
 
     },
 
-    PREDICATE('p') {
+    PREDICATE('p', (byte) 1) {
 
         @Override
         public URI apply(final Statement statement) {
@@ -63,7 +63,7 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
 
     },
 
-    OBJECT('o') {
+    OBJECT('o', (byte) 2) {
 
         @Override
         public Value apply(final Statement statement) {
@@ -86,7 +86,7 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
 
     },
 
-    CONTEXT('c') {
+    CONTEXT('c', (byte) 3) {
 
         @Override
         public Resource apply(final Statement statement) {
@@ -111,12 +111,19 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
 
     private char letter;
 
-    private StatementComponent(final char letter) {
+    private byte index;
+
+    private StatementComponent(final char letter, final byte index) {
         this.letter = letter;
+        this.index = index;
     }
 
     public final char getLetter() {
         return this.letter;
+    }
+
+    public byte getIndex() {
+        return this.index;
     }
 
     @Override

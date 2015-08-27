@@ -429,7 +429,7 @@ public final class RDFHandlers {
         if (handlers.length == 0) {
             return NIL;
         } else if (handlers.length == 1) {
-            return handlers[1];
+            return handlers[0];
         } else {
             return new DispatchRoundRobinHandler(chunkSize, handlers);
         }
