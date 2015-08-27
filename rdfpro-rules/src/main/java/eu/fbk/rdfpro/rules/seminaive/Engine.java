@@ -940,7 +940,8 @@ public class Engine extends RuleEngine {
 
             FixpointHandler(final RDFHandler handler, final boolean deduplicate) {
                 super(handler);
-                this.deduplicate = deduplicate;
+                this.deduplicate = deduplicate && SemiNaivePhase.this.fixpoint
+                        && SemiNaivePhase.this.joinMatcher.matchAll();
             }
 
             @Override

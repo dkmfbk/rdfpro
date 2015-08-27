@@ -58,80 +58,80 @@ final class ProcessorUnique implements RDFProcessor {
                 : new Handler(handler, true);
     }
 
-    private static final class KeepContextsHandler extends AbstractRDFHandlerWrapper {
-
-        private final int threshold;
-
-        private StatementDeduplicator deduplicator;
-
-        private AtomicInteger count;
-
-        private Sorter<Statement> sorter;
-
-        KeepContextsHandler(final RDFHandler handler) {
-            super(handler);
-            this.threshold = (int) (Runtime.getRuntime().freeMemory() / 2 / 24);
-            this.deduplicator = null;
-            this.sorter = null;
-            this.count = null;
-        }
-
-        @Override
-        public void startRDF() throws RDFHandlerException {
-            super.startRDF();
-            this.deduplicator = StatementDeduplicator.newHashDeduplicator();
-            this.count = new AtomicInteger(0);
-            this.sorter = Sorter.newStatementSorter(true);
-            try {
-                this.sorter.start(true);
-            } catch (final IOException ex) {
-                throw new RDFHandlerException(ex);
-            }
-        }
-
-        @Override
-        public void handleStatement(final Statement stmt) throws RDFHandlerException {
-            try {
-                if (this.deduplicator.isNew(stmt)) {
-                    final int count = this.count.incrementAndGet();
-                }
-
-                this.sorter.emit(statement);
-            } catch (final Throwable ex) {
-                throw new RDFHandlerException(ex);
-            }
-        }
-
-        @Override
-        public void endRDF() throws RDFHandlerException {
-            try {
-                this.sorter.end(true, new Consumer<Statement>() {
-
-                    @Override
-                    public void accept(final Statement statement) {
-                        try {
-                            KeepContextsHandler.this.handler.handleStatement(statement);
-                        } catch (final RDFHandlerException ex) {
-                            throw new RuntimeException(ex);
-                        }
-                    }
-
-                });
-                this.sorter.close();
-                this.sorter = null;
-            } catch (final IOException ex) {
-                throw new RDFHandlerException(ex);
-            }
-            super.endRDF();
-        }
-
-        @Override
-        public final void close() {
-            IO.closeQuietly(this.sorter);
-            super.close();
-        }
-
-    }
+//    private static final class KeepContextsHandler extends AbstractRDFHandlerWrapper {
+//
+//        private final int threshold;
+//
+//        private StatementDeduplicator deduplicator;
+//
+//        private AtomicInteger count;
+//
+//        private Sorter<Statement> sorter;
+//
+//        KeepContextsHandler(final RDFHandler handler) {
+//            super(handler);
+//            this.threshold = (int) (Runtime.getRuntime().freeMemory() / 2 / 24);
+//            this.deduplicator = null;
+//            this.sorter = null;
+//            this.count = null;
+//        }
+//
+//        @Override
+//        public void startRDF() throws RDFHandlerException {
+//            super.startRDF();
+//            this.deduplicator = StatementDeduplicator.newHashDeduplicator();
+//            this.count = new AtomicInteger(0);
+//            this.sorter = Sorter.newStatementSorter(true);
+//            try {
+//                this.sorter.start(true);
+//            } catch (final IOException ex) {
+//                throw new RDFHandlerException(ex);
+//            }
+//        }
+//
+//        @Override
+//        public void handleStatement(final Statement stmt) throws RDFHandlerException {
+//            try {
+//                if (this.deduplicator.isNew(stmt)) {
+//                    final int count = this.count.incrementAndGet();
+//                }
+//
+//                this.sorter.emit(statement);
+//            } catch (final Throwable ex) {
+//                throw new RDFHandlerException(ex);
+//            }
+//        }
+//
+//        @Override
+//        public void endRDF() throws RDFHandlerException {
+//            try {
+//                this.sorter.end(true, new Consumer<Statement>() {
+//
+//                    @Override
+//                    public void accept(final Statement statement) {
+//                        try {
+//                            KeepContextsHandler.this.handler.handleStatement(statement);
+//                        } catch (final RDFHandlerException ex) {
+//                            throw new RuntimeException(ex);
+//                        }
+//                    }
+//
+//                });
+//                this.sorter.close();
+//                this.sorter = null;
+//            } catch (final IOException ex) {
+//                throw new RDFHandlerException(ex);
+//            }
+//            super.endRDF();
+//        }
+//
+//        @Override
+//        public final void close() {
+//            IO.closeQuietly(this.sorter);
+//            super.close();
+//        }
+//
+//    }
 
     private static final class MergeContextsHandler extends AbstractRDFHandlerWrapper {
 
