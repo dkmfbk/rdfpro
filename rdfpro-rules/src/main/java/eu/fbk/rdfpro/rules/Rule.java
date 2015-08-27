@@ -71,7 +71,6 @@ import info.aduna.iteration.CloseableIteration;
 import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
-import eu.fbk.rdfpro.rules.util.StatementHandler;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
@@ -636,16 +635,6 @@ public final class Rule implements Comparable<Rule> {
                     newInsertExpr, first.whereExpr));
         }
         return mergedRules;
-    }
-
-    public void collect(final BindingSet bindings, @Nullable final QuadModel model,
-            @Nullable final StatementHandler deleteHandler,
-            @Nullable final StatementHandler insertHandler) {
-
-        if (this.collector == null) {
-            this.collector = Collector.create(this);
-        }
-        this.collector.collect(bindings, model, deleteHandler, insertHandler);
     }
 
     public void evaluate(final QuadModel model, @Nullable final QuadModel deltaModel,

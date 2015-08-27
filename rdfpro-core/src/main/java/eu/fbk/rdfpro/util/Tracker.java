@@ -84,30 +84,15 @@ public final class Tracker {
     public void increment() {
         long counter = this.counter.getAndIncrement();
         if (counter % this.chunkSize == 0 && this.statusMessage != null) {
-            synchronized (this) {
-                ++counter;
-                final long ts = System.currentTimeMillis();
-                this.ts1 = ts;
-                if (this.ts0 == 0) {
-                    this.ts0 = ts;
-                    this.ts = ts;
-                    this.statusKey = STATUS_KEY_COUNTER.getAndIncrement();
-                }
-                final long delta = ts - this.ts0;
-                if (delta > 0) {
-                    final long avgThroughput = counter * 1000 / delta;
-                    this.chunkSize = avgThroughput < 10 ? 1
-                            : avgThroughput < 10000 ? avgThroughput / 10 : 1000;
-                    if (ts / 1000 - this.ts / 1000 >= 1) {
-                        final long throughput = (counter - this.counterAtTs) * 1000
-                                / (ts - this.ts);
-                        this.ts = ts;
-                        this.counterAtTs = counter;
-                        registerStatus(this.statusKey, String.format(this.statusMessage,
-                                counter - 1, throughput, avgThroughput));
-                    }
-                }
-            }
+            updateStatus(counter + 1);
+        }
+    }
+
+    public void add(final long delta) {
+        final long counter = this.counter.addAndGet(delta);
+        if (this.statusMessage != null
+                && (counter - delta) / this.chunkSize < counter / this.chunkSize) {
+            updateStatus(counter);
         }
     }
 
@@ -121,6 +106,31 @@ public final class Tracker {
             if (this.logger.isInfoEnabled()) {
                 this.logger
                         .info(String.format(this.endMessage, this.counter.get(), avgThroughput));
+            }
+        }
+    }
+
+    private synchronized void updateStatus(long counter) {
+        synchronized (this) {
+            final long ts = System.currentTimeMillis();
+            this.ts1 = ts;
+            if (this.ts0 == 0) {
+                this.ts0 = ts;
+                this.ts = ts;
+                this.statusKey = STATUS_KEY_COUNTER.getAndIncrement();
+            }
+            final long delta = ts - this.ts0;
+            if (delta > 0) {
+                final long avgThroughput = counter * 1000 / delta;
+                this.chunkSize = avgThroughput < 10 ? 1
+                        : avgThroughput < 10000 ? avgThroughput / 10 : 1000;
+                if (ts / 1000 - this.ts / 1000 >= 1) {
+                    final long throughput = (counter - this.counterAtTs) * 1000 / (ts - this.ts);
+                    this.ts = ts;
+                    this.counterAtTs = counter;
+                    registerStatus(this.statusKey, String.format(this.statusMessage, counter - 1,
+                            throughput, avgThroughput));
+                }
             }
         }
     }

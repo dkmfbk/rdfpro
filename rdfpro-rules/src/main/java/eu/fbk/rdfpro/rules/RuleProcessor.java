@@ -81,7 +81,13 @@ public final class RuleProcessor implements RDFProcessor {
         }
         final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
                 rulesetURLs.toArray(new String[rulesetURLs.size()]));
-        Ruleset ruleset = Ruleset.fromRDF(rulesetSource);
+        Ruleset ruleset;
+        try {
+            ruleset = Ruleset.fromRDF(rulesetSource);
+        } catch (final Throwable ex) {
+            LOGGER.error("Invalid ruleset", ex);
+            throw ex;
+        }
 
         // Transform ruleset
         ruleset = ruleset.rewriteVariables(bindings);
@@ -157,7 +163,7 @@ public final class RuleProcessor implements RDFProcessor {
             @Nullable final URI staticContext) {
 
         // Process ruleset and static data
-        LOGGER.info("Processing {} rules {} static data", ruleset.getRules().size(),
+        LOGGER.debug("Processing {} rules {} static data", ruleset.getRules().size(),
                 staticData == null ? "without" : "with");
         final long ts = System.currentTimeMillis();
         Ruleset processedRuleset = ruleset.mergeSameWhereExpr();
@@ -186,8 +192,9 @@ public final class RuleProcessor implements RDFProcessor {
                 }
             }
         }
-        LOGGER.info("Rule engine initialized with {} dynamic rules in {} ms", processedRuleset
-                .getRules().size(), System.currentTimeMillis() - ts);
+        LOGGER.info("{} initialized with {} dynamic rules (from {} rules) in {} ms", engine,
+                processedRuleset.getRules().size(), ruleset.getRules().size(),
+                System.currentTimeMillis() - ts);
 
         // Setup object
         this.engine = engine;

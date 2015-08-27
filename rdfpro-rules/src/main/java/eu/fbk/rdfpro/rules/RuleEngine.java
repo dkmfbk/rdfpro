@@ -165,25 +165,12 @@ public abstract class RuleEngine {
         if (!LOGGER.isDebugEnabled()) {
 
             // Logging disabled: delegate to doEval(), filtering out non-matchable quads
-            final RDFHandler sink = handler;
-            return new AbstractRDFHandlerWrapper(doEval(handler, deduplicate)) {
-
-                @Override
-                public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
-                        super.handleStatement(stmt);
-                    } else {
-                        sink.handleStatement(stmt);
-                    }
-                }
-
-            };
+            return doEval(handler, deduplicate);
 
         } else {
 
             // Logging enabled: allocate counters to track quads in (processed/propagated) and out
             final AtomicInteger numProcessed = new AtomicInteger(0);
-            final AtomicInteger numPropagated = new AtomicInteger(0);
             final AtomicInteger numOut = new AtomicInteger(0);
 
             // Wrap sink handler to count out quads
@@ -207,7 +194,6 @@ public abstract class RuleEngine {
                 public void startRDF() throws RDFHandlerException {
                     this.ts = System.currentTimeMillis();
                     numProcessed.set(0);
-                    numPropagated.set(0);
                     numOut.set(0);
                     LOGGER.debug("Rule evaluation started: {} rule(s), stream input",
                             RuleEngine.this.ruleset.getRules().size());
@@ -216,23 +202,15 @@ public abstract class RuleEngine {
 
                 @Override
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
-                        super.handleStatement(stmt);
-                        numProcessed.incrementAndGet();
-                    } else {
-                        // this.handler.handleStatement(stmt);
-                        numPropagated.incrementAndGet();
-                    }
+                    super.handleStatement(stmt);
+                    numProcessed.incrementAndGet();
                 }
 
                 @Override
                 public void endRDF() throws RDFHandlerException {
                     super.endRDF();
-                    LOGGER.debug("{}/{} statements directly emitted", numPropagated.get(),
-                            numPropagated.get() + numProcessed.get());
                     LOGGER.debug("Rule evaluation completed: {} input statements, "
-                            + "{} output statements , {} ms",
-                            numProcessed.get() + numPropagated.get(), numOut.get(),
+                            + "{} output statements , {} ms", numProcessed.get(), numOut.get(),
                             System.currentTimeMillis() - this.ts);
                 }
 
@@ -249,10 +227,6 @@ public abstract class RuleEngine {
      */
     protected void doEval(final Collection<Statement> model) {
 
-        // Counters used for logging
-        final int numInput = LOGGER.isDebugEnabled() ? model.size() : 0;
-        int numPropagated = 0;
-
         // Delegate to doEval(RDFHandler), handling two cases for performance reasons
         if (!this.ruleset.isDeletePossible()
                 && (model instanceof QuadModel || model instanceof Set<?>)) {
@@ -265,11 +239,7 @@ public abstract class RuleEngine {
             try {
                 handler.startRDF();
                 for (final Statement stmt : inputStmts) {
-                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
-                        handler.handleStatement(stmt);
-                    } else {
-                        ++numPropagated;
-                    }
+                    handler.handleStatement(stmt);
                 }
                 handler.endRDF();
             } catch (final RDFHandlerException ex) {
@@ -289,12 +259,7 @@ public abstract class RuleEngine {
             try {
                 handler.startRDF();
                 for (final Statement stmt : model) {
-                    if (RuleEngine.this.ruleset.isMatchable(stmt)) {
-                        handler.handleStatement(stmt);
-                    } else {
-                        outputStmts.add(stmt);
-                        ++numPropagated;
-                    }
+                    handler.handleStatement(stmt);
                 }
                 handler.endRDF();
             } catch (final RDFHandlerException ex) {
@@ -306,11 +271,6 @@ public abstract class RuleEngine {
             for (final Statement stmt : outputStmts) {
                 model.add(stmt);
             }
-        }
-
-        // Log the number of input statements directly emitted in output as non matchable
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("{}/{} input statements directly emitted", numPropagated, numInput);
         }
     }
 

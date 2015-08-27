@@ -62,6 +62,26 @@ public class Engine extends RuleEngine {
     }
 
     @Override
+    public String toString() {
+        final StringBuilder builder = new StringBuilder();
+        builder.append("SN+ rule engine (");
+        for (final Phase phase : this.phases) {
+            if (phase instanceof StreamPhase) {
+                builder.append('X');
+            } else if (phase instanceof NaivePhase) {
+                builder.append('N');
+            } else if (phase instanceof SemiNaivePhase) {
+                builder.append('S');
+            } else {
+                builder.append('?');
+            }
+        }
+        builder.append(this.unique ? "*" : "");
+        builder.append(')');
+        return builder.toString();
+    }
+
+    @Override
     protected void doEval(final Collection<Statement> model) {
 
         final QuadModel quadModel = model instanceof QuadModel ? (QuadModel) model //
@@ -425,9 +445,10 @@ public class Engine extends RuleEngine {
             final StatementMatcher im = ib == null ? null : ib.build(null);
 
             // Log result
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Configured StreamPhase: {} rules; {}; {} axioms; {} delete matcher; "
-                        + "{} insert matcher", Iterables.size(rules),
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug(
+                        "Configured StreamPhase: {} rules; {}; {} axioms; {} delete matcher; "
+                                + "{} insert matcher", Iterables.size(rules),
                         containsFixpointRule ? "fixpoint" : "non fixpoint", axioms.size(), dm, im);
             }
 
@@ -520,8 +541,8 @@ public class Engine extends RuleEngine {
             final boolean fixpoint = ruleList.get(0).isFixpoint();
 
             // Log result
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Configured NaivePhase: {} rules; {}", ruleList.size(),
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Configured NaivePhase: {} rules; {}", ruleList.size(),
                         fixpoint ? "fixpoint" : "non fixpoint");
             }
 
@@ -680,8 +701,8 @@ public class Engine extends RuleEngine {
             final StatementMatcher streamMatcher = streamBuilder.build(null);
 
             // Log result
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Configured SemiNaivePhase: {} rules ({} join); {}; {} axioms; "
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Configured SemiNaivePhase: {} rules ({} join); {}; {} axioms; "
                         + "{} join matcher ({}); {} stream matcher", allRules.size(),
                         joinRules.size(), fixpoint ? "fixpoint" : "non fixpoint", axioms.size(),
                         joinMatcher, joinMatcher.matchAll() ? "match all" : "no match all",

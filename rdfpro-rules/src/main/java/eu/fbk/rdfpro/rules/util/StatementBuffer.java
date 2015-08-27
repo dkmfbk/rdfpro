@@ -19,9 +19,12 @@ import org.openrdf.model.Value;
 import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.rules.model.QuadModel;
+import eu.fbk.rdfpro.util.Tracker;
 
 /**
  * A statement buffer behaving as a list with duplicates where statements can only be added and
@@ -29,6 +32,8 @@ import eu.fbk.rdfpro.rules.model.QuadModel;
  */
 public final class StatementBuffer extends AbstractCollection<Statement> implements
         Supplier<RDFHandler> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StatementBuffer.class);
 
     private static final int BLOCK_SIZE = 4 * 1024; // 1K quads, 4K values, 16K bytes
 
@@ -39,9 +44,16 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
     @Nullable
     private transient int[] buckets;
 
+    @Nullable
+    private Tracker addTracker;
+
+    private int addTrackCount;
+
     public StatementBuffer() {
         this.blocks = Lists.newArrayList();
         this.offset = BLOCK_SIZE;
+        this.addTracker = null;
+        this.addTrackCount = 0;
     }
 
     @Override
@@ -149,6 +161,11 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
     public int toModel(final QuadModel model, final boolean add,
             @Nullable final RDFHandler callback) {
 
+        // Create a tracker
+        final Tracker tracker = new Tracker(LOGGER, null, null, "%d triples "
+                + (add ? "inserted" : "deleted") + " (%d tr/s, %d tr/s avg)");
+        tracker.start();
+
         try {
             // Notify the callback handler, if any
             if (callback != null) {
@@ -163,10 +180,10 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
                 for (int offset = 0; offset < maxOffset; offset += 4) {
 
                     // Retrieve SPOC components of current statement
-                    Resource subj = (Resource) block[offset];
-                    URI pred = (URI) block[offset + 1];
-                    Value obj = block[offset + 2];
-                    Resource ctx = (Resource) block[offset + 3];
+                    final Resource subj = (Resource) block[offset];
+                    final URI pred = (URI) block[offset + 1];
+                    final Value obj = block[offset + 2];
+                    final Resource ctx = (Resource) block[offset + 3];
 
                     // Either add or remove the statement to/from the model
                     boolean modified;
@@ -186,6 +203,7 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
                     // counter and notify the callback, if any
                     if (modified) {
                         ++numChanges;
+                        tracker.increment();
                         if (callback != null) {
                             callback.handleStatement(new ContextStatementImpl(subj, pred, obj, ctx));
                         }
@@ -204,6 +222,10 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
         } catch (final RDFHandlerException ex) {
             // Wrap and propagate
             throw Throwables.propagate(ex);
+
+        } finally {
+            // Stop tracking
+            tracker.end();
         }
     }
 
@@ -244,6 +266,11 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
         block[this.offset + 2] = obj;
         block[this.offset + 3] = ctx;
         this.offset += 4;
+
+        // Update tracker if available
+        if (this.addTracker != null) {
+            this.addTracker.increment();
+        }
 
         // Always return true (buffer always modified)
         return true;
@@ -286,6 +313,23 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
         return this.buckets;
     }
 
+    private synchronized void startAddTracker() {
+        if (this.addTracker == null) {
+            this.addTracker = new Tracker(LOGGER, null, null,
+                    "%d triples buffered (%d tr/s, %d tr/s avg)");
+            this.addTracker.start();
+        }
+        ++this.addTrackCount;
+    }
+
+    private synchronized void stopAddTracker() {
+        --this.addTrackCount;
+        if (this.addTrackCount <= 0 && this.addTracker != null) {
+            this.addTracker.end();
+            this.addTracker = null;
+        }
+    }
+
     private synchronized void append(final Value[] block, final int blockLength) {
 
         // Invalidate hash index
@@ -323,6 +367,11 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
                 this.offset += length;
             }
         }
+
+        // Update tracker if available
+        if (this.addTracker != null) {
+            this.addTracker.add(blockLength >> 2);
+        }
     }
 
     private static int hash(final Value subj, final Value pred, final Value obj, final Value ctx) {
@@ -348,6 +397,9 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
             // Allocate a local block
             this.block = new Value[BLOCK_SIZE];
             this.offset = 0;
+
+            // Start tracking if necessary
+            startAddTracker();
         }
 
         @Override
@@ -385,6 +437,9 @@ public final class StatementBuffer extends AbstractCollection<Statement> impleme
                 this.offset = 0;
             }
             this.block = null;
+
+            // Stop tracking
+            stopAddTracker();
         }
 
     }

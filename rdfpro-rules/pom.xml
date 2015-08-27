@@ -85,10 +85,6 @@
                     <groupId>org.openrdf.sesame</groupId>
                     <artifactId>sesame-queryresultio-sparqlxml</artifactId>
                 </exclusion>
-                <exclusion>
-                    <groupId>org.openrdf.sesame</groupId>
-                    <artifactId>sesame-http-client</artifactId>
-                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -150,12 +146,12 @@
             <artifactId>sesame-rio-turtle</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.openrdf.sesame</groupId>
-            <artifactId>sesame-http-client</artifactId>
-            <version>2.8.4</version>
-            <scope>provided</scope>
-        </dependency>
+        <!-- <dependency> -->
+        <!-- <groupId>org.openrdf.sesame</groupId> -->
+        <!-- <artifactId>sesame-http-client</artifactId> -->
+        <!-- <version>2.8.4</version> -->
+        <!-- <scope>provided</scope> -->
+        <!-- </dependency> -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

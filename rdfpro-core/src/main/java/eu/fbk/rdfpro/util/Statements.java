@@ -59,7 +59,7 @@ public final class Statements {
 
     static {
         final boolean hashfactory = Boolean.parseBoolean(Environment.getProperty(
-                "rdfpro.hashfactory", "false"));
+                "rdfpro.hashfactory", "true"));
         if (hashfactory) {
             VALUE_FACTORY = HashValueFactory.INSTANCE;
         } else {

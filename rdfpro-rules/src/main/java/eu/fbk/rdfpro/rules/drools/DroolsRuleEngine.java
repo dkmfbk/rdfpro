@@ -81,6 +81,11 @@ public class DroolsRuleEngine extends RuleEngine {
     }
 
     @Override
+    public String toString() {
+        return "DR rule engine";
+    }
+
+    @Override
     protected RDFHandler doEval(final RDFHandler handler, final boolean deduplicate) {
         return new Handler(handler); // deduplicate ignored: output always deduplicated
     }

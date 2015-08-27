@@ -133,6 +133,11 @@
             <artifactId>sesame-rio-turtle</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-queryalgebra-evaluation</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <profiles>

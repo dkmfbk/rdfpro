@@ -29,6 +29,11 @@ public class Engine2 extends RuleEngine {
     }
 
     @Override
+    public String toString() {
+        return "SN rule engine";
+    }
+
+    @Override
     protected void doEval(final Collection<Statement> model) {
 
         // Rule evaluation is done inside a specifically-created object as some state has to be
