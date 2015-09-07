@@ -31,7 +31,7 @@ public abstract class StatementDeduplicator {
         if (method == ComparisonMethod.EQUALS) {
             return new TotalEqualsDeduplicator();
         } else if (method == ComparisonMethod.HASH) {
-            return new TotalHashDeduplicator2();
+            return new TotalHashDeduplicator();
         } else if (method == ComparisonMethod.IDENTITY) {
             return new TotalIdentityDeduplicator();
         } else {
@@ -151,83 +151,9 @@ public abstract class StatementDeduplicator {
 
     private static final class TotalHashDeduplicator extends StatementDeduplicator {
 
-        private long[] hashes;
-
-        private int size;
-
-        TotalHashDeduplicator() {
-            this.hashes = new long[2 * INITIAL_TABLE_SIZE];
-            this.size = 0;
-        }
-
-        @Override
-        boolean total() {
-            return true;
-        }
-
-        @Override
-        boolean process(final Resource subj, final URI pred, final Value obj, final Resource ctx,
-                final boolean add) {
-
-            final Hash hash = hash(subj, pred, obj, ctx);
-
-            final long lo = hash.getLow();
-            final long hi = hash.getHigh();
-
-            synchronized (this) {
-                int slot = ((int) lo & 0x7FFFFFFF) % (this.hashes.length >>> 1) << 1;
-                while (true) {
-                    final long storedLo = this.hashes[slot];
-                    final long storedHi = this.hashes[slot + 1];
-                    if (storedLo == 0L) {
-                        if (add) {
-                            this.hashes[slot] = lo;
-                            this.hashes[slot + 1] = hi;
-                            ++this.size;
-                            if (this.size >= this.hashes.length / 3) { // fill factor 0.66
-                                rehash();
-                            }
-                        }
-                        return true;
-
-                    } else if (storedLo == lo && storedHi == hi) {
-                        return false;
-
-                    } else {
-                        slot += 2;
-                        if (slot >= this.hashes.length) {
-                            slot = 0;
-                        }
-                    }
-                }
-            }
-        }
-
-        private void rehash() {
-            final long[] newTable = new long[this.hashes.length * 2];
-            for (int slot = 0; slot < this.hashes.length; slot += 2) {
-                final long lo = this.hashes[slot];
-                final long hi = this.hashes[slot + 1];
-                int newSlot = ((int) lo & 0x7FFFFFFF) % (newTable.length >>> 1) << 1;
-                while (newTable[newSlot] != 0L) {
-                    newSlot += 2;
-                    if (newSlot >= newTable.length) {
-                        newSlot = 0;
-                    }
-                }
-                newTable[newSlot] = lo;
-                newTable[newSlot + 1] = hi;
-            }
-            this.hashes = newTable;
-        }
-
-    }
-
-    private static final class TotalHashDeduplicator2 extends StatementDeduplicator {
-
         private final Table[] tables;
 
-        TotalHashDeduplicator2() {
+        TotalHashDeduplicator() {
             this.tables = new Table[64];
             for (int i = 0; i < this.tables.length; ++i) {
                 this.tables[i] = new Table();
