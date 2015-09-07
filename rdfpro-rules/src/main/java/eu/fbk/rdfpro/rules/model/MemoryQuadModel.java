@@ -35,6 +35,9 @@ import org.openrdf.model.vocabulary.XMLSchema;
 
 import eu.fbk.rdfpro.rules.util.Iterators;
 import eu.fbk.rdfpro.rules.util.StringIndex;
+import eu.fbk.rdfpro.util.Hash;
+import eu.fbk.rdfpro.util.Hashable;
+import eu.fbk.rdfpro.util.Statements;
 
 final class MemoryQuadModel extends QuadModel {
 
@@ -840,7 +843,7 @@ final class MemoryQuadModel extends QuadModel {
         return result >= max ? 0 : result;
     }
 
-    private static abstract class ModelValue implements Value {
+    private static abstract class ModelValue implements Value, Hashable {
 
         private static final long serialVersionUID = 1L;
 
@@ -851,6 +854,10 @@ final class MemoryQuadModel extends QuadModel {
         transient ModelStatement nextByObj;
 
         transient int numObj;
+
+        transient long hashLo;
+
+        transient long hashHi;
 
         ModelValue(final MemoryQuadModel model) {
             this.model = model;
@@ -863,6 +870,19 @@ final class MemoryQuadModel extends QuadModel {
             default:
                 return null;
             }
+        }
+
+        @Override
+        public Hash getHash() {
+            Hash hash;
+            if (this.hashLo != 0L) {
+                hash = Hash.fromLongs(this.hashHi, this.hashLo);
+            } else {
+                hash = Statements.computeHash(this);
+                this.hashHi = hash.getHigh();
+                this.hashLo = hash.getLow();
+            }
+            return hash;
         }
 
     }

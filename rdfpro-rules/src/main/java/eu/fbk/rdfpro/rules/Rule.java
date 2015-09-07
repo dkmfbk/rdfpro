@@ -1,5 +1,7 @@
 package eu.fbk.rdfpro.rules;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,6 +28,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
+import com.google.common.io.CharStreams;
+import com.google.common.io.LineProcessor;
 
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
@@ -75,6 +79,7 @@ import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
+import eu.fbk.rdfpro.util.Tracker;
 
 /**
  * Rule definition.
@@ -84,6 +89,8 @@ public final class Rule implements Comparable<Rule> {
     private static final Logger LOGGER = LoggerFactory.getLogger(Rule.class);
 
     private static final AtomicLong ID_COUNTER = new AtomicLong(0L);
+
+    private static final AtomicInteger DLOG_RULE_COUNTER = new AtomicInteger(0);
 
     private final URI id;
 
@@ -668,8 +675,20 @@ public final class Rule implements Comparable<Rule> {
                 }
             }
         }
-        Collections.sort(tasks);
-        Environment.run(tasks);
+        if (!tasks.isEmpty()) {
+            Collections.sort(tasks);
+            final Tracker tracker = new Tracker(LOGGER, null, null, "%d/" + tasks.size()
+                    + " rule variants evaluated");
+            for (final Evaluation task : tasks) {
+                task.setTracker(tracker);
+            }
+            tracker.start();
+            try {
+                Environment.run(tasks);
+            } finally {
+                tracker.end();
+            }
+        }
         return tasks.size();
     }
 
@@ -785,6 +804,89 @@ public final class Rule implements Comparable<Rule> {
             throw new RuntimeException(ex);
         }
         return output;
+    }
+
+    public static List<Rule> fromDLOG(final Reader reader) throws IOException {
+
+        return CharStreams.readLines(reader, new LineProcessor<List<Rule>>() {
+
+            private final Map<String, String> namespaceMap = new HashMap<>();
+
+            @Nullable
+            private Namespaces namespaces = null;
+
+            private final List<Rule> rules = new ArrayList<>();
+
+            private int varCounter = 0;
+
+            @Override
+            public List<Rule> getResult() {
+                return this.rules;
+            }
+
+            @Override
+            public boolean processLine(final String line) throws IOException {
+                try {
+                    if (line.startsWith("PREFIX ") || line.startsWith("prefix ")) {
+                        this.namespaces = null;
+                        final String[] tokens = line.split("\\s+");
+                        final String prefix = tokens[1].substring(0, tokens[1].length() - 1);
+                        final String namespace = ((URI) Statements.parseValue(tokens[2]))
+                                .toString();
+                        this.namespaceMap.put(prefix, namespace);
+                    } else {
+                        final int index = line.indexOf(":-");
+                        if (index >= 0) {
+                            this.namespaces = this.namespaces != null ? this.namespaces
+                                    : Namespaces.forURIMap(this.namespaceMap);
+                            final TupleExpr head = processAtoms(line.substring(0, index));
+                            final TupleExpr body = processAtoms(line.substring(index + 2));
+                            this.rules.add(new Rule(Statements.VALUE_FACTORY.createURI("rule:"
+                                    + DLOG_RULE_COUNTER.incrementAndGet()), true, 0, null, head,
+                                    body));
+                        }
+                    }
+                    return true;
+                } catch (final Throwable ex) {
+                    throw new IllegalArgumentException("Could not parse line: " + line, ex);
+                }
+            }
+
+            private TupleExpr processAtoms(final String string) {
+                TupleExpr expr = null;
+                for (String atomToken : string.split("\\)\\s*[,.]?")) {
+                    atomToken = atomToken.trim();
+                    final int index1 = atomToken.indexOf('(');
+                    final Var rel = constant(atomToken.substring(0, index1).trim());
+                    final List<Var> vars = new ArrayList<>();
+                    for (String termToken : atomToken.substring(index1 + 1).split("\\s*\\,\\s*")) {
+                        termToken = termToken.trim();
+                        if (termToken.startsWith("?")) {
+                            vars.add(new Var(termToken.substring(1)));
+                        } else {
+                            vars.add(constant(termToken));
+                        }
+                    }
+                    final StatementPattern pattern = vars.size() == 1 ? new StatementPattern(vars
+                            .get(0), constant(RDF.TYPE), rel) : new StatementPattern(vars.get(0),
+                            rel, vars.get(1));
+                    expr = expr == null ? pattern : new Join(expr, pattern);
+                }
+                return expr;
+            }
+
+            private Var constant(final String string) {
+                if ("<int$false>".equals(string)) {
+                    return constant(Statements.VALUE_FACTORY.createURI("sesame:false"));
+                }
+                return constant(Statements.parseValue(string, this.namespaces));
+            }
+
+            private Var constant(final Value value) {
+                return new Var("__v" + (++this.varCounter), value);
+            }
+
+        });
     }
 
     /**
@@ -911,6 +1013,9 @@ public final class Rule implements Comparable<Rule> {
         @Nullable
         private final Supplier<RDFHandler> insertSink;
 
+        @Nullable
+        private Tracker tracker;
+
         private final EvaluationStatistics statistics;
 
         private final double cardinality;
@@ -936,6 +1041,10 @@ public final class Rule implements Comparable<Rule> {
             return this.cardinality != 0.0;
         }
 
+        void setTracker(@Nullable final Tracker tracker) {
+            this.tracker = tracker;
+        }
+
         @Override
         public int compareTo(final Evaluation other) {
             return -Double.compare(this.cardinality, other.cardinality);
@@ -944,83 +1053,100 @@ public final class Rule implements Comparable<Rule> {
         @Override
         public void run() {
 
-            // Take a timestamp to measure rule evaluation time
-            final long ts = System.currentTimeMillis();
-
-            // Define counter for # activations
-            int numActivations = 0;
-
-            // Start evaluating the rule
-            Iterator<BindingSet> iterator;
-            if (this.cardinality == 0.0) {
-                iterator = Collections.emptyIterator();
-            } else if (this.rule.getWhereExpr() == null) {
-                iterator = Collections.singleton(EmptyBindingSet.getInstance()).iterator();
-            } else if (this.deltaModel == null) {
-                iterator = this.model.evaluate(this.rule.getWhereExpr(), null, null);
-            } else {
-                iterator = Algebra.evaluateTupleExpr(this.rule.getWhereExpr(), null, null,
-                        newSemiNaiveEvaluationStrategy(), this.statistics,
-                        this.model.getValueNormalizer());
-            }
+            // Retrieve current thread
+            final Thread thread = Thread.currentThread();
+            final String threadName = thread.getName();
 
             try {
-                // Proceed only if there is some query result to process
-                if (iterator.hasNext()) {
+                // Update thread name (for diagnostic purposes)
+                thread.setName(thread.getName() + " [" + this.rule.toString() + "]");
 
-                    // Acquire a collector, normalizing its constants so to use the same Value
-                    // objects in the model
-                    final Collector collector = this.rule.getCollector().normalize(
+                // Take a timestamp to measure rule evaluation time
+                final long ts = System.currentTimeMillis();
+
+                // Define counter for # activations
+                int numActivations = 0;
+
+                // Start evaluating the rule
+                Iterator<BindingSet> iterator;
+                if (this.cardinality == 0.0) {
+                    iterator = Collections.emptyIterator();
+                } else if (this.rule.getWhereExpr() == null) {
+                    iterator = Collections.singleton(EmptyBindingSet.getInstance()).iterator();
+                } else if (this.deltaModel == null) {
+                    iterator = this.model.evaluate(this.rule.getWhereExpr(), null, null);
+                } else {
+                    iterator = Algebra.evaluateTupleExpr(this.rule.getWhereExpr(), null, null,
+                            newSemiNaiveEvaluationStrategy(), this.statistics,
                             this.model.getValueNormalizer());
-
-                    // Allocate the delete handler, if possible
-                    RDFHandler deleteHandler = null;
-                    if (this.deleteSink != null && this.rule.getDeleteExpr() != null) {
-                        deleteHandler = this.deleteSink.get();
-                        deleteHandler.startRDF();
-                    }
-
-                    // Allocate the insert handler, if possible
-                    RDFHandler insertHandler = null;
-                    if (this.insertSink != null && this.rule.getInsertExpr() != null) {
-                        insertHandler = this.insertSink.get();
-                        insertHandler.startRDF();
-                    }
-
-                    // Scan the bindings returned by the WHERE part, using the collector to
-                    // compute deleted/inserted quads
-                    while (iterator.hasNext()) {
-                        ++numActivations;
-                        final BindingSet bindings = iterator.next();
-                        collector.collect(bindings, this.model, deleteHandler, insertHandler);
-                    }
-
-                    // Signal completion to the delete handler, if any
-                    if (deleteHandler != null) {
-                        deleteHandler.endRDF();
-                    }
-
-                    // Signal completion to the insert handler, if any
-                    if (insertHandler != null) {
-                        insertHandler.endRDF();
-                    }
                 }
-            } catch (final RDFHandlerException ex) {
-                // Wrap and propagate
-                throw new RuntimeException(ex);
+
+                try {
+                    // Proceed only if there is some query result to process
+                    if (iterator.hasNext()) {
+
+                        // Acquire a collector, normalizing its constants so to use the same Value
+                        // objects in the model
+                        final Collector collector = this.rule.getCollector().normalize(
+                                this.model.getValueNormalizer());
+
+                        // Allocate the delete handler, if possible
+                        RDFHandler deleteHandler = null;
+                        if (this.deleteSink != null && this.rule.getDeleteExpr() != null) {
+                            deleteHandler = this.deleteSink.get();
+                            deleteHandler.startRDF();
+                        }
+
+                        // Allocate the insert handler, if possible
+                        RDFHandler insertHandler = null;
+                        if (this.insertSink != null && this.rule.getInsertExpr() != null) {
+                            insertHandler = this.insertSink.get();
+                            insertHandler.startRDF();
+                        }
+
+                        // Scan the bindings returned by the WHERE part, using the collector to
+                        // compute deleted/inserted quads
+                        while (iterator.hasNext()) {
+                            ++numActivations;
+                            final BindingSet bindings = iterator.next();
+                            collector.collect(bindings, this.model, deleteHandler, insertHandler);
+                        }
+
+                        // Signal completion to the delete handler, if any
+                        if (deleteHandler != null) {
+                            deleteHandler.endRDF();
+                        }
+
+                        // Signal completion to the insert handler, if any
+                        if (insertHandler != null) {
+                            insertHandler.endRDF();
+                        }
+                    }
+                } catch (final RDFHandlerException ex) {
+                    // Wrap and propagate
+                    throw new RuntimeException(ex);
+
+                } finally {
+                    // Ensure to close the iterator (if it needs to be closed)
+                    IO.closeQuietly(iterator);
+
+                }
+
+                // Log relevant rule evaluation statistics
+                if (LOGGER.isTraceEnabled()) {
+                    final String patternString = this.deltaPattern == null ? ""
+                            : " (delta pattern " + Algebra.format(this.deltaPattern) + ")";
+                    LOGGER.trace("Rule {}{} evaluated in {} ms with {} activations", this.rule
+                            .getID().getLocalName(), patternString, System.currentTimeMillis()
+                            - ts, numActivations);
+                }
 
             } finally {
-                // Ensure to close the iterator (if it needs to be closed)
-                IO.closeQuietly(iterator);
-            }
-
-            // Log relevant rule evaluation statistics
-            if (LOGGER.isTraceEnabled()) {
-                final String patternString = this.deltaPattern == null ? "" : " (delta pattern "
-                        + Algebra.format(this.deltaPattern) + ")";
-                LOGGER.trace("Rule {}{} evaluated in {} ms with {} activations", this.rule.getID()
-                        .getLocalName(), patternString, System.currentTimeMillis() - ts,
-                        numActivations);
+                // Restore original thread name
+                thread.setName(threadName);
+                if (this.tracker != null) {
+                    this.tracker.increment();
+                }
             }
         }
 

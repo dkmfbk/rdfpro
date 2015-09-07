@@ -209,7 +209,9 @@ public final class Environment {
             for (int i = 1; i < parallelism; ++i) {
                 Environment.getPool().submit(threadRunnables.get(i));
             }
-            threadRunnables.get(0).run();
+            if (!threadRunnables.isEmpty()) {
+                threadRunnables.get(0).run();
+            }
             latch.await();
             if (exception.get() != null) {
                 throw exception.get();

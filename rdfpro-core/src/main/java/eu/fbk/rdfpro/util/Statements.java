@@ -180,23 +180,24 @@ public final class Statements {
         return value;
     }
 
-    public static Hash hash(final Statement statement) {
-        final Hash subjHash = hash(statement.getSubject());
-        final Hash predHash = hash(statement.getPredicate());
-        final Hash objHash = hash(statement.getObject());
-        final Hash ctxHash = hash(statement.getContext());
+    public static Hash getHash(final Statement statement) {
+        return statement instanceof Hashable ? ((Hashable) statement).getHash()
+                : computeHash(statement);
+    }
+
+    public static Hash getHash(@Nullable final Value value) {
+        return value instanceof Hashable ? ((Hashable) value).getHash() : computeHash(value);
+    }
+
+    public static Hash computeHash(final Statement statement) {
+        final Hash subjHash = getHash(statement.getSubject());
+        final Hash predHash = getHash(statement.getPredicate());
+        final Hash objHash = getHash(statement.getObject());
+        final Hash ctxHash = getHash(statement.getContext());
         return Hash.combine(subjHash, predHash, objHash, ctxHash);
     }
 
-    @Nullable
-    public static Hash hash(@Nullable final Value value) {
-        if (VALUE_FACTORY instanceof HashValueFactory) {
-            return HashValueFactory.hash(value);
-        }
-        return doHash(value);
-    }
-
-    static Hash doHash(final Value value) {
+    public static Hash computeHash(@Nullable final Value value) {
         if (value == null) {
             return NIL_HASH;
         }

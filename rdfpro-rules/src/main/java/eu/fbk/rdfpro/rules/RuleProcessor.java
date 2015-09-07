@@ -1,5 +1,7 @@
 package eu.fbk.rdfpro.rules;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +51,8 @@ public final class RuleProcessor implements RDFProcessor {
 
     private final boolean deduplicate;
 
-    static RDFProcessor create(final String name, final String... args) throws RDFHandlerException {
+    static RDFProcessor create(final String name, final String... args) throws IOException,
+            RDFHandlerException {
 
         // Validate and parse options
         final Options options = Options.parse("r!|B!|p!|g!|t|C|c!|b!|w|u|*", args);
@@ -72,21 +75,38 @@ public final class RuleProcessor implements RDFProcessor {
         }
 
         // Read rulesets
-        final List<String> rulesetURLs = new ArrayList<>();
+        final List<String> rdfRulesetURLs = new ArrayList<>();
+        final List<String> dlogRulesetURLs = new ArrayList<>();
         final String rulesetNames = options.getOptionArg("r", String.class);
         for (final String rulesetName : rulesetNames.split(",")) {
             String location = Environment.getProperty("rdfpro.rules." + rulesetName);
             location = location != null ? location : rulesetName;
-            rulesetURLs.add(IO.extractURL(location).toString());
+            final String url = IO.extractURL(location).toString();
+            (url.endsWith(".dlog") ? dlogRulesetURLs : rdfRulesetURLs).add(url);
         }
-        final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
-                rulesetURLs.toArray(new String[rulesetURLs.size()]));
-        Ruleset ruleset;
-        try {
-            ruleset = Ruleset.fromRDF(rulesetSource);
-        } catch (final Throwable ex) {
-            LOGGER.error("Invalid ruleset", ex);
-            throw ex;
+        Ruleset ruleset = null;
+        if (!rdfRulesetURLs.isEmpty()) {
+            final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
+                    rdfRulesetURLs.toArray(new String[rdfRulesetURLs.size()]));
+            try {
+                ruleset = Ruleset.fromRDF(rulesetSource);
+            } catch (final Throwable ex) {
+                LOGGER.error("Invalid ruleset", ex);
+                throw ex;
+            }
+        }
+        if (!dlogRulesetURLs.isEmpty()) {
+            final List<Ruleset> rulesets = new ArrayList<>();
+            if (ruleset != null) {
+                rulesets.add(ruleset);
+            }
+            for (final String dlogRulesetURL : dlogRulesetURLs) {
+                try (Reader dlogReader = IO.utf8Reader(IO.read(dlogRulesetURL))) {
+                    final List<Rule> rules = Rule.fromDLOG(dlogReader);
+                    rulesets.add(new Ruleset(rules, null));
+                }
+            }
+            ruleset = Ruleset.merge(rulesets.toArray(new Ruleset[rulesets.size()]));
         }
 
         // Transform ruleset

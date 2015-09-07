@@ -82,7 +82,7 @@ public final class Tracker {
     }
 
     public void increment() {
-        long counter = this.counter.getAndIncrement();
+        final long counter = this.counter.getAndIncrement();
         if (counter % this.chunkSize == 0 && this.statusMessage != null) {
             updateStatus(counter + 1);
         }
@@ -110,7 +110,7 @@ public final class Tracker {
         }
     }
 
-    private synchronized void updateStatus(long counter) {
+    private synchronized void updateStatus(final long counter) {
         synchronized (this) {
             final long ts = System.currentTimeMillis();
             this.ts1 = ts;
@@ -124,8 +124,9 @@ public final class Tracker {
                 final long avgThroughput = counter * 1000 / delta;
                 this.chunkSize = avgThroughput < 10 ? 1
                         : avgThroughput < 10000 ? avgThroughput / 10 : 1000;
-                if (ts / 1000 - this.ts / 1000 >= 1) {
-                    final long throughput = (counter - this.counterAtTs) * 1000 / (ts - this.ts);
+                if (ts / 1000 - this.ts / 1000 >= 1 || this.chunkSize == 1) {
+                    final long throughput = ts == this.ts ? 0L : (counter - this.counterAtTs)
+                            * 1000 / (ts - this.ts);
                     this.ts = ts;
                     this.counterAtTs = counter;
                     registerStatus(this.statusKey, String.format(this.statusMessage, counter - 1,

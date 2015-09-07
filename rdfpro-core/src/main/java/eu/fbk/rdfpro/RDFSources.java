@@ -513,7 +513,9 @@ public final class RDFSources {
                 for (int i = 1; i < parallelism; ++i) {
                     Environment.getPool().execute(runnables.get(i));
                 }
-                runnables.get(0).run();
+                if (!runnables.isEmpty()) {
+                    runnables.get(0).run();
+                }
                 latch.await();
                 if (exception.get() != null) {
                     throw exception.get();

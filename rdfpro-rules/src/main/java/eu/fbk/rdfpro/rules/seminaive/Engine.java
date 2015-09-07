@@ -46,6 +46,15 @@ public class Engine extends RuleEngine {
 
     private static final int DEDUPLICATION_CACHE_SIZE = 16 * 1024;
 
+    private static final boolean FORCE_DEDUPLICATION = Boolean.parseBoolean(Environment
+            .getProperty("rdfpro.rules.deduplication", "false"));
+
+    private static final boolean ENABLE_STREAMING = Boolean.parseBoolean(Environment.getProperty(
+            "rdfpro.rules.streaming", "true"));
+
+    private static final boolean ENABLE_SEMINAIVE = Boolean.parseBoolean(Environment.getProperty(
+            "rdfpro.rules.seminaive", "true"));
+
     private final List<Phase> phases;
 
     private final boolean unique;
@@ -283,13 +292,6 @@ public class Engine extends RuleEngine {
         return statements;
     }
 
-    private static Supplier<RDFHandler> deduplicate(final StatementBuffer buffer) {
-        return () -> {
-            return StatementDeduplicator.newPartialDeduplicator(ComparisonMethod.EQUALS,
-                    DEDUPLICATION_CACHE_SIZE).deduplicate(buffer.get(), true);
-        };
-    }
-
     private static List<Phase> buildPhases(final Ruleset ruleset) {
 
         // Scan rules (which are ordered by phase, fixpoint, id) and identify the rules for
@@ -324,9 +326,9 @@ public class Engine extends RuleEngine {
 
         // Select the type of phase based on rule properties
         Phase phase;
-        if (streamable) {
+        if (streamable && ENABLE_STREAMING) {
             phase = StreamPhase.create(rules);
-        } else if (simple && insertOnly) {
+        } else if (simple && insertOnly && ENABLE_SEMINAIVE) {
             phase = SemiNaivePhase.create(rules);
         } else {
             phase = NaivePhase.create(rules);
@@ -494,7 +496,7 @@ public class Engine extends RuleEngine {
                     super.startRDF();
 
                     // Initialize deduplicator
-                    if (deduplicate) {
+                    if (deduplicate || FORCE_DEDUPLICATION) {
                         this.deduplicator = StatementDeduplicator
                                 .newTotalDeduplicator(ComparisonMethod.HASH);
                     } else {
@@ -528,10 +530,17 @@ public class Engine extends RuleEngine {
 
         private final boolean fixpoint;
 
-        private NaivePhase(final List<Rule> rules, final boolean fixpoint) {
+        private final boolean canDelete;
+
+        private final boolean canInsert;
+
+        private NaivePhase(final List<Rule> rules, final boolean fixpoint,
+                final boolean canDelete, final boolean canInsert) {
             super(false, true);
             this.rules = rules;
             this.fixpoint = fixpoint;
+            this.canDelete = canDelete;
+            this.canInsert = canInsert;
         }
 
         static NaivePhase create(final Iterable<Rule> rules) {
@@ -546,29 +555,52 @@ public class Engine extends RuleEngine {
                         fixpoint ? "fixpoint" : "non fixpoint");
             }
 
+            // Determine whether deletions and/or insertions are possible
+            boolean canDelete = false;
+            boolean canInsert = false;
+            for (final Rule rule : rules) {
+                canDelete |= rule.getDeleteExpr() != null;
+                canInsert |= rule.getInsertExpr() != null;
+            }
+
             // Build the naive phase
-            return new NaivePhase(ruleList, fixpoint);
+            return new NaivePhase(ruleList, fixpoint && canInsert, canDelete, canInsert);
+        }
+
+        private StatementDeduplicator newDeduplicator() {
+            return FORCE_DEDUPLICATION ? StatementDeduplicator
+                    .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
+                    .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
         }
 
         @Override
         public void eval(final QuadModel model) {
 
+            StatementDeduplicator deleteDeduplicator = this.canDelete ? newDeduplicator() : null;
+            StatementDeduplicator insertDeduplicator = this.canInsert ? newDeduplicator() : null;
+
             if (!this.fixpoint) {
                 // (1) One-shot evaluation
-                evalRules(model);
+                evalRules(deleteDeduplicator, insertDeduplicator, model);
 
             } else {
                 // (2) Naive fixpoint evaluation
                 while (true) {
-                    final boolean modified = evalRules(model);
+                    final boolean modified = evalRules(deleteDeduplicator, insertDeduplicator,
+                            model);
                     if (!modified) {
                         break; // fixpoint reached
+                    }
+                    if (this.canInsert && this.canDelete) {
+                        deleteDeduplicator = newDeduplicator();
+                        insertDeduplicator = newDeduplicator();
                     }
                 }
             }
         }
 
-        private boolean evalRules(final QuadModel model) {
+        private boolean evalRules(final StatementDeduplicator deleteDeduplicator,
+                final StatementDeduplicator insertDeduplicator, final QuadModel model) {
 
             // Take a timestamp
             final long ts1 = System.currentTimeMillis();
@@ -578,8 +610,11 @@ public class Engine extends RuleEngine {
             final StatementBuffer insertBuffer = new StatementBuffer();
 
             // Evaluate all rules in parallel, collecting produced quads in the two buffers
-            final int numRules = Rule.evaluate(this.rules, model, null, deduplicate(deleteBuffer),
-                    deduplicate(insertBuffer));
+            final int numRules = Rule.evaluate(this.rules, model, null, () -> {
+                return deleteDeduplicator.deduplicate(deleteBuffer.get(), true);
+            }, () -> {
+                return insertDeduplicator.deduplicate(insertBuffer.get(), true);
+            });
 
             // Take another timestamp and measure buffer sizes after rule evaluation
             final long ts2 = System.currentTimeMillis();
@@ -610,7 +645,6 @@ public class Engine extends RuleEngine {
             } else if (size0 == size1) {
                 result = false;
             } else {
-                assert deleteBuffer != null; // necessarily true
                 result = insertBuffer.contains(deleteBuffer);
             }
 
@@ -748,8 +782,13 @@ public class Engine extends RuleEngine {
         public void eval(final QuadModel model) {
 
             // Allocate a partial deduplicator to use during all the phase evaluation
-            final StatementDeduplicator deduplicator = StatementDeduplicator
-                    .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+            final StatementDeduplicator deduplicator;
+            if (FORCE_DEDUPLICATION) {
+                deduplicator = StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH);
+            } else {
+                deduplicator = StatementDeduplicator.newPartialDeduplicator(
+                        ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+            }
 
             // Handle three case
             if (!this.fixpoint) {
@@ -787,7 +826,9 @@ public class Engine extends RuleEngine {
 
             // Evaluate join rules, single iteration (no fixpoint)
             final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, null,
-                    null, buffer);
+                    null, () -> {
+                        return deduplicator.deduplicate(buffer.get(), true);
+                    });
 
             // Take a timestamp after evaluating rules
             final long ts1 = System.currentTimeMillis();
@@ -975,7 +1016,7 @@ public class Engine extends RuleEngine {
                 this.joinModel = QuadModel.create();
 
                 // Allocate a deduplicator
-                this.deduplicator = this.deduplicate ? StatementDeduplicator
+                this.deduplicator = this.deduplicate || FORCE_DEDUPLICATION ? StatementDeduplicator
                         .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
                         .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
 
@@ -1024,10 +1065,10 @@ public class Engine extends RuleEngine {
                 }
 
                 // Emit closed statements in the join model
-                final RDFHandler sink = RDFHandlers.decouple(this.handler);
-                for (final Statement stmt : this.joinModel) {
-                    sink.handleStatement(stmt);
-                }
+                final RDFHandler sink = RDFHandlers.decouple(RDFHandlers.ignoreMethods(
+                        this.handler, RDFHandlers.METHOD_START_RDF | RDFHandlers.METHOD_END_RDF
+                                | RDFHandlers.METHOD_CLOSE));
+                RDFSources.wrap(this.joinModel).emit(sink, 1);
 
                 // Release memory
                 this.joinModel = null;
@@ -1061,7 +1102,7 @@ public class Engine extends RuleEngine {
 
                 // Allocate model and deduplicator
                 this.joinModel = QuadModel.create();
-                this.deduplicator = this.deduplicate ? StatementDeduplicator
+                this.deduplicator = this.deduplicate || FORCE_DEDUPLICATION ? StatementDeduplicator
                         .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
                         .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
 

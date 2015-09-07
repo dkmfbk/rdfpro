@@ -93,15 +93,7 @@ final class HashValueFactory extends ValueFactoryBase {
         }
     }
 
-    public static Hash hash(final Value value) {
-        if (value instanceof HashValue) {
-            return ((HashValue) value).getHash();
-        } else {
-            return Statements.doHash(value);
-        }
-    }
-
-    private static abstract class HashValue implements Value {
+    private static abstract class HashValue implements Value, Hashable {
 
         private static final long serialVersionUID = 1L;
 
@@ -111,12 +103,13 @@ final class HashValueFactory extends ValueFactoryBase {
 
         transient int hashCode;
 
-        final Hash getHash() {
+        @Override
+        public final Hash getHash() {
             Hash hash;
             if (this.hashLo != 0L) {
                 hash = Hash.fromLongs(this.hashHi, this.hashLo);
             } else {
-                hash = Statements.doHash(this);
+                hash = Statements.computeHash(this);
                 this.hashHi = hash.getHigh();
                 this.hashLo = hash.getLow();
             }
@@ -125,7 +118,7 @@ final class HashValueFactory extends ValueFactoryBase {
 
         final void initHash() {
             if (this.hashLo == 0L) {
-                final Hash hash = Statements.doHash(this);
+                final Hash hash = Statements.computeHash(this);
                 this.hashLo = hash.getLow();
                 this.hashHi = hash.getHigh();
             }
