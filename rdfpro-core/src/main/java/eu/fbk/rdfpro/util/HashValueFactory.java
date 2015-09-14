@@ -2,6 +2,8 @@ package eu.fbk.rdfpro.util;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -18,24 +20,79 @@ import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.ValueFactoryBase;
 import org.openrdf.model.util.URIUtil;
+import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.model.vocabulary.XMLSchema;
 
 final class HashValueFactory extends ValueFactoryBase {
 
     public static final HashValueFactory INSTANCE = new HashValueFactory();
 
+    private final Map<String, URI> w3cURIs;
+
     private HashValueFactory() {
+        this.w3cURIs = new HashMap<>(1024);
+        for (final URI uri : new URI[] { XMLSchema.DECIMAL, XMLSchema.INTEGER,
+                XMLSchema.NON_POSITIVE_INTEGER, XMLSchema.NEGATIVE_INTEGER,
+                XMLSchema.NON_NEGATIVE_INTEGER, XMLSchema.POSITIVE_INTEGER, XMLSchema.LONG,
+                XMLSchema.INT, XMLSchema.SHORT, XMLSchema.BYTE, XMLSchema.UNSIGNED_LONG,
+                XMLSchema.UNSIGNED_INT, XMLSchema.UNSIGNED_SHORT, XMLSchema.UNSIGNED_BYTE,
+                XMLSchema.DOUBLE, XMLSchema.FLOAT, XMLSchema.BOOLEAN, XMLSchema.DATETIME,
+                XMLSchema.DATE, XMLSchema.TIME, XMLSchema.GYEARMONTH, XMLSchema.GMONTHDAY,
+                XMLSchema.GYEAR, XMLSchema.GMONTH, XMLSchema.GDAY, XMLSchema.DURATION,
+                XMLSchema.DAYTIMEDURATION, XMLSchema.STRING, XMLSchema.BASE64BINARY,
+                XMLSchema.HEXBINARY, XMLSchema.ANYURI, XMLSchema.QNAME, XMLSchema.NOTATION,
+                XMLSchema.NORMALIZEDSTRING, XMLSchema.TOKEN, XMLSchema.LANGUAGE,
+                XMLSchema.NMTOKEN, XMLSchema.NMTOKENS, XMLSchema.NAME, XMLSchema.NCNAME,
+                XMLSchema.ID, XMLSchema.IDREF, XMLSchema.IDREFS, XMLSchema.ENTITY,
+                XMLSchema.ENTITIES, RDF.TYPE, RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT,
+                RDF.PREDICATE, RDF.OBJECT, RDF.STATEMENT, RDF.BAG, RDF.ALT, RDF.SEQ, RDF.VALUE,
+                RDF.LI, RDF.LIST, RDF.FIRST, RDF.REST, RDF.NIL, RDF.LANGSTRING, RDF.HTML,
+                RDFS.RESOURCE, RDFS.LITERAL, RDFS.CLASS, RDFS.SUBCLASSOF, RDFS.SUBPROPERTYOF,
+                RDFS.DOMAIN, RDFS.RANGE, RDFS.COMMENT, RDFS.LABEL, RDFS.DATATYPE, RDFS.CONTAINER,
+                RDFS.MEMBER, RDFS.ISDEFINEDBY, RDFS.SEEALSO, RDFS.CONTAINERMEMBERSHIPPROPERTY,
+                OWL.CLASS, OWL.INDIVIDUAL, OWL.THING, OWL.NOTHING, OWL.EQUIVALENTCLASS,
+                OWL.EQUIVALENTPROPERTY, OWL.SAMEAS, OWL.DIFFERENTFROM, OWL.ALLDIFFERENT,
+                OWL.DISTINCTMEMBERS, OWL.OBJECTPROPERTY, OWL.DATATYPEPROPERTY, OWL.INVERSEOF,
+                OWL.TRANSITIVEPROPERTY, OWL.SYMMETRICPROPERTY, OWL.FUNCTIONALPROPERTY,
+                OWL.INVERSEFUNCTIONALPROPERTY, OWL.RESTRICTION, OWL.ONPROPERTY, OWL.ALLVALUESFROM,
+                OWL.SOMEVALUESFROM, OWL.MINCARDINALITY, OWL.MAXCARDINALITY, OWL.CARDINALITY,
+                OWL.ONTOLOGY, OWL.IMPORTS, OWL.INTERSECTIONOF, OWL.VERSIONINFO, OWL.VERSIONIRI,
+                OWL.PRIORVERSION, OWL.BACKWARDCOMPATIBLEWITH, OWL.INCOMPATIBLEWITH,
+                OWL.DEPRECATEDCLASS, OWL.DEPRECATEDPROPERTY, OWL.ANNOTATIONPROPERTY,
+                OWL.ONTOLOGYPROPERTY, OWL.ONEOF, OWL.HASVALUE, OWL.DISJOINTWITH, OWL.UNIONOF,
+                OWL.COMPLEMENTOF }) {
+            final HashURI h = new HashURI(uri.stringValue());
+            h.initHash();
+            this.w3cURIs.put(uri.stringValue(), h);
+        }
+    }
+
+    private boolean isPossibleW3CURI(final String uri) {
+        return uri.length() > 33 && uri.charAt(12) == '3';
     }
 
     @Override
     public URI createURI(final String uri) {
+        if (isPossibleW3CURI(uri)) {
+            final URI u = this.w3cURIs.get(uri);
+            if (u != null) {
+                return u;
+            }
+        }
         return new HashURI(uri);
     }
 
     @Override
     public URI createURI(final String namespace, final String localName) {
         final String uri = namespace + localName;
+        if (isPossibleW3CURI(uri)) {
+            final URI u = this.w3cURIs.get(uri);
+            if (u != null) {
+                return u;
+            }
+        }
         if (URIUtil.isCorrectURISplit(namespace, localName)) {
             return new HashURI(uri, namespace, localName);
         } else {
@@ -55,7 +112,7 @@ final class HashValueFactory extends ValueFactoryBase {
 
     @Override
     public Literal createLiteral(final String label, final String language) {
-        return new HashLiteral(label, language, null);
+        return new HashLiteral(label, language.intern(), null);
     }
 
     @Override
@@ -114,6 +171,10 @@ final class HashValueFactory extends ValueFactoryBase {
                 this.hashLo = hash.getLow();
             }
             return hash;
+        }
+
+        final boolean hasHash() {
+            return this.hashLo != 0L;
         }
 
         final void initHash() {
@@ -233,7 +294,7 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashLiteral) {
+            } else if (object instanceof HashLiteral && hasHash() && ((HashURI) object).hasHash()) {
                 return sameHash((HashLiteral) object);
             } else if (object instanceof Literal) {
                 final Literal other = (Literal) object;
@@ -306,7 +367,7 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashBNode) {
+            } else if (object instanceof HashBNode && hasHash() && ((HashURI) object).hasHash()) {
                 return sameHash((HashBNode) object);
             } else if (object instanceof BNode) {
                 final BNode other = (BNode) object;
@@ -386,7 +447,7 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashURI) {
+            } else if (object instanceof HashURI && hasHash() && ((HashURI) object).hasHash()) {
                 final HashURI other = (HashURI) object;
                 return sameHash(other);
             } else if (object instanceof URI) {
