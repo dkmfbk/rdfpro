@@ -30,9 +30,12 @@ import org.openrdf.query.algebra.Var;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.fbk.rdfpro.RDFSource;
+import eu.fbk.rdfpro.RDFSources;
 import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
 import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -42,6 +45,12 @@ import eu.fbk.rdfpro.util.Statements;
 public final class Ruleset {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Ruleset.class);
+
+    public static final Ruleset RHODF = fromRDF(Environment.getProperty("rdfpro.rules.rhodf"));
+
+    public static final Ruleset RDFS = fromRDF(Environment.getProperty("rdfpro.rules.rdfs"));
+
+    public static final Ruleset OWL2RL = fromRDF(Environment.getProperty("rdfpro.rules.owl2rl"));
 
     private final Set<Rule> rules;
 
@@ -519,6 +528,20 @@ public final class Ruleset {
 
         // Build resulting ruleset
         return new Ruleset(rules, staticTerms);
+    }
+
+    /**
+     * Parses a ruleset from the RDF located at the specified location. The method extracts all
+     * the rules and the static terms defined in the RDF, and collects them in a new ruleset.
+     *
+     * @param location
+     *            the location where to load RDF data, not null
+     * @return the parsed ruleset
+     */
+    public static Ruleset fromRDF(final String location) {
+        final String url = IO.extractURL(location).toString();
+        final RDFSource rulesetSource = RDFSources.read(true, true, null, null, url);
+        return Ruleset.fromRDF(rulesetSource);
     }
 
     /**

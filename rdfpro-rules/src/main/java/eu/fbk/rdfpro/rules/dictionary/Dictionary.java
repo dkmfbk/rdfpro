@@ -117,9 +117,9 @@ public abstract class Dictionary implements AutoCloseable {
 
     private final SequentialDictionary<URI> datatypeIndex;
 
-    private final EncodeCache encodeCache;
+    private final EncodeCacheEntry[] encodeCache;
 
-    private final DecodeCache decodeCache;
+    private final DecodeCacheEntry[] decodeCache;
 
     private final AtomicLong encodeEmbeddedCounter;
 
@@ -137,8 +137,8 @@ public abstract class Dictionary implements AutoCloseable {
         this.namespaceIndex = new SequentialDictionary<>(64 * 1024 - 2);
         this.languageIndex = new SequentialDictionary<>(64 * 1024 - 2);
         this.datatypeIndex = new SequentialDictionary<>(INITIAL_DATATYPE_INDEX);
-        this.encodeCache = new EncodeCache();
-        this.decodeCache = new DecodeCache();
+        this.encodeCache = new EncodeCacheEntry[1024 - 1];
+        this.decodeCache = new DecodeCacheEntry[1024 - 1];
         this.encodeEmbeddedCounter = new AtomicLong();
         this.encodeCacheCounter = new AtomicLong();
         this.encodeIndexedCounter = new AtomicLong();
@@ -226,6 +226,13 @@ public abstract class Dictionary implements AutoCloseable {
         };
     }
 
+    void encodeCachePut(@Nullable final Value value, final int code) {
+        final int hash = value.hashCode() & 0x7FFFFFFF;
+        final int slotIndex = hash % this.encodeCache.length;
+        final EncodeCacheEntry entry = new EncodeCacheEntry(code, hash, value);
+        this.encodeCache[slotIndex] = entry;
+    }
+
     public final int encode(@Nullable final Value value) {
 
         // Handle default context
@@ -250,10 +257,12 @@ public abstract class Dictionary implements AutoCloseable {
         }
 
         // Lookup a pre-computed code in the cache
-        int code = this.encodeCache.lookup(value);
-        if (code != 0) {
+        final int hash = value.hashCode();
+        final int slotIndex = (hash & 0x7FFFFFFF) % this.encodeCache.length;
+        final EncodeCacheEntry entry = this.encodeCache[slotIndex];
+        if (entry != null && entry.hash == hash && entry.value.equals(value)) {
             this.encodeCacheCounter.incrementAndGet();
-            return code;
+            return entry.code;
         }
 
         // On cache miss, split the value in type + index + string (datatype index reused)
@@ -289,8 +298,8 @@ public abstract class Dictionary implements AutoCloseable {
         }
 
         // Delegate and cache the result
-        code = doEncode(type, index, string);
-        this.encodeCache.cache(value, code);
+        final int code = doEncode(type, index, string);
+        this.encodeCache[slotIndex] = new EncodeCacheEntry(code, hash, value);
         this.encodeIndexedCounter.incrementAndGet();
         return code;
     }
@@ -345,15 +354,17 @@ public abstract class Dictionary implements AutoCloseable {
         }
 
         // Lookup the code in the cache
-        Value value = this.decodeCache.lookup(code);
-        if (value != null) {
+        final int hash = hashInt(code);
+        final int slotIndex = (hash & 0x7FFFFFFF) % this.decodeCache.length;
+        final DecodeCacheEntry entry = this.decodeCache[slotIndex];
+        if (entry != null && entry.code == code) {
             this.decodeCacheCounter.incrementAndGet();
-            return value;
+            return entry.value;
         }
 
         // Delegate and cache the result
-        value = doDecode(code);
-        this.decodeCache.cache(code, value);
+        final Value value = doDecode(code);
+        this.decodeCache[slotIndex] = new DecodeCacheEntry(code, value);
         this.decodeIndexedCounter.incrementAndGet();
         return value;
     }
@@ -505,106 +516,39 @@ public abstract class Dictionary implements AutoCloseable {
         }
     }
 
-    private static final class EncodeCache {
+    private static int hashInt(final int value) {
+        int x = value;
+        x = (x >>> 16 ^ x) * 0x45d9f3b;
+        x = (x >>> 16 ^ x) * 0x45d9f3b;
+        x = x >>> 16 ^ x;
+        return x;
+    }
 
-        private static final int NUM_SLOTS = 1024 - 1; // 8K + 4K
+    private static final class EncodeCacheEntry {
 
-        private static final int NUM_LOCKS = 64 - 1;
+        final int code;
 
-        private final long[] table;
+        final int hash;
 
-        private final Value[] values;
+        final Value value;
 
-        private final Object[] locks;
-
-        EncodeCache() {
-            this.table = new long[NUM_SLOTS];
-            this.values = new Value[NUM_SLOTS];
-            this.locks = new Object[NUM_LOCKS];
-            for (int i = 0; i < NUM_LOCKS; ++i) {
-                this.locks[i] = new Object();
-            }
-        }
-
-        int lookup(final Value value) {
-            final int hash = value.hashCode() & 0x7FFFFFFF;
-            final int slotIndex = hash % NUM_SLOTS;
-            final int lockIndex = slotIndex % NUM_LOCKS;
-            long cell;
-            final Value candidate;
-            synchronized (this.locks[lockIndex]) {
-                cell = this.table[slotIndex];
-                if ((int) cell != hash) {
-                    return 0;
-                }
-                candidate = this.values[slotIndex];
-            }
-            return value.equals(candidate) ? (int) (cell >>> 32) : 0;
-        }
-
-        void cache(@Nullable final Value value, final int code) {
-            final int hash = value.hashCode() & 0x7FFFFFFF;
-            final int slotIndex = hash % NUM_SLOTS;
-            final int lockIndex = slotIndex % NUM_LOCKS;
-            final long cell = (long) code << 32L | hash & 0xFFFFFFFFL;
-            synchronized (this.locks[lockIndex]) {
-                this.table[slotIndex] = cell;
-                this.values[slotIndex] = value;
-            }
+        EncodeCacheEntry(final int code, final int hash, final Value value) {
+            this.code = code;
+            this.hash = hash;
+            this.value = value;
         }
 
     }
 
-    private static final class DecodeCache {
+    private static final class DecodeCacheEntry {
 
-        private static final int NUM_SLOTS = 2 * 1024 - 1; // empirically better than 1k and 4k
+        final int code;
 
-        private static final int NUM_LOCKS = 64 - 1;
+        final Value value;
 
-        private final int[] codes;
-
-        private final Value[] values;
-
-        private final Object[] locks;
-
-        DecodeCache() {
-            this.codes = new int[NUM_SLOTS];
-            this.values = new Value[NUM_SLOTS];
-            this.locks = new Object[NUM_LOCKS];
-            for (int i = 0; i < NUM_LOCKS; ++i) {
-                this.locks[i] = new Object();
-            }
-        }
-
-        @Nullable
-        Value lookup(final int code) {
-            final int hash = hash(code);
-            final int slotIndex = hash % NUM_SLOTS;
-            final int lockIndex = slotIndex % NUM_LOCKS;
-            synchronized (this.locks[lockIndex]) {
-                if (this.codes[slotIndex] == code) {
-                    return this.values[slotIndex];
-                }
-            }
-            return null;
-        }
-
-        void cache(final int code, final Value value) {
-            final int hash = hash(code);
-            final int slotIndex = hash % NUM_SLOTS;
-            final int lockIndex = slotIndex % NUM_LOCKS;
-            synchronized (this.locks[lockIndex]) {
-                this.codes[slotIndex] = code;
-                this.values[slotIndex] = value;
-            }
-        }
-
-        private static int hash(final int code) {
-            int x = code;
-            x = (x >>> 16 ^ x) * 0x45d9f3b;
-            x = (x >>> 16 ^ x) * 0x45d9f3b;
-            x = x >>> 16 ^ x;
-            return x & 0x7FFFFFFF;
+        DecodeCacheEntry(final int code, final Value value) {
+            this.code = code;
+            this.value = value;
         }
 
     }
@@ -750,8 +694,11 @@ public abstract class Dictionary implements AutoCloseable {
             this.primaryBuffer.write(0, (byte) 0);
         }
 
-        @Override
         int doEncode(final int type, final int index, final String string) {
+
+            // if (1 == 1) { // TODO
+            // return string.length() + index + type;
+            // }
 
             final int hash = type * 6661 + index * 661 + string.hashCode() & 0x7FFFFFFF;
 

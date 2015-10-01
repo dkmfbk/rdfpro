@@ -492,10 +492,17 @@ public final class Rule implements Comparable<Rule> {
         }
         final Var graphVar = new Var(graphVarName);
 
+        // Generate the where expr if missing
+        TupleExpr whereExpr = this.whereExpr;
+        if (whereExpr == null) {
+            whereExpr = new StatementPattern(new Var("s"), new Var("p"), new Var("o"),
+                    graphVar.clone());
+        }
+
         // Rewrite the rule
         final TupleExpr newDeleteExpr = Algebra.rewriteGraph(this.deleteExpr, graphVar);
         final TupleExpr newInsertExpr = Algebra.rewriteGraph(this.insertExpr, graphVar);
-        final TupleExpr newWhereExpr = Algebra.rewriteGraph(this.whereExpr, graphVar);
+        final TupleExpr newWhereExpr = Algebra.rewriteGraph(whereExpr, graphVar);
         return new Rule(newID(this.id.stringValue()), this.fixpoint, this.phase, newDeleteExpr,
                 newInsertExpr, newWhereExpr);
     }
