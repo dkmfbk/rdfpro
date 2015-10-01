@@ -128,7 +128,7 @@
                                 <packages>eu.fbk.rdfpro.rules:eu.fbk.rdfpro.rules.*</packages>
                             </group>
                         </groups>
-                        <excludePackageNames>eu.fbk.rdfpro.tool</excludePackageNames>
+                        <excludePackageNames>eu.fbk.rdfpro.tool:org.openrdf.query.algebra.evaluation</excludePackageNames>
                     </configuration>
                 </plugin>
             </plugins>
@@ -136,8 +136,25 @@
     </build>
 
     <properties>
-        <rdfpro-version>${project.version}</rdfpro-version>
         <site.root>http://rdfpro.fbk.eu/</site.root>
+        <rdfpro-version>${project.version}</rdfpro-version>
+
+        <!-- used by rdfpro, to be moved to parent -->
+        <sesame-version>2.8.6</sesame-version>
+        <google-guava-version>19.0-rc2</google-guava-version>
+        <groovy-version>2.4.5</groovy-version>
+
+        <!-- not used by rdfpro, to be moved to parent -->
+        <mustache-version>0.9.1</mustache-version>
+        <paranamer-version>2.8</paranamer-version>
+        <hikari-version>2.3.10</hikari-version>
+        <corenlp-version>3.5.2</corenlp-version>
+        <httpclient-version>4.5.1</httpclient-version>
+        <httpcore-version>4.4.3</httpcore-version>
+        <enunciate-version>1.31</enunciate-version>
+        <drools-version>6.3.0.Final</drools-version>
+        <jetty-version>9.3.4.RC0</jetty-version>
+        <jersey-version>2.22</jersey-version>
     </properties>
 
     <modules>

@@ -15,6 +15,14 @@ import org.openrdf.query.impl.BindingImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/*
+ * Different implementation of QueryBindingSet, supposedly more efficient (actually proved to
+ * improve execution times in rdfpro-rules). As QueryBindingSet is hard-coded into Sesame query
+ * algebra operators, there is no way to cleanly change implementation unless we reuse the same
+ * name and force the classloader to load this class instead of the default one (which is done by
+ * listing rdfpro-dist jar file first in the classpath). An INFO message is printed in case this
+ * class is loaded instead of the default one.
+ */
 public final class QueryBindingSet implements BindingSet {
 
     private static final long serialVersionUID = 1L;
@@ -23,7 +31,7 @@ public final class QueryBindingSet implements BindingSet {
 
     private static final Object DELETED = new Object();
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueryBindingSet.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("eu.fbk.rdfpro");
 
     private Object[] data;
 
@@ -316,7 +324,7 @@ public final class QueryBindingSet implements BindingSet {
     }
 
     static {
-        LOGGER.warn("Using patched QueryBindingSet class");
+        LOGGER.info("Using patched QueryBindingSet class");
     }
 
     private static abstract class AbstractIterator<T> implements Iterator<T> {
