@@ -864,6 +864,19 @@ public final class RDFProcessors {
         };
     }
 
+    public static RDFProcessor rules(final Ruleset ruleset, @Nullable final Mapper mapper,
+            final boolean dropBNodeTypes, final boolean deduplicate) {
+        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, null, false, null);
+    }
+
+    public static RDFProcessor rules(final Ruleset ruleset, @Nullable final Mapper mapper,
+            final boolean dropBNodeTypes, final boolean deduplicate,
+            @Nullable final RDFSource staticData, final boolean emitStatic,
+            @Nullable final URI staticContext) {
+        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, staticData,
+                emitStatic, staticContext);
+    }
+
     private static class InjectSourceHandler extends AbstractRDFHandler {
 
         @Nullable

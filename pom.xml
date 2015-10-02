@@ -123,12 +123,8 @@
                                 <title>rdfpro-tql</title>
                                 <packages>eu.fbk.rdfpro.tql</packages>
                             </group>
-                            <group>
-                                <title>rdfpro-rules</title>
-                                <packages>eu.fbk.rdfpro.rules:eu.fbk.rdfpro.rules.*</packages>
-                            </group>
                         </groups>
-                        <excludePackageNames>eu.fbk.rdfpro.tool:org.openrdf.query.algebra.evaluation</excludePackageNames>
+                        <excludePackageNames>eu.fbk.rdfpro.tool:eu.fbk.rdfpro.internal:org.openrdf.query.algebra.evaluation</excludePackageNames>
                     </configuration>
                 </plugin>
             </plugins>
@@ -163,7 +159,6 @@
         <module>rdfpro-jsonld</module>
         <module>rdfpro-tql</module>
         <module>rdfpro-dist</module>
-        <module>rdfpro-rules</module>
     </modules>
 
 </project>

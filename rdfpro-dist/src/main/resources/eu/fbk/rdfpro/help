@@ -1,4 +1,4 @@
-RDFpro %s - https://github.com/dkmfbk/rdfpro (Public Domain software)
+RDFpro %s - http://rdfpro.fbk.eu/ (Public Domain software)
 
 Builds and runs an RDF processing pipeline composed of one or more processors,
 reading/writing compressed RDF data from/to FILEs or SPARQL endpoints.
