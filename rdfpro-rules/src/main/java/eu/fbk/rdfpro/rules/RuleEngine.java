@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 import eu.fbk.rdfpro.RDFHandlers;
-import eu.fbk.rdfpro.rules.model.QuadModel;
+import eu.fbk.rdfpro.rules.util.QuadModel;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 
@@ -36,15 +36,12 @@ public abstract class RuleEngine {
     private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
     private static final String IMPLEMENTATION = Environment.getProperty(
-            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.Engine");
+            "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.QueryRuleEngine");
 
     // private static final String IMPLEMENTATION = Environment.getProperty(
-    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.seminaive.Engine2");
+    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.DroolsRuleEngine");
 
-    // private static final String IMPLEMENTATION = Environment.getProperty(
-    // "rdfpro.rules.implementation", "eu.fbk.rdfpro.rules.drools.DroolsRuleEngine");
-
-    protected final Ruleset ruleset;
+    private final Ruleset ruleset;
 
     /**
      * Creates a new {@code RuleEngine} using the {@code Ruleset} specified. The ruleset must not

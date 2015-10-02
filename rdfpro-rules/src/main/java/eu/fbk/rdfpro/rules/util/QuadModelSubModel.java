@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import java.util.BitSet;
 import java.util.Collection;
@@ -19,11 +19,9 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.vocabulary.RDF;
 
-import eu.fbk.rdfpro.rules.util.Sorting;
-import eu.fbk.rdfpro.rules.util.Sorting.ArrayComparator;
 import eu.fbk.rdfpro.util.Statements;
 
-final class SubQuadModel extends QuadModel {
+final class QuadModelSubModel extends QuadModel {
 
     private static final long serialVersionUID = 1;
 
@@ -33,7 +31,8 @@ final class SubQuadModel extends QuadModel {
 
     private static final int TYPE_HASH = hash(RDF.TYPE);
 
-    private static final ArrayComparator<Value> VALUE_ARRAY_COMPARATOR = new ArrayComparator<Value>() {
+    private static final Sorting.ArrayComparator<Value> VALUE_ARRAY_COMPARATOR //
+    = new Sorting.ArrayComparator<Value>() {
 
         @Override
         public int size() {
@@ -67,7 +66,7 @@ final class SubQuadModel extends QuadModel {
 
     private final Value[] data;
 
-    SubQuadModel(final QuadModel model, final Collection<Statement> stmts) {
+    QuadModelSubModel(final QuadModel model, final Collection<Statement> stmts) {
 
         // stmts must not contain duplicates!
 
@@ -141,7 +140,7 @@ final class SubQuadModel extends QuadModel {
 
                 @Override
                 public boolean hasNext() {
-                    return this.offset < SubQuadModel.this.data.length;
+                    return this.offset < QuadModelSubModel.this.data.length;
                 }
 
                 @Override
@@ -185,7 +184,7 @@ final class SubQuadModel extends QuadModel {
                 if (this.next != null) {
                     return true;
                 }
-                final Value[] data = SubQuadModel.this.data;
+                final Value[] data = QuadModelSubModel.this.data;
                 while (this.offset < data.length) {
                     if (prefixCompare(prefix, this.offset) != 0) {
                         this.offset = data.length;
@@ -314,10 +313,10 @@ final class SubQuadModel extends QuadModel {
     }
 
     private Statement statementAt(final int offset) {
-        final Resource subj = (Resource) SubQuadModel.this.data[offset];
-        final URI pred = (URI) SubQuadModel.this.data[offset + 1];
-        final Value obj = SubQuadModel.this.data[offset + 2];
-        final Resource ctx = (Resource) SubQuadModel.this.data[offset + 3];
+        final Resource subj = (Resource) QuadModelSubModel.this.data[offset];
+        final URI pred = (URI) QuadModelSubModel.this.data[offset + 1];
+        final Value obj = QuadModelSubModel.this.data[offset + 2];
+        final Resource ctx = (Resource) QuadModelSubModel.this.data[offset + 3];
         return ctx == null ? Statements.VALUE_FACTORY.createStatement(subj, pred, obj)
                 : Statements.VALUE_FACTORY.createStatement(subj, pred, obj, ctx);
     }

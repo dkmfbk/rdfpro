@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -40,13 +40,9 @@ import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.evaluation.TripleSource;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
-import org.openrdf.repository.RepositoryConnection;
-import org.openrdf.sail.SailConnection;
 
 import info.aduna.iteration.CloseableIteration;
 
-import eu.fbk.rdfpro.rules.util.Algebra;
-import eu.fbk.rdfpro.rules.util.Iterators;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -60,7 +56,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     private static final long serialVersionUID = 1L;
 
     public static QuadModel create() {
-        return new MemoryQuadModel();
+        return new QuadModelImpl();
     }
 
     public static QuadModel create(final Iterable<Statement> statements) {
@@ -84,16 +80,16 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *            skipped and all modification operations return true
      * @return the created {@code QuadModel} view
      */
-    public static QuadModel wrap(final SailConnection connection, final boolean trackChanges) {
-        return new SailQuadModel(connection, trackChanges);
+    public static QuadModel wrap(final org.openrdf.sail.SailConnection connection, final boolean trackChanges) {
+        return new QuadModelSailAdapter(connection, trackChanges);
     }
 
-    public static QuadModel wrap(final RepositoryConnection connection, final boolean trackChanges) {
-        return new RepositoryQuadModel(connection, trackChanges);
+    public static QuadModel wrap(final org.openrdf.repository.RepositoryConnection connection, final boolean trackChanges) {
+        return new QuadModelRepositoryAdapter(connection, trackChanges);
     }
 
     public static QuadModel wrap(final Model model) {
-        return new ModelQuadModel(model);
+        return new QuadModelModelAdapter(model);
     }
 
     protected abstract Set<Namespace> doGetNamespaces();
@@ -435,7 +431,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      * @return an immutable view of this model including only the statements specified
      */
     public QuadModel filter(final Collection<Statement> statements) {
-        return new SubQuadModel(this, statements);
+        return new QuadModelSubModel(this, statements);
     }
 
     /**

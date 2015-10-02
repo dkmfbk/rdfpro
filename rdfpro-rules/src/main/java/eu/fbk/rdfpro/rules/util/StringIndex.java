@@ -7,7 +7,7 @@ import java.util.List;
 // TODO
 // (1) move hash values out of hash table or drop them, revising rehashing code
 
-public final class StringIndex {
+final class StringIndex {
 
     private static final int SMALL_BUFFER_SIZE = 64 * 1024;
 

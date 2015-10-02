@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.drools;
+package eu.fbk.rdfpro.rules;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.Nullable;
 
 import org.drools.core.spi.KnowledgeHelper;
 import org.kie.api.KieServices;
@@ -20,9 +22,12 @@ import org.kie.api.builder.model.KieBaseModel;
 import org.kie.api.builder.model.KieModuleModel;
 import org.kie.api.builder.model.KieSessionModel;
 import org.kie.api.conf.EqualityBehaviorOption;
+import org.kie.api.definition.type.Position;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
+import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -46,10 +51,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
-import eu.fbk.rdfpro.rules.Rule;
-import eu.fbk.rdfpro.rules.RuleEngine;
-import eu.fbk.rdfpro.rules.Ruleset;
 import eu.fbk.rdfpro.rules.util.Algebra;
+import eu.fbk.rdfpro.util.Statements;
 
 public class DroolsRuleEngine extends RuleEngine {
 
@@ -197,6 +200,193 @@ public class DroolsRuleEngine extends RuleEngine {
 
     }
 
+    public static final class Dictionary {
+
+        static final int SIZE = 4 * 1024 * 1024 - 1;
+
+        private final Value[] table;
+
+        public Dictionary() {
+            this.table = new Value[SIZE];
+        }
+
+        public Dictionary(final Dictionary source) {
+            this.table = source.table.clone();
+        }
+
+        public Value[] decode(final int... ids) {
+            final Value[] values = new Value[ids.length];
+            for (int i = 0; i < ids.length; ++i) {
+                values[i] = decode(ids[i]);
+            }
+            return values;
+        }
+
+        @Nullable
+        public Value decode(final int id) {
+            return this.table[id & 0x1FFFFFFF];
+        }
+
+        public int[] encode(final Value... values) {
+            final int[] ids = new int[values.length];
+            for (int i = 0; i < values.length; ++i) {
+                ids[i] = encode(values[i]);
+            }
+            return ids;
+        }
+
+        public int encode(@Nullable final Value value) {
+            if (value == null) {
+                return 0;
+            }
+            int id = (value.hashCode() & 0x7FFFFFFF) % SIZE;
+            if (id == 0) {
+                id = 1; // 0 used for null context ID
+            }
+            final int initialID = id;
+            while (true) {
+                final Value storedValue = this.table[id];
+                if (storedValue == null) {
+                    this.table[id] = value;
+                    break;
+                }
+                if (storedValue.equals(value)) {
+                    break;
+                }
+                ++id;
+                if (id == SIZE) {
+                    id = 1;
+                }
+                if (id == initialID) {
+                    throw new Error("Dictionary full (capacity " + SIZE + ")");
+                }
+            }
+            if (value instanceof URI) {
+                return id;
+            } else if (value instanceof BNode) {
+                return id | 0x20000000;
+            } else {
+                return id | 0x40000000;
+            }
+        }
+
+        public static boolean isResource(final int id) {
+            return (id & 0x40000000) == 0;
+        }
+
+        public static boolean isURI(final int id) {
+            return (id & 0x60000000) == 0;
+        }
+
+        public static boolean isBNode(final int id) {
+            return (id & 0x60000000) == 0x20000000;
+        }
+
+        public static boolean isLiteral(final int id) {
+            return (id & 0x60000000) == 0x40000000;
+        }
+
+    }
+
+    public static final class Quad {
+
+        @Position(0)
+        private final int subjectID;
+
+        @Position(1)
+        private final int predicateID;
+
+        @Position(2)
+        private final int objectID;
+
+        @Position(3)
+        private final int contextID;
+
+        public Quad(final int subjectID, final int predicateID, final int objectID,
+                final int contextID) {
+            this.subjectID = subjectID;
+            this.predicateID = predicateID;
+            this.objectID = objectID;
+            this.contextID = contextID;
+        }
+
+        public int getSubjectID() {
+            return this.subjectID;
+        }
+
+        public int getPredicateID() {
+            return this.predicateID;
+        }
+
+        public int getObjectID() {
+            return this.objectID;
+        }
+
+        public int getContextID() {
+            return this.contextID;
+        }
+
+        @Override
+        public boolean equals(final Object object) {
+            if (object == this) {
+                return true;
+            }
+            if (!(object instanceof Quad)) {
+                return false;
+            }
+            final Quad other = (Quad) object;
+            return this.subjectID == other.subjectID && this.predicateID == other.predicateID
+                    && this.objectID == other.objectID && this.contextID == other.contextID;
+        }
+
+        @Override
+        public int hashCode() {
+            return 7829 * this.subjectID + 1103 * this.predicateID + 137 * this.objectID
+                    + this.contextID;
+        }
+
+        @Override
+        public String toString() {
+            final StringBuilder builder = new StringBuilder();
+            builder.append('(');
+            builder.append(this.subjectID);
+            builder.append(", ");
+            builder.append(this.predicateID);
+            builder.append(", ");
+            builder.append(this.objectID);
+            builder.append(", ");
+            builder.append(this.contextID);
+            builder.append(')');
+            return builder.toString();
+        }
+
+        public Statement decode(final Dictionary dictionary) {
+            return Statements.VALUE_FACTORY.createStatement( //
+                    (Resource) dictionary.decode(this.subjectID), //
+                    (URI) dictionary.decode(this.predicateID), //
+                    dictionary.decode(this.objectID), //
+                    (Resource) dictionary.decode(this.contextID));
+        }
+
+        public static Quad encode(final Dictionary dictionary, final Statement statement) {
+            return new Quad( //
+                    dictionary.encode(statement.getSubject()), //
+                    dictionary.encode(statement.getPredicate()), //
+                    dictionary.encode(statement.getObject()), //
+                    dictionary.encode(statement.getContext()));
+        }
+
+        public static Quad encode(final Dictionary dictionary, final Resource subject,
+                final URI predicate, final Value object, final Resource context) {
+            return new Quad( //
+                    dictionary.encode(subject), //
+                    dictionary.encode(predicate), //
+                    dictionary.encode(object), //
+                    dictionary.encode(context));
+        }
+
+    }
+
     private static final class Translation {
 
         private final StringBuilder builder;
@@ -223,9 +413,9 @@ public class DroolsRuleEngine extends RuleEngine {
         private KieContainer translate(final Ruleset ruleset) {
 
             this.builder.append("package eu.fbk.rdfpro.rules.drools;\n");
-            this.builder.append("import eu.fbk.rdfpro.rules.drools.Quad;\n");
-            this.builder.append("import eu.fbk.rdfpro.rules.drools.DroolsRuleEngine.Handler;\n");
-            this.builder.append("import eu.fbk.rdfpro.rules.drools.Dictionary;\n");
+            this.builder.append("import eu.fbk.rdfpro.rules.DroolsRuleEngine.Quad;\n");
+            this.builder.append("import eu.fbk.rdfpro.rules.DroolsRuleEngine.Handler;\n");
+            this.builder.append("import eu.fbk.rdfpro.rules.DroolsRuleEngine.Dictionary;\n");
             this.builder.append("global Handler handler;\n");
 
             for (final Rule rule : ruleset.getRules()) {

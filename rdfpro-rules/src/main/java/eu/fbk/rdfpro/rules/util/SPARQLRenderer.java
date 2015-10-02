@@ -22,7 +22,6 @@ import org.openrdf.model.vocabulary.FN;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.Dataset;
-import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.algebra.Add;
 import org.openrdf.query.algebra.And;
 import org.openrdf.query.algebra.ArbitraryLengthPath;
@@ -110,10 +109,8 @@ import org.openrdf.query.algebra.ValueExpr;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.ZeroLengthPath;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
-import org.openrdf.query.parser.ParsedQuery;
-import org.openrdf.queryrender.QueryRenderer;
 
-public final class SPARQLRenderer implements QueryRenderer {
+final class SPARQLRenderer {
 
     private static final Map<String, String> NAMES;
 
@@ -167,16 +164,6 @@ public final class SPARQLRenderer implements QueryRenderer {
             @Nullable final boolean forceSelect) {
         this.prefixes = prefixes != null ? prefixes : Collections.<String, String>emptyMap();
         this.forceSelect = forceSelect;
-    }
-
-    @Override
-    public QueryLanguage getLanguage() {
-        return QueryLanguage.SPARQL;
-    }
-
-    @Override
-    public String render(final ParsedQuery query) {
-        return render(query.getTupleExpr(), query.getDataset());
     }
 
     public String render(final TupleExpr expr, @Nullable final Dataset dataset) {

@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import java.util.Iterator;
 import java.util.Objects;
@@ -17,13 +17,13 @@ import org.openrdf.model.util.ModelException;
 
 import eu.fbk.rdfpro.util.IO;
 
-final class ModelQuadModel extends QuadModel implements AutoCloseable {
+final class QuadModelModelAdapter extends QuadModel implements AutoCloseable {
 
     private static final long serialVersionUID = 1L;
 
     private final Model model;
 
-    ModelQuadModel(final Model model) {
+    QuadModelModelAdapter(final Model model) {
         this.model = Objects.requireNonNull(model);
     }
 

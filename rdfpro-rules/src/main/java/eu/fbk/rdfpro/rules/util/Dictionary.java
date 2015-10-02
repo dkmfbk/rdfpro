@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.dictionary;
+package eu.fbk.rdfpro.rules.util;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -32,7 +32,7 @@ import eu.fbk.rdfpro.util.Statements;
 // - from 0xC0000000 to 0xEFFFFFFF secondary buffer always used (3 GB, 384M values encodable)
 // codes from 0xF0000000 to 0xFFFFFFFF denote embedded values
 
-public abstract class Dictionary implements AutoCloseable {
+abstract class Dictionary implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Dictionary.class);
 
@@ -522,6 +522,30 @@ public abstract class Dictionary implements AutoCloseable {
         x = (x >>> 16 ^ x) * 0x45d9f3b;
         x = x >>> 16 ^ x;
         return x;
+    }
+
+    public interface QuadHandler extends AutoCloseable {
+
+        final QuadHandler NIL = new QuadHandler() {
+
+            @Override
+            public void handle(final int subj, final int pred, final int obj, final int ctx) {
+            }
+
+        };
+
+        default void start() throws RDFHandlerException {
+        }
+
+        void handle(int subj, int pred, int obj, int ctx) throws RDFHandlerException;
+
+        default void end() throws RDFHandlerException {
+        }
+
+        @Override
+        default void close() {
+        }
+
     }
 
     private static final class EncodeCacheEntry {

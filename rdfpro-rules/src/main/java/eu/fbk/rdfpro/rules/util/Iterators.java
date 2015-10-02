@@ -16,7 +16,7 @@ import info.aduna.iteration.Iteration;
 
 import eu.fbk.rdfpro.util.IO;
 
-public class Iterators {
+final class Iterators {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Iterators.class);
 

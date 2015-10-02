@@ -32,8 +32,8 @@ import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
+import eu.fbk.rdfpro.rules.util.QuadModel;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;

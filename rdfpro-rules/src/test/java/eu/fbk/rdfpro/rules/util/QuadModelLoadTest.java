@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import org.openrdf.model.Statement;
 

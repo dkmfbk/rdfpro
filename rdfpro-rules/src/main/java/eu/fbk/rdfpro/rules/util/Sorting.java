@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
-public final class Sorting {
+final class Sorting {
 
     private Sorting() {
     }

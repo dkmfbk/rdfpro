@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -33,13 +33,11 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.SESAME;
 import org.openrdf.model.vocabulary.XMLSchema;
 
-import eu.fbk.rdfpro.rules.util.Iterators;
-import eu.fbk.rdfpro.rules.util.StringIndex;
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.Hashable;
 import eu.fbk.rdfpro.util.Statements;
 
-final class MemoryQuadModel extends QuadModel {
+final class QuadModelImpl extends QuadModel {
 
     private static final int INITIAL_VALUE_TABLE_SIZE = 256 - 1;
 
@@ -82,7 +80,7 @@ final class MemoryQuadModel extends QuadModel {
 
     private int statementZombies;
 
-    public MemoryQuadModel() {
+    public QuadModelImpl() {
         this.namespaces = new HashMap<>();
         this.stringIndex = new StringIndex();
         this.valueTable = new ModelValue[INITIAL_VALUE_TABLE_SIZE];
@@ -361,8 +359,8 @@ final class MemoryQuadModel extends QuadModel {
                     if (this.next != null) {
                         return true;
                     }
-                    while (this.index < MemoryQuadModel.this.statementTable.length) {
-                        final ModelStatement stmt = MemoryQuadModel.this.statementTable[this.index++];
+                    while (this.index < QuadModelImpl.this.statementTable.length) {
+                        final ModelStatement stmt = QuadModelImpl.this.statementTable[this.index++];
                         if (stmt != null && stmt != NULL_STATEMENT) {
                             this.next = stmt;
                             return true;
@@ -848,7 +846,7 @@ final class MemoryQuadModel extends QuadModel {
         private static final long serialVersionUID = 1L;
 
         @Nullable
-        final transient MemoryQuadModel model;
+        final transient QuadModelImpl model;
 
         @Nullable
         transient ModelStatement nextByObj;
@@ -859,7 +857,7 @@ final class MemoryQuadModel extends QuadModel {
 
         transient long hashHi;
 
-        ModelValue(final MemoryQuadModel model) {
+        ModelValue(final QuadModelImpl model) {
             this.model = model;
         }
 
@@ -901,7 +899,7 @@ final class MemoryQuadModel extends QuadModel {
 
         transient int numCtx;
 
-        ModelResource(final MemoryQuadModel model) {
+        ModelResource(final QuadModelImpl model) {
             super(model);
         }
 
@@ -938,7 +936,7 @@ final class MemoryQuadModel extends QuadModel {
 
         transient int numPred;
 
-        ModelURI(@Nullable final MemoryQuadModel model, final String string) {
+        ModelURI(@Nullable final QuadModelImpl model, final String string) {
             super(model);
             final int index = URIUtil.getLocalNameIndex(string);
             if (model != null) {
@@ -1075,7 +1073,7 @@ final class MemoryQuadModel extends QuadModel {
 
         private final int hash;
 
-        ModelBNode(final MemoryQuadModel model, final String id) {
+        ModelBNode(final QuadModelImpl model, final String id) {
             super(model);
             this.id = model.stringIndex.put(id);
             this.hash = id.hashCode();
@@ -1133,7 +1131,7 @@ final class MemoryQuadModel extends QuadModel {
         @Nullable
         private Object cachedLabel;
 
-        ModelLiteral(@Nullable final MemoryQuadModel model, final String label,
+        ModelLiteral(@Nullable final QuadModelImpl model, final String label,
                 @Nullable final String language, final ModelURI datatype) {
 
             super(model);

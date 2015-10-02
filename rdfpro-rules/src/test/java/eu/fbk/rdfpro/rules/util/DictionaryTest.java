@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.dictionary;
+package eu.fbk.rdfpro.rules.util;
 
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +20,7 @@ import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.RDFSources;
+import eu.fbk.rdfpro.rules.util.Dictionary;
 import eu.fbk.rdfpro.util.Statements;
 
 public class DictionaryTest {

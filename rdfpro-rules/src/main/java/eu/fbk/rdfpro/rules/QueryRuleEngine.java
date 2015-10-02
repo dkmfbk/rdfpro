@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.seminaive;
+package eu.fbk.rdfpro.rules;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,10 +28,7 @@ import org.slf4j.LoggerFactory;
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.rules.Rule;
-import eu.fbk.rdfpro.rules.RuleEngine;
-import eu.fbk.rdfpro.rules.Ruleset;
-import eu.fbk.rdfpro.rules.model.QuadModel;
+import eu.fbk.rdfpro.rules.util.QuadModel;
 import eu.fbk.rdfpro.rules.util.StatementBuffer;
 import eu.fbk.rdfpro.rules.util.StatementMatcher;
 import eu.fbk.rdfpro.rules.util.StatementTemplate;
@@ -40,9 +37,9 @@ import eu.fbk.rdfpro.util.StatementDeduplicator;
 import eu.fbk.rdfpro.util.StatementDeduplicator.ComparisonMethod;
 import eu.fbk.rdfpro.util.Statements;
 
-public class Engine extends RuleEngine {
+public class QueryRuleEngine extends RuleEngine {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Engine.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryRuleEngine.class);
 
     private static final int DEDUPLICATION_CACHE_SIZE = 16 * 1024;
 
@@ -59,7 +56,7 @@ public class Engine extends RuleEngine {
 
     private final boolean unique;
 
-    public Engine(final Ruleset ruleset) {
+    public QueryRuleEngine(final Ruleset ruleset) {
         super(ruleset);
         this.phases = buildPhases(ruleset);
 
@@ -99,7 +96,7 @@ public class Engine extends RuleEngine {
             phase.normalize(quadModel.getValueNormalizer()).eval(quadModel);
         }
         if (model != quadModel) {
-            if (this.ruleset.isDeletePossible() || !(model instanceof Set<?>)) {
+            if (getRuleset().isDeletePossible() || !(model instanceof Set<?>)) {
                 model.clear();
             }
             model.addAll(quadModel);
@@ -475,7 +472,8 @@ public class Engine extends RuleEngine {
                     : this.insertMatcher.normalize(normalizer);
 
             // Normalize axioms
-            final Statement[] normalizedAxioms = Engine.normalize(this.axioms, normalizer);
+            final Statement[] normalizedAxioms = QueryRuleEngine
+                    .normalize(this.axioms, normalizer);
 
             // Return a normalized copy of this phase object
             return new StreamPhase(normalizedDeleteMatcher, normalizedInsertMatcher,
@@ -758,7 +756,7 @@ public class Engine extends RuleEngine {
 
             final StatementMatcher normStreamMatcher = this.streamMatcher.normalize(normalizer);
             final StatementMatcher normModelMatcher = this.joinMatcher.normalize(normalizer);
-            final Statement[] normAxioms = Engine.normalize(this.axioms, normalizer);
+            final Statement[] normAxioms = QueryRuleEngine.normalize(this.axioms, normalizer);
 
             Phase result = this;
             if (normStreamMatcher != this.streamMatcher || normModelMatcher != this.joinMatcher

@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.dictionary;
+package eu.fbk.rdfpro.rules.util;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.RDFProcessor;
+import eu.fbk.rdfpro.rules.util.Dictionary;
 
 // TODO: delete this class
 

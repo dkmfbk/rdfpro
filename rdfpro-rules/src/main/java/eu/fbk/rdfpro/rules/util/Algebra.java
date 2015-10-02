@@ -31,6 +31,7 @@ import org.openrdf.query.Dataset;
 import org.openrdf.query.IncompatibleOperationException;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
+import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.algebra.And;
 import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
@@ -107,7 +108,7 @@ public final class Algebra {
     private static final EvaluationStatistics DEFAULT_EVALUATION_STATISTICS = new EvaluationStatistics();
 
     private static final FederatedServiceResolverImpl FEDERATED_SERVICE_RESOLVER = //
-            new FederatedServiceResolverImpl();
+    new FederatedServiceResolverImpl();
 
     private static final TripleSource EMPTY_TRIPLE_SOURCE = new TripleSource() {
 
@@ -119,7 +120,7 @@ public final class Algebra {
         @Override
         public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
                 final Resource subj, final URI pred, final Value obj, final Resource... contexts)
-                        throws QueryEvaluationException {
+                throws QueryEvaluationException {
             return new EmptyIteration<Statement, QueryEvaluationException>();
         }
 
@@ -720,11 +721,11 @@ public final class Algebra {
                         if (join.getLeftArg().getAssuredBindingNames().containsAll(elemVars)) {
                             newArg = join.getLeftArg() instanceof Extension ? (Extension) join
                                     .getLeftArg() : new Extension(join.getLeftArg());
-                                    join.setLeftArg(newArg);
+                            join.setLeftArg(newArg);
                         } else if (join.getRightArg().getAssuredBindingNames().contains(elemVars)) {
                             newArg = join.getRightArg() instanceof Extension ? (Extension) join
                                     .getRightArg() : new Extension(join.getRightArg());
-                                    join.setRightArg(newArg);
+                            join.setRightArg(newArg);
                         }
                         if (newArg != null) {
                             newArg.addElement(elem.clone());
@@ -745,13 +746,18 @@ public final class Algebra {
     public static TupleExpr[] splitTupleExpr(final TupleExpr expr, final Set<URI> vocabulary,
             final int partition) {
 
-        return splitTupleExpr(expr, (final StatementPattern pattern) -> {
-            for (final Var var : pattern.getVarList()) {
-                if (vocabulary.contains(var.getValue())) {
-                    return true;
+        return splitTupleExpr(expr, new Predicate<StatementPattern>() {
+
+            @Override
+            public boolean test(final StatementPattern pattern) {
+                for (final Var var : pattern.getVarList()) {
+                    if (vocabulary.contains(var.getValue())) {
+                        return true;
+                    }
                 }
+                return false;
             }
-            return false;
+
         }, partition);
     }
 
@@ -867,9 +873,36 @@ public final class Algebra {
         }
     }
 
+    public static String renderQuery(final TupleExpr expr, @Nullable final Dataset dataset,
+            @Nullable final Map<String, String> prefixes, final boolean forceSelect) {
+        return new SPARQLRenderer(prefixes, forceSelect).render(expr, dataset);
+    }
+
+    public static String renderExpr(final TupleExpr expr,
+            @Nullable final Map<String, String> prefixes) {
+        return new SPARQLRenderer(prefixes, false).renderTupleExpr(expr);
+    }
+
+    public static org.openrdf.queryrender.QueryRenderer newRenderer(
+            @Nullable final Map<String, String> prefixes, final boolean forceSelect) {
+        return new org.openrdf.queryrender.QueryRenderer() {
+
+            @Override
+            public QueryLanguage getLanguage() {
+                return QueryLanguage.SPARQL;
+            }
+
+            @Override
+            public String render(final ParsedQuery query) throws Exception {
+                return renderQuery(query.getTupleExpr(), query.getDataset(), prefixes, forceSelect);
+            }
+
+        };
+    }
+
     public static String format(final TupleExpr expr) {
-        return expr == null ? "null" : new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-        .renderTupleExpr(expr).replaceAll("[\n\r\t ]+", " ");
+        return expr == null ? "null" : renderExpr(expr, Namespaces.DEFAULT.prefixMap())
+                .replaceAll("[\n\r\t ]+", " ");
     }
 
     private static class QNameProcessor extends ASTVisitorBase {

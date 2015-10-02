@@ -64,7 +64,6 @@ import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
 import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
 import org.openrdf.query.impl.EmptyBindingSet;
-import org.openrdf.queryrender.sparql.SparqlTupleExprRenderer;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
@@ -72,9 +71,8 @@ import org.slf4j.LoggerFactory;
 
 import info.aduna.iteration.CloseableIteration;
 
-import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.rules.util.Algebra;
-import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
+import eu.fbk.rdfpro.rules.util.QuadModel;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
@@ -759,18 +757,18 @@ public final class Rule implements Comparable<Rule> {
                     .append(this.fixpoint ? ", fixpoint):" : "):");
             if (this.deleteExpr != null) {
                 builder.append(" DELETE ");
-                builder.append(new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-                        .renderTupleExpr(this.deleteExpr).replaceAll("[\n\r\t ]+", " "));
+                builder.append(Algebra.renderExpr(this.deleteExpr, Namespaces.DEFAULT.prefixMap())
+                        .replaceAll("[\n\r\t ]+", " "));
             }
             if (this.insertExpr != null) {
                 builder.append(" INSERT ");
-                builder.append(new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-                        .renderTupleExpr(this.insertExpr).replaceAll("[\n\r\t ]+", " "));
+                builder.append(Algebra.renderExpr(this.insertExpr, Namespaces.DEFAULT.prefixMap())
+                        .replaceAll("[\n\r\t ]+", " "));
             }
             if (this.whereExpr != null) {
                 builder.append(" WHERE ");
-                builder.append(new SPARQLRenderer(Namespaces.DEFAULT.prefixMap(), false)
-                        .renderTupleExpr(this.whereExpr).replaceAll("[\n\r\t ]+", " "));
+                builder.append(Algebra.renderExpr(this.whereExpr, Namespaces.DEFAULT.prefixMap())
+                        .replaceAll("[\n\r\t ]+", " "));
             }
             return builder.toString();
         } catch (final Exception ex) {
@@ -797,15 +795,15 @@ public final class Rule implements Comparable<Rule> {
         try {
             if (this.deleteExpr != null) {
                 output.add(vf.createStatement(this.id, RR.DELETE,
-                        vf.createLiteral(new SparqlTupleExprRenderer().render(this.deleteExpr))));
+                        vf.createLiteral(Algebra.renderExpr(this.deleteExpr, null))));
             }
             if (this.insertExpr != null) {
                 output.add(vf.createStatement(this.id, RR.INSERT,
-                        vf.createLiteral(new SparqlTupleExprRenderer().render(this.insertExpr))));
+                        vf.createLiteral(Algebra.renderExpr(this.insertExpr, null))));
             }
             if (this.whereExpr != null) {
                 output.add(vf.createStatement(this.id, RR.WHERE,
-                        vf.createLiteral(new SparqlTupleExprRenderer().render(this.whereExpr))));
+                        vf.createLiteral(Algebra.renderExpr(this.whereExpr, null))));
             }
         } catch (final Exception ex) {
             throw new RuntimeException(ex);

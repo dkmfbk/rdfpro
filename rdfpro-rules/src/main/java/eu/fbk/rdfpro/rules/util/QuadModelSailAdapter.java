@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -14,33 +14,55 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.NamespaceImpl;
 import org.openrdf.model.util.ModelException;
-import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.Dataset;
-import org.openrdf.query.MalformedQueryException;
-import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.QueryLanguage;
-import org.openrdf.query.TupleQuery;
 import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.repository.RepositoryConnection;
-import org.openrdf.repository.RepositoryException;
-import org.openrdf.repository.RepositoryResult;
+import org.openrdf.query.impl.EmptyBindingSet;
+import org.openrdf.sail.NotifyingSailConnection;
+import org.openrdf.sail.SailConnection;
+import org.openrdf.sail.SailConnectionListener;
+import org.openrdf.sail.SailException;
 
-import eu.fbk.rdfpro.rules.util.Iterators;
-import eu.fbk.rdfpro.rules.util.SPARQLRenderer;
+import info.aduna.iteration.CloseableIteration;
+
 import eu.fbk.rdfpro.util.IO;
 
-final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
+final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
 
     private static final long serialVersionUID = 1L;
 
-    private final RepositoryConnection connection;
+    private final SailConnection connection;
 
     private final boolean trackChanges;
 
-    RepositoryQuadModel(final RepositoryConnection connection, final boolean trackChanges) {
+    private long addCounter;
+
+    private long removeCounter;
+
+    QuadModelSailAdapter(final SailConnection connection, final boolean trackChanges) {
         this.connection = Objects.requireNonNull(connection);
         this.trackChanges = trackChanges;
+        if (trackChanges && connection instanceof NotifyingSailConnection) {
+            this.addCounter = 0;
+            this.removeCounter = 0;
+            ((NotifyingSailConnection) connection)
+                    .addConnectionListener(new SailConnectionListener() {
+
+                        @Override
+                        public void statementAdded(final Statement stmt) {
+                            ++QuadModelSailAdapter.this.addCounter;
+                        }
+
+                        @Override
+                        public void statementRemoved(final Statement stmt) {
+                            ++QuadModelSailAdapter.this.removeCounter;
+                        }
+
+                    });
+        } else {
+            this.addCounter = -1;
+            this.removeCounter = -1;
+        }
     }
 
     @Override
@@ -52,7 +74,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
     protected Set<Namespace> doGetNamespaces() {
         try {
             final Set<Namespace> namespaces = new HashSet<>();
-            RepositoryResult<? extends Namespace> iteration;
+            CloseableIteration<? extends Namespace, SailException> iteration;
             iteration = this.connection.getNamespaces();
             try {
                 while (iteration.hasNext()) {
@@ -62,7 +84,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
                 iteration.close();
             }
             return namespaces;
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
@@ -73,7 +95,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
         try {
             final String name = this.connection.getNamespace(prefix);
             return name == null ? null : new NamespaceImpl(prefix, name);
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
@@ -90,7 +112,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
                 this.connection.setNamespace(prefix, name);
             }
             return oldNamespace;
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
@@ -103,7 +125,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
                 return (int) this.connection.size(ctxs);
             } else {
                 int size = 0;
-                RepositoryResult<? extends Statement> iteration;
+                CloseableIteration<? extends Statement, SailException> iteration;
                 iteration = this.connection.getStatements(subj, pred, obj, false, ctxs);
                 try {
                     while (iteration.hasNext()) {
@@ -115,7 +137,7 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
                 }
                 return size;
             }
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
@@ -132,42 +154,42 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
         try {
             return Iterators.forIteration(this.connection.getStatements(subj, pred, obj, false,
                     ctxs));
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
 
     @Override
-    protected boolean doAdd(@Nullable final Resource subj, @Nullable final URI pred,
-            @Nullable final Value obj, final Resource[] ctxs) {
+    protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
+            final Resource[] ctxs) {
         try {
             if (!this.trackChanges) {
-                this.connection.add(subj, pred, obj, ctxs);
+                this.connection.addStatement(subj, pred, obj, ctxs);
                 return true;
-            } else if (ctxs.length == 0) {
-                if (this.connection.hasStatement(subj, pred, obj, false, new Resource[] { null })) {
-                    return false;
-                }
-                this.connection.add(subj, pred, obj, ctxs);
-                return true;
-            } else if (ctxs.length == 1) {
-                if (this.connection.hasStatement(subj, pred, obj, false, ctxs)) {
-                    return false;
-                }
-                this.connection.add(subj, pred, obj, ctxs);
-                return true;
+            } else if (this.addCounter >= 0) {
+                final long addCounterBefore = this.addCounter;
+                this.connection.addStatement(subj, pred, obj, ctxs);
+                return this.addCounter > addCounterBefore;
             } else {
-                boolean modified = false;
-                for (final Resource ctx : ctxs) {
-                    final Resource[] singletonCtxs = new Resource[] { ctx };
-                    if (!this.connection.hasStatement(subj, pred, obj, false, singletonCtxs)) {
-                        this.connection.add(subj, pred, obj, singletonCtxs);
-                        modified = true;
+                final Resource[] queryCtxs = ctxs.length > 0 ? ctxs : new Resource[] { null };
+                int count = 0;
+                CloseableIteration<? extends Statement, SailException> iteration;
+                iteration = this.connection.getStatements(subj, pred, obj, false, queryCtxs);
+                try {
+                    while (iteration.hasNext()) {
+                        iteration.next();
+                        ++count;
                     }
+                } finally {
+                    iteration.close();
                 }
-                return modified;
+                if (count >= ctxs.length) {
+                    return false;
+                }
+                this.connection.addStatement(subj, pred, obj, ctxs);
+                return true;
             }
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
@@ -177,34 +199,38 @@ final class RepositoryQuadModel extends QuadModel implements AutoCloseable {
             @Nullable final Value obj, final Resource[] ctxs) {
         try {
             if (!this.trackChanges) {
-                this.connection.remove(subj, pred, obj, ctxs);
+                this.connection.removeStatements(subj, pred, obj, ctxs);
                 return true;
+            } else if (this.removeCounter >= 0) {
+                final long removeCounterBefore = this.removeCounter;
+                this.connection.removeStatements(subj, pred, obj, ctxs);
+                return this.removeCounter != removeCounterBefore;
             } else {
-                if (!this.connection.hasStatement(subj, pred, obj, false, ctxs)) {
-                    return false;
+                CloseableIteration<? extends Statement, SailException> iteration;
+                iteration = this.connection.getStatements(subj, pred, obj, false, ctxs);
+                try {
+                    if (!iteration.hasNext()) {
+                        return false;
+                    }
+                } finally {
+                    iteration.close();
                 }
-                this.connection.remove(subj, pred, obj, ctxs);
+                this.connection.removeStatements(subj, pred, obj, ctxs);
                 return true;
             }
-        } catch (final RepositoryException ex) {
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
 
     @Override
-    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr, final Dataset dataset,
-            final BindingSet bindings) {
-
-        final String queryString = new SPARQLRenderer(null, true).render(expr, null);
+    protected Iterator<BindingSet> doEvaluate(final TupleExpr expr,
+            @Nullable final Dataset dataset, @Nullable BindingSet bindings) {
         try {
-            final TupleQuery query = this.connection.prepareTupleQuery(QueryLanguage.SPARQL,
-                    queryString);
-            query.setDataset(dataset);
-            for (final Binding binding : bindings) {
-                query.setBinding(binding.getName(), binding.getValue());
-            }
-            return Iterators.forIteration(query.evaluate());
-        } catch (final QueryEvaluationException | MalformedQueryException | RepositoryException ex) {
+            bindings = bindings != null ? bindings : EmptyBindingSet.getInstance();
+            return Iterators
+                    .forIteration(this.connection.evaluate(expr, dataset, bindings, false));
+        } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }

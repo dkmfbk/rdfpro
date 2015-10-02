@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandler;
-import eu.fbk.rdfpro.rules.model.QuadModel;
 import eu.fbk.rdfpro.util.Tracker;
 
 /**

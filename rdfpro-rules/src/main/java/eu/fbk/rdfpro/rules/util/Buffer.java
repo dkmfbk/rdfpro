@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.dictionary;
+package eu.fbk.rdfpro.rules.util;
 
 import java.util.Arrays;
 

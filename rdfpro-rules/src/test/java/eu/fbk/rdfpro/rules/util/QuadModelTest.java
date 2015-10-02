@@ -1,4 +1,4 @@
-package eu.fbk.rdfpro.rules.model;
+package eu.fbk.rdfpro.rules.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
