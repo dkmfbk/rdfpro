@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import org.openrdf.model.BNode;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
@@ -292,7 +293,7 @@ public final class RDFProcessors {
                     threshold, processCooccurrences);
         }
 
-        case "query": {
+        case "download": {
             final Options options = Options.parse("w|q!|f!|!", args);
             final boolean preserveBNodes = !options.hasOption("w");
             final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
@@ -325,14 +326,14 @@ public final class RDFProcessors {
                             + ": " + ex.getMessage(), ex);
                 }
             }
-            return query(true, preserveBNodes, endpointURL, query);
+            return download(true, preserveBNodes, endpointURL, query);
         }
 
-        case "update": {
+        case "upload": {
             final Options options = Options.parse("!", args);
             final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
                     .stringValue();
-            return update(endpointURL);
+            return upload(endpointURL);
         }
 
         case "mapreduce": {
@@ -737,7 +738,7 @@ public final class RDFProcessors {
      *            rewritten on a per-endpoint basis to avoid possible clashes
      * @return the created {@code RDFProcessor}
      */
-    public static RDFProcessor query(final boolean parallelize, final boolean preserveBNodes,
+    public static RDFProcessor download(final boolean parallelize, final boolean preserveBNodes,
             final String endpointURL, final String query) {
         final RDFProcessor tracker = track(new Tracker(LOGGER, null,
                 "%d triples queried (%d tr/s avg)", //
@@ -814,7 +815,7 @@ public final class RDFProcessors {
      *            the URL of the SPARQL Update endpoint, not null
      * @return the created {@code RDFProcessor}
      */
-    public static RDFProcessor update(final String endpointURL) {
+    public static RDFProcessor upload(final String endpointURL) {
         final RDFProcessor tracker = track(new Tracker(LOGGER, null, //
                 "%d triples uploaded (%d tr/s avg)", //
                 "%d triples uploaded (%d tr/s, %d tr/s avg)"));
@@ -864,17 +865,56 @@ public final class RDFProcessors {
         };
     }
 
+    /**
+     * Returns an {@code RDFProcessor} that applies the ruleset specified on input statements
+     * either as a whole or partitioned based on an optional {@code Mapper}.
+     * 
+     * @param ruleset
+     *            the ruleset to apply
+     * @param mapper
+     *            the optional mapper for partitioning input statements, possibly null
+     * @param dropBNodeTypes
+     *            true to drop output {@code rdf:type} statements with a {@link BNode} object
+     * @param deduplicate
+     *            true to enforce that output statements do not contain duplicates (if false,
+     *            duplicates might be returned if this enables the rule engine to operate faster)
+     * @return the created {@code RDFProcessor}
+     */
     public static RDFProcessor rules(final Ruleset ruleset, @Nullable final Mapper mapper,
             final boolean dropBNodeTypes, final boolean deduplicate) {
         return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, null, false, null);
     }
 
+    /**
+     * Returns an {@code RDFProcessor} that expands the ruleset based on the supplied TBox and
+     * applies the resulting ruleset on input statements either as a whole or partitioned based on
+     * an optional {@code Mapper}.
+     *
+     * @param ruleset
+     *            the ruleset to apply
+     * @param mapper
+     *            the optional mapper for partitioning input statements, possibly null
+     * @param dropBNodeTypes
+     *            true to drop output {@code rdf:type} statements with a {@link BNode} object
+     * @param deduplicate
+     *            true to enforce that output statements do not contain duplicates (if false,
+     *            duplicates might be returned if this enables the rule engine to operate faster)
+     * @param tboxData
+     *            the {@code RDFSource} of TBox data; null to disable TBox expansion
+     * @param emitTBox
+     *            true to emit TBox data (closed based on rules in the supplied {@code Ruleset})
+     * @param tboxContext
+     *            the context where to emit closed TBox data; null to emit TBox statements with
+     *            their original contexts (use {@link SESAME#NIL} for emitting TBox data in the
+     *            default context)
+     * @return the created {@code RDFProcessor}
+     */
     public static RDFProcessor rules(final Ruleset ruleset, @Nullable final Mapper mapper,
             final boolean dropBNodeTypes, final boolean deduplicate,
-            @Nullable final RDFSource staticData, final boolean emitStatic,
-            @Nullable final URI staticContext) {
-        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, staticData,
-                emitStatic, staticContext);
+            @Nullable final RDFSource tboxData, final boolean emitTBox,
+            @Nullable final URI tboxContext) {
+        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, tboxData,
+                emitTBox, tboxContext);
     }
 
     private static class InjectSourceHandler extends AbstractRDFHandler {

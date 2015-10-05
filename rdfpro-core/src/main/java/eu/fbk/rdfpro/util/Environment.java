@@ -43,8 +43,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,11 +76,16 @@ public final class Environment {
         final Properties properties = new Properties();
         properties.setProperty("rdfpro.cores", "" + Runtime.getRuntime().availableProcessors());
         try {
+            final List<String> envSources = Lists.newArrayList("rdfpro.properties");
+            envSources.addAll(Splitter.on(',').omitEmptyStrings()
+                    .splitToList(System.getProperty("rdfpro.environment.sources", "")));
             final List<URL> urls = new ArrayList<>();
             final ClassLoader cl = Environment.class.getClassLoader();
-            for (final String p : new String[] { "META-INF/rdfpro.properties", "rdfpro.properties" }) {
-                for (final Enumeration<URL> e = cl.getResources(p); e.hasMoreElements();) {
-                    urls.add(e.nextElement());
+            for (final String envSource : envSources) {
+                for (final String p : new String[] { "META-INF/" + envSource, envSource }) {
+                    for (final Enumeration<URL> e = cl.getResources(p); e.hasMoreElements();) {
+                        urls.add(e.nextElement());
+                    }
                 }
             }
             for (final URL url : urls) {
@@ -364,8 +371,7 @@ public final class Environment {
                             method.setAccessible(true);
                             plugins.add(new Plugin(pluginNames, value, method));
                         } catch (final Throwable ex) {
-                            LOGGER.warn("Invalid plugin definition " + name
-                                    + " in file - ignoring", ex);
+                            LOGGER.warn("Invalid plugin definition " + name + " - ignoring", ex);
                         }
                     }
                 }

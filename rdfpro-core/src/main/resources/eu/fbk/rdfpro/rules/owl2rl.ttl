@@ -1,9 +1,9 @@
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
-@prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
 @prefix sys:  <sys:> .
-@prefix :     <http://dkm.fbk.eu/rdfpro-rules/owl2rl#> .
+@prefix rr:   <http://rdfpro.fbk.eu/ontologies/rules#> .
+@prefix :     <http://rdfpro.fbk.eu/ontologies/rules/owl2rl#> .
 
 # General notes:
 # - 85 rules (21 for constraints and related auxiliary rules)
@@ -26,72 +26,72 @@ rdfs: rr:prefix "rdfs" .
 ################################################################################
 
 
-owl:Class a rr:StaticTerm.
-owl:ObjectProperty a rr:StaticTerm.
-owl:DatatypeProperty a rr:StaticTerm.
-owl:AnnotationProperty a rr:StaticTerm.
-owl:FunctionalProperty a rr:StaticTerm.
-owl:InverseFunctionalProperty a rr:StaticTerm.
-owl:SymmetricProperty a rr:StaticTerm.
-owl:AsymmetricProperty a rr:StaticTerm.
-owl:IrreflexiveProperty a rr:StaticTerm.
-owl:TransitiveProperty a rr:StaticTerm.
-owl:AllDifferent a rr:StaticTerm.
-owl:AllDisjointClasses a rr:StaticTerm.
-owl:AllDisjointProperties a rr:StaticTerm.
+owl:Class a rr:MetaVocabularyTerm.
+owl:ObjectProperty a rr:MetaVocabularyTerm.
+owl:DatatypeProperty a rr:MetaVocabularyTerm.
+owl:AnnotationProperty a rr:MetaVocabularyTerm.
+owl:FunctionalProperty a rr:MetaVocabularyTerm.
+owl:InverseFunctionalProperty a rr:MetaVocabularyTerm.
+owl:SymmetricProperty a rr:MetaVocabularyTerm.
+owl:AsymmetricProperty a rr:MetaVocabularyTerm.
+owl:IrreflexiveProperty a rr:MetaVocabularyTerm.
+owl:TransitiveProperty a rr:MetaVocabularyTerm.
+owl:AllDifferent a rr:MetaVocabularyTerm.
+owl:AllDisjointClasses a rr:MetaVocabularyTerm.
+owl:AllDisjointProperties a rr:MetaVocabularyTerm.
 
-owl:equivalentClass a rr:StaticTerm.
-owl:equivalentProperty a rr:StaticTerm.
-owl:propertyChainAxiom a rr:StaticTerm.
-owl:propertyDisjointWith a rr:StaticTerm.
-owl:hasKey a rr:StaticTerm.
-owl:hasValue a rr:StaticTerm.
-owl:someValuesFrom a rr:StaticTerm.
-owl:allValuesFrom a rr:StaticTerm.
-owl:maxCardinality a rr:StaticTerm.
-owl:maxQualifiedCardinality a rr:StaticTerm.
-owl:onProperty a rr:StaticTerm.
-owl:onClass a rr:StaticTerm.
-owl:oneOf a rr:StaticTerm.
-owl:unionOf a rr:StaticTerm.
-owl:intersectionOf a rr:StaticTerm.
-owl:complementOf a rr:StaticTerm.
-owl:inverseOf a rr:StaticTerm.
-owl:members a rr:StaticTerm.
-owl:distinctMembers a rr:StaticTerm.
+owl:equivalentClass a rr:MetaVocabularyTerm.
+owl:equivalentProperty a rr:MetaVocabularyTerm.
+owl:propertyChainAxiom a rr:MetaVocabularyTerm.
+owl:propertyDisjointWith a rr:MetaVocabularyTerm.
+owl:hasKey a rr:MetaVocabularyTerm.
+owl:hasValue a rr:MetaVocabularyTerm.
+owl:someValuesFrom a rr:MetaVocabularyTerm.
+owl:allValuesFrom a rr:MetaVocabularyTerm.
+owl:maxCardinality a rr:MetaVocabularyTerm.
+owl:maxQualifiedCardinality a rr:MetaVocabularyTerm.
+owl:onProperty a rr:MetaVocabularyTerm.
+owl:onClass a rr:MetaVocabularyTerm.
+owl:oneOf a rr:MetaVocabularyTerm.
+owl:unionOf a rr:MetaVocabularyTerm.
+owl:intersectionOf a rr:MetaVocabularyTerm.
+owl:complementOf a rr:MetaVocabularyTerm.
+owl:inverseOf a rr:MetaVocabularyTerm.
+owl:members a rr:MetaVocabularyTerm.
+owl:distinctMembers a rr:MetaVocabularyTerm.
 
-rdfs:Datatype a rr:StaticTerm.
-rdfs:subClassOf a rr:StaticTerm.
-rdfs:subPropertyOf a rr:StaticTerm.
-rdfs:domain a rr:StaticTerm.
-rdfs:range a rr:StaticTerm.
+rdfs:Datatype a rr:MetaVocabularyTerm.
+rdfs:subClassOf a rr:MetaVocabularyTerm.
+rdfs:subPropertyOf a rr:MetaVocabularyTerm.
+rdfs:domain a rr:MetaVocabularyTerm.
+rdfs:range a rr:MetaVocabularyTerm.
 
-rdf:first a rr:StaticTerm.
-rdf:rest a rr:StaticTerm.
-rdf:nil a rr:StaticTerm.
+rdf:first a rr:MetaVocabularyTerm.
+rdf:rest a rr:MetaVocabularyTerm.
+rdf:nil a rr:MetaVocabularyTerm.
 
-sys:distinctMember a rr:StaticTerm.
-sys:disjointClass a rr:StaticTerm.
-sys:disjointProperty a rr:StaticTerm.
-sys:chain2prop1 a rr:StaticTerm.
-sys:chain2prop2 a rr:StaticTerm.
-sys:key1prop a rr:StaticTerm.
-sys:key2prop1 a rr:StaticTerm.
-sys:key2prop2 a rr:StaticTerm.
-sys:keyNprop1 a rr:StaticTerm.
-sys:keyNprop2 a rr:StaticTerm.
-sys:keyNprop3 a rr:StaticTerm.
-sys:keyNrest a rr:StaticTerm.
-sys:keyNarg1 a rr:StaticTerm.
-sys:keyNarg2 a rr:StaticTerm.
-sys:keyNnode a rr:StaticTerm.
-sys:intersectionOfMember1 a rr:StaticTerm.
-sys:intersectionOfMember2 a rr:StaticTerm.
-sys:expandUnion a rr:StaticTerm.
-sys:expandOneOf a rr:StaticTerm.
-sys:expandAllDifferent a rr:StaticTerm.
-sys:expandAllDisjointClasses a rr:StaticTerm.
-sys:expandAllDisjointProperties a rr:StaticTerm.
+sys:distinctMember a rr:MetaVocabularyTerm.
+sys:disjointClass a rr:MetaVocabularyTerm.
+sys:disjointProperty a rr:MetaVocabularyTerm.
+sys:chain2prop1 a rr:MetaVocabularyTerm.
+sys:chain2prop2 a rr:MetaVocabularyTerm.
+sys:key1prop a rr:MetaVocabularyTerm.
+sys:key2prop1 a rr:MetaVocabularyTerm.
+sys:key2prop2 a rr:MetaVocabularyTerm.
+sys:keyNprop1 a rr:MetaVocabularyTerm.
+sys:keyNprop2 a rr:MetaVocabularyTerm.
+sys:keyNprop3 a rr:MetaVocabularyTerm.
+sys:keyNrest a rr:MetaVocabularyTerm.
+sys:keyNarg1 a rr:MetaVocabularyTerm.
+sys:keyNarg2 a rr:MetaVocabularyTerm.
+sys:keyNnode a rr:MetaVocabularyTerm.
+sys:intersectionOfMember1 a rr:MetaVocabularyTerm.
+sys:intersectionOfMember2 a rr:MetaVocabularyTerm.
+sys:expandUnion a rr:MetaVocabularyTerm.
+sys:expandOneOf a rr:MetaVocabularyTerm.
+sys:expandAllDifferent a rr:MetaVocabularyTerm.
+sys:expandAllDisjointClasses a rr:MetaVocabularyTerm.
+sys:expandAllDisjointProperties a rr:MetaVocabularyTerm.
 
 
 ################################################################################

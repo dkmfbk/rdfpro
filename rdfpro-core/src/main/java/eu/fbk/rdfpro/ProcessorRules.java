@@ -37,7 +37,7 @@ final class ProcessorRules implements RDFProcessor {
     private final Mapper mapper;
 
     @Nullable
-    private final QuadModel staticClosure;
+    private final QuadModel tboxClosure;
 
     private final boolean dropBNodeTypes;
 
@@ -120,15 +120,15 @@ final class ProcessorRules implements RDFProcessor {
             throw new IllegalArgumentException("Unknown graph inference mode: " + mode);
         }
 
-        // Read static closure settings
-        boolean emitStatic = false;
-        URI staticContext = null;
+        // Read TBox closure settings
+        boolean emitTBox = false;
+        URI tboxContext = null;
         if (options.hasOption("C")) {
-            emitStatic = true;
+            emitTBox = true;
         } else if (options.hasOption("c")) {
-            emitStatic = true;
+            emitTBox = true;
             final String ctx = options.getOptionArg("c", String.class);
-            staticContext = (URI) Statements.parseValue(ctx.contains(":") ? ctx //
+            tboxContext = (URI) Statements.parseValue(ctx.contains(":") ? ctx //
                     : ctx + ":", Namespaces.DEFAULT);
         }
 
@@ -148,20 +148,19 @@ final class ProcessorRules implements RDFProcessor {
             throw new IllegalArgumentException("Unknown partitioning scheme: " + partitioning);
         }
 
-        // Read static data, if any
-        final String[] staticSpecs = options.getPositionalArgs(String.class)
-                .toArray(new String[0]);
-        final RDFSource staticData = staticSpecs.length == 0 ? null : RDFProcessors.track(
-                new Tracker(LOGGER, null, "%d static triples read (%d tr/s avg)", //
-                        "%d static triples read (%d tr/s, %d tr/s avg)")).wrap(
-                RDFSources.read(true, preserveBNodes, base, null, staticSpecs));
+        // Read TBox data, if any
+        final String[] tboxSpecs = options.getPositionalArgs(String.class).toArray(new String[0]);
+        final RDFSource tboxData = tboxSpecs.length == 0 ? null : RDFProcessors.track(
+                new Tracker(LOGGER, null, "%d TBox triples read (%d tr/s avg)", //
+                        "%d TBox triples read (%d tr/s, %d tr/s avg)")).wrap(
+                RDFSources.read(true, preserveBNodes, base, null, tboxSpecs));
 
         // Read deduplicate flag
         final boolean deduplicate = options.hasOption("u");
 
         // Build processor
-        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, staticData,
-                emitStatic, staticContext);
+        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, tboxData,
+                emitTBox, tboxContext);
     }
 
     public ProcessorRules(final Ruleset ruleset, @Nullable final Mapper mapper,
@@ -171,47 +170,47 @@ final class ProcessorRules implements RDFProcessor {
 
     public ProcessorRules(final Ruleset ruleset, @Nullable final Mapper mapper,
             final boolean dropBNodeTypes, final boolean deduplicate,
-            @Nullable final RDFSource staticData, final boolean emitStatic,
-            @Nullable final URI staticContext) {
+            @Nullable final RDFSource tboxData, final boolean emitTBox,
+            @Nullable final URI tboxContext) {
 
         // Process ruleset and static data
-        LOGGER.debug("Processing {} rules {} static data", ruleset.getRules().size(),
-                staticData == null ? "without" : "with");
+        LOGGER.debug("Processing {} rules {} TBox data", ruleset.getRules().size(),
+                tboxData == null ? "without" : "with");
         final long ts = System.currentTimeMillis();
         Ruleset processedRuleset = ruleset.mergeSameWhereExpr();
         RuleEngine engine = RuleEngine.create(processedRuleset);
-        QuadModel staticClosure = null;
-        if (staticData != null) {
-            staticClosure = QuadModel.create();
+        QuadModel tboxClosure = null;
+        if (tboxData != null) {
+            tboxClosure = QuadModel.create();
             try {
-                staticData.emit(RDFHandlers.synchronize(RDFHandlers.wrap(staticClosure)), 1);
+                tboxData.emit(RDFHandlers.synchronize(RDFHandlers.wrap(tboxClosure)), 1);
             } catch (final RDFHandlerException ex) {
                 throw new RuntimeException(ex);
             }
-            engine.eval(staticClosure);
-            processedRuleset = processedRuleset.getDynamicRuleset(staticClosure)
+            engine.eval(tboxClosure);
+            processedRuleset = processedRuleset.getABoxRuleset(tboxClosure)
                     .mergeSameWhereExpr();
             engine = RuleEngine.create(processedRuleset);
-            if (!emitStatic) {
-                staticClosure = null;
-            } else if (staticContext != null) {
-                final URI ctx = staticContext.equals(SESAME.NIL) ? null : staticContext;
-                final List<Statement> stmts = new ArrayList<>(staticClosure);
-                staticClosure.clear();
+            if (!emitTBox) {
+                tboxClosure = null;
+            } else if (tboxContext != null) {
+                final URI ctx = tboxContext.equals(SESAME.NIL) ? null : tboxContext;
+                final List<Statement> stmts = new ArrayList<>(tboxClosure);
+                tboxClosure.clear();
                 for (final Statement stmt : stmts) {
-                    staticClosure.add(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+                    tboxClosure.add(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                             ctx);
                 }
             }
         }
-        LOGGER.info("{} initialized with {} dynamic rules (from {} rules) in {} ms", engine,
+        LOGGER.info("{} initialized with {} ABox rules (from {} rules) in {} ms", engine,
                 processedRuleset.getRules().size(), ruleset.getRules().size(),
                 System.currentTimeMillis() - ts);
 
         // Setup object
         this.engine = engine;
         this.mapper = mapper;
-        this.staticClosure = staticClosure;
+        this.tboxClosure = tboxClosure;
         this.dropBNodeTypes = dropBNodeTypes;
         this.deduplicate = deduplicate;
     }
@@ -237,9 +236,9 @@ final class ProcessorRules implements RDFProcessor {
             };
         }
 
-        // If necessary, filter the handler so to inject the static closure (in parallel)
-        if (this.staticClosure != null) {
-            result = RDFProcessors.inject(RDFSources.wrap(this.staticClosure)).wrap(result);
+        // If necessary, filter the handler so to inject the TBox closure (in parallel)
+        if (this.tboxClosure != null) {
+            result = RDFProcessors.inject(RDFSources.wrap(this.tboxClosure)).wrap(result);
         }
 
         // Add decoupler so to ensure that output is dispatched to parallel threads

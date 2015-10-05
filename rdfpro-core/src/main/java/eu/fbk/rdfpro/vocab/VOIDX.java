@@ -26,15 +26,15 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 /**
  * Constants for the VOID Extension (VOIDX) vocabulary.
  *
- * @see <a href="http://dkm.fbk.eu/ontologies/voidx">vocabulary specification</a>
+ * @see <a href="http://rdfpro.fbk.eu/ontologies/voidx">vocabulary specification</a>
  */
 public final class VOIDX {
 
     /** Recommended prefix for the vocabulary namespace: "voidx". */
     public static final String PREFIX = "voidx";
 
-    /** Vocabulary namespace: "http://dkm.fbk.eu/ontologies/voidx#". */
-    public static final String NAMESPACE = "http://dkm.fbk.eu/ontologies/voidx#";
+    /** Vocabulary namespace: "http://rdfpro.fbk.eu/ontologies/voidx#". */
+    public static final String NAMESPACE = "http://rdfpro.fbk.eu/ontologies/voidx#";
 
     /** Immutable {@link Namespace} constant for the vocabulary namespace. */
     public static final Namespace NS = new NamespaceImpl(PREFIX, NAMESPACE);

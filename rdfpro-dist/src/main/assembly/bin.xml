@@ -27,6 +27,10 @@
       <outputDirectory>etc</outputDirectory>
     </fileSet>
     <fileSet>
+      <directory>../src/webdemo</directory>
+      <outputDirectory>webdemo</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>..</directory>
       <outputDirectory></outputDirectory>
       <includes>

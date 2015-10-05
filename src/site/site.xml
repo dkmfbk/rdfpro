@@ -137,6 +137,9 @@
                 <license>
                     <highlightJs>false</highlightJs>
                 </license>
+                <install>
+                    <highlightJs>false</highlightJs>
+                </install>
             </pages>
         </reflowSkin>
     </custom>
