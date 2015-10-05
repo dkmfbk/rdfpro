@@ -1,8 +1,8 @@
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
-@prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
-@prefix :     <http://dkm.fbk.eu/rdfpro-rules/horst#> .
+@prefix rr:   <http://rdfpro.fbk.eu/ontologies/rules#> .
+@prefix :     <http://rdfpro.fbk.eu/ontologies/rules/horst#> .
 
 
 rr: rr:prefix "rr".
@@ -11,26 +11,26 @@ rdfs: rr:prefix "rdfs".
 owl: rr:prefix "owl".
 
 
-rdf:Property a rr:StaticTerm.
-rdf:List a rr:StaticTerm.
-rdfs:Datatype a rr:StaticTerm.
-rdfs:ContainerMembershipProperty a rr:StaticTerm.
-rdfs:subClassOf a rr:StaticTerm.
-rdfs:subPropertyOf a rr:StaticTerm.
-rdfs:domain a rr:StaticTerm.
-rdfs:range a rr:StaticTerm.
-owl:Class a rr:StaticTerm.
-owl:FunctionalProperty a rr:StaticTerm.
-owl:InverseFunctionalProperty a rr:StaticTerm.
-owl:SymmetricFunctionalProperty a rr:StaticTerm.
-owl:TransitiveFunctionalProperty a rr:StaticTerm.
-owl:inverseOf a rr:StaticTerm.
-owl:equivalentClass a rr:StaticTerm.
-owl:equivalentProperty a rr:StaticTerm.
-owl:hasValue a rr:StaticTerm.
-owl:onProperty a rr:StaticTerm.
-owl:someValuesFrom a rr:StaticTerm.
-owl:allValuesFrom a rr:StaticTerm.
+rdf:Property a rr:MetaVocabularyTerm.
+rdf:List a rr:MetaVocabularyTerm.
+rdfs:Datatype a rr:MetaVocabularyTerm.
+rdfs:ContainerMembershipProperty a rr:MetaVocabularyTerm.
+rdfs:subClassOf a rr:MetaVocabularyTerm.
+rdfs:subPropertyOf a rr:MetaVocabularyTerm.
+rdfs:domain a rr:MetaVocabularyTerm.
+rdfs:range a rr:MetaVocabularyTerm.
+owl:Class a rr:MetaVocabularyTerm.
+owl:FunctionalProperty a rr:MetaVocabularyTerm.
+owl:InverseFunctionalProperty a rr:MetaVocabularyTerm.
+owl:SymmetricFunctionalProperty a rr:MetaVocabularyTerm.
+owl:TransitiveFunctionalProperty a rr:MetaVocabularyTerm.
+owl:inverseOf a rr:MetaVocabularyTerm.
+owl:equivalentClass a rr:MetaVocabularyTerm.
+owl:equivalentProperty a rr:MetaVocabularyTerm.
+owl:hasValue a rr:MetaVocabularyTerm.
+owl:onProperty a rr:MetaVocabularyTerm.
+owl:someValuesFrom a rr:MetaVocabularyTerm.
+owl:allValuesFrom a rr:MetaVocabularyTerm.
 
 
 :axioms-rdfs a rr:Rule;
@@ -86,7 +86,7 @@ owl:allValuesFrom a rr:StaticTerm.
                 rdf:value rdfs:range rdfs:Resource.
                 rdf:_1 rdfs:domain rdfs:Resource.
                 rdf:_1 rdfs:range rdfs:Resource. """.
-                
+
 :axioms-owl a rr:Rule;
     rr:head """ owl:FunctionalProperty rdfs:subClassOf rdf:Property.
                 owl:InverseFunctionalProperty rdfs:subClassOf rdf:Property .
@@ -117,7 +117,7 @@ owl:allValuesFrom a rr:StaticTerm.
 :rdf1 a rr:Rule;
     rr:head """ ?p rdf:type rdf:Property. """;
     rr:body """ ?s ?p ?o. """.
-    
+
 :rdfs2 a rr:Rule;
     rr:head """ ?s rdf:type ?x. """;
     rr:body """ ?s ?p ?o. ?p rdfs:domain ?x. FILTER (?x != rdfs:Resource) """.
@@ -189,7 +189,7 @@ owl:allValuesFrom a rr:StaticTerm.
 
 :rdfp4 a rr:Rule;
     rr:head """ ?s ?p ?t. """;
-    rr:body """ ?p rdf:type owl:TransitiveProperty. ?s ?p ?o. ?o ?p ?t. 
+    rr:body """ ?p rdf:type owl:TransitiveProperty. ?s ?p ?o. ?o ?p ?t.
                 FILTER (?s != ?o && ?o != ?t) """.
 
 :rdfp5a a rr:Rule;

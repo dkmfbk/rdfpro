@@ -39,7 +39,7 @@ import eu.fbk.rdfpro.util.Statements;
 import eu.fbk.rdfpro.vocab.RR;
 
 /**
- * A set of rules, with associated optional static vocabulary.
+ * A set of rules, with associated optional meta-vocabulary.
  */
 public final class Ruleset {
 
@@ -53,7 +53,7 @@ public final class Ruleset {
 
     private final Set<Rule> rules;
 
-    private final Set<URI> staticTerms;
+    private final Set<URI> metaVocabularyTerms;
 
     @Nullable
     private transient Map<URI, Rule> ruleIndex;
@@ -73,18 +73,19 @@ public final class Ruleset {
     private transient BloomFilter<Integer>[] filters;
 
     /**
-     * Creates a new ruleset with the rules and static vocabulary terms supplied.
+     * Creates a new ruleset with the rules and meta-vocabulary terms supplied.
      *
      * @param rules
      *            the rules
-     * @param staticTerms
-     *            the static terms
+     * @param metaVocabularyTerms
+     *            the meta-vocabulary terms
      */
-    public Ruleset(final Iterable<Rule> rules, @Nullable final Iterable<URI> staticTerms) {
+    public Ruleset(final Iterable<Rule> rules, @Nullable final Iterable<URI> metaVocabularyTerms) {
 
         this.rules = ImmutableSet.copyOf(Ordering.natural().sortedCopy(rules));
-        this.staticTerms = staticTerms == null ? ImmutableSet.of() : ImmutableSet.copyOf(Ordering
-                .from(Statements.valueComparator()).sortedCopy(staticTerms));
+        this.metaVocabularyTerms = metaVocabularyTerms == null ? ImmutableSet.of() //
+                : ImmutableSet.copyOf(Ordering.from(Statements.valueComparator()).sortedCopy(
+                        metaVocabularyTerms));
 
         this.ruleIndex = null;
         this.ruleSplits = null;
@@ -123,12 +124,12 @@ public final class Ruleset {
     }
 
     /**
-     * Returns the static vocabulary terms associated to this ruleset.
+     * Returns the meta-vocabulary terms associated to this ruleset.
      *
      * @return a set of term URIs, sorted by URI
      */
-    public Set<URI> getStaticTerms() {
-        return this.staticTerms;
+    public Set<URI> getMetaVocabularyTerms() {
+        return this.metaVocabularyTerms;
     }
 
     /**
@@ -259,47 +260,47 @@ public final class Ruleset {
     }
 
     /**
-     * Returns the ruleset with the dynamic rules obtained computed from the rules of this ruleset
-     * and the static data specified. The method split the DELETE, INSERT and WHERE expressions of
-     * rules into static and dynamic parts. Rules with only static parts are discarded. Rules with
-     * only dynamic parts are included as is in the returned ruleset. Rules with both dynamic part
-     * (in DELETE and/or INSERT expressions) and static part (in WHERE expression) are instead
-     * 'exploded' by computing all the possible bindings of the static part w.r.t. the supplied
-     * static data, adding to the resulting ruleset all the rules obtained by injecting those
-     * bindings. Note: this method does not modify in any way the supplied static data. In
-     * general, it is necessary to close it w.r.t. relevant inference rules (which can be the same
-     * rules of this ruleset) before computing the dynamic ruleset. In this case, the closure
-     * should be computed manually before calling this method.
+     * Returns the ruleset with the ABox rules obtained from the rules of this ruleset and the
+     * TBox data specified. The method split the DELETE, INSERT and WHERE expressions of rules
+     * into TBox and ABox parts. Rules with only TBox parts are discarded. Rules with only ABox
+     * parts are included as is in the returned ruleset. Rules with both ABox part (in DELETE
+     * and/or INSERT expressions) and TBox part (in WHERE expression) are instead 'exploded' by
+     * computing all the possible bindings of the TBox part w.r.t. the supplied TBox data, adding
+     * to the resulting ruleset all the rules obtained by injecting those bindings. Note: this
+     * method does not modify in any way the supplied TBox data. In general, it is necessary to
+     * close it w.r.t. relevant inference rules (which can be the same rules of this ruleset)
+     * before computing the ABox ruleset. In this case, the closure should be computed manually
+     * before calling this method.
      *
-     * @param staticData
-     *            the static data
+     * @param tboxData
+     *            the TBox data
      * @return the resulting ruleset
      */
-    public Ruleset getDynamicRuleset(final QuadModel staticData) {
+    public Ruleset getABoxRuleset(final QuadModel tboxData) {
 
         // Split rules if necessary, caching the result
         if (this.ruleSplits == null) {
             final List<RuleSplit> splits = new ArrayList<>(this.rules.size());
             for (final Rule rule : this.rules) {
-                splits.add(new RuleSplit(rule, this.staticTerms));
+                splits.add(new RuleSplit(rule, this.metaVocabularyTerms));
             }
             this.ruleSplits = splits;
         }
 
-        // Compute preprocessing rules that obtain bindings of static WHERE exprs
+        // Compute preprocessing rules that obtain bindings of TBox WHERE exprs
         final Map<URI, List<BindingSet>> bindingsMap = new ConcurrentHashMap<>();
         final List<Runnable> queries = new ArrayList<>();
-        int numDynamic = 0;
+        int numABoxRules = 0;
         for (final RuleSplit split : this.ruleSplits) {
-            if (split.dynamicDeleteExpr != null || split.dynamicInsertExpr != null) {
-                ++numDynamic;
-                if (split.staticWhereExpr != null) {
+            if (split.aboxDeleteExpr != null || split.aboxInsertExpr != null) {
+                ++numABoxRules;
+                if (split.tboxWhereExpr != null) {
                     queries.add(new Runnable() {
 
                         @Override
                         public void run() {
-                            final List<BindingSet> bindings = Lists.newArrayList(staticData
-                                    .evaluate(split.staticWhereExpr, null, null));
+                            final List<BindingSet> bindings = Lists.newArrayList(tboxData
+                                    .evaluate(split.tboxWhereExpr, null, null));
                             bindingsMap.put(split.rule.getID(), bindings);
                         }
 
@@ -309,29 +310,29 @@ public final class Ruleset {
         }
         Environment.run(queries);
 
-        // Compute the dynamic rules using obtained bindings to explode the static WHERE parts
+        // Compute the ABox rules using obtained bindings to explode the TBox WHERE parts
         final List<Rule> rules = new ArrayList<>();
         for (final RuleSplit split : this.ruleSplits) {
-            if (split.dynamicDeleteExpr != null || split.dynamicInsertExpr != null) {
+            if (split.aboxDeleteExpr != null || split.aboxInsertExpr != null) {
                 final URI id = split.rule.getID();
                 final boolean fixpoint = split.rule.isFixpoint();
                 final int phase = split.rule.getPhase();
-                if (split.staticWhereExpr == null) {
+                if (split.tboxWhereExpr == null) {
                     final URI newID = Rule.newID(id.stringValue());
-                    rules.add(new Rule(newID, fixpoint, phase, split.dynamicDeleteExpr,
-                            split.dynamicInsertExpr, split.dynamicWhereExpr));
+                    rules.add(new Rule(newID, fixpoint, phase, split.aboxDeleteExpr,
+                            split.aboxInsertExpr, split.aboxWhereExpr));
                 } else {
                     final Iterable<? extends BindingSet> list = bindingsMap.get(id);
                     if (list != null) {
                         for (final BindingSet b : list) {
                             final TupleExpr delete = Algebra.normalize(
-                                    Algebra.rewrite(split.dynamicDeleteExpr, b),
+                                    Algebra.rewrite(split.aboxDeleteExpr, b),
                                     Statements.VALUE_NORMALIZER);
                             final TupleExpr insert = Algebra.normalize(
-                                    Algebra.rewrite(split.dynamicInsertExpr, b),
+                                    Algebra.rewrite(split.aboxInsertExpr, b),
                                     Statements.VALUE_NORMALIZER);
                             final TupleExpr where = Algebra.normalize(
-                                    Algebra.rewrite(split.dynamicWhereExpr, b),
+                                    Algebra.rewrite(split.aboxWhereExpr, b),
                                     Statements.VALUE_NORMALIZER);
                             if (!Objects.equals(insert, where) || delete != null) {
                                 final URI newID = Rule.newID(id.stringValue());
@@ -342,23 +343,25 @@ public final class Ruleset {
                 }
             }
         }
-        LOGGER.debug("{} dynamic rules derived from {} static quads and {} original rules "
-                + "({} with dynamic components, {} with static & dynamic components)",
-                rules.size(), staticData.size(), this.rules.size(), numDynamic, queries.size());
+        LOGGER.debug("{} ABox rules derived from {} TBox quads and {} original rules "
+                + "({} with ABox components, {} with TBox & ABox components)", rules.size(),
+                tboxData.size(), this.rules.size(), numABoxRules, queries.size());
 
         // Build and return the resulting ruleset
-        return new Ruleset(rules, this.staticTerms);
+        return new Ruleset(rules, this.metaVocabularyTerms);
     }
 
     /**
      * Returns the ruleset obtained by rewriting the rules of this ruleset according to the GLOBAL
-     * graph inference mode, using the global graph URI specified. Static terms are not affected.
+     * graph inference mode, using the global graph URI specified. Meta-vocabulary terms are not
+     * affected.
      *
      *
      * @param globalGraph
      *            the URI of the global graph where to insert new quads; if null, quads will be
      *            inserted in the default graph {@code sesame:nil}
-     * @return a ruleset with the rewritten rules and the same static terms of this ruleset
+     * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
+     *         ruleset
      * @see Rule#rewriteGlobalGM(URI)
      */
     public Ruleset rewriteGlobalGM(@Nullable final URI globalGraph) {
@@ -366,14 +369,15 @@ public final class Ruleset {
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteGlobalGM(globalGraph));
         }
-        return new Ruleset(rewrittenRules, this.staticTerms);
+        return new Ruleset(rewrittenRules, this.metaVocabularyTerms);
     }
 
     /**
      * Returns the ruleset obtained by rewriting the rules of this ruleset according to the
-     * SEPARATE graph inference mode. Static terms are not affected.
+     * SEPARATE graph inference mode. Meta-vocabulary terms are not affected.
      *
-     * @return a ruleset with the rewritten rules and the same static terms of this ruleset
+     * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
+     *         ruleset
      * @see Rule#rewriteSeparateGM()
      */
     public Ruleset rewriteSeparateGM() {
@@ -381,17 +385,19 @@ public final class Ruleset {
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteSeparateGM());
         }
-        return new Ruleset(rewrittenRules, this.staticTerms);
+        return new Ruleset(rewrittenRules, this.metaVocabularyTerms);
     }
 
     /**
      * Returns the ruleset obtained by rewriting the rules of this ruleset according to the STAR
-     * graph inference mode, using the global graph URI supplied. Static terms are not affected.
+     * graph inference mode, using the global graph URI supplied. Meta-vocabulary terms are not
+     * affected.
      *
      * @param globalGraph
      *            the URI of the global graph whose quads are 'imported' in other graphs; if null,
      *            the default graph {@code sesame:nil} will be used
-     * @return a ruleset with the rewritten rules and the same static terms of this ruleset
+     * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
+     *         ruleset
      * @see Rule#rewriteStarGM(URI)
      */
     public Ruleset rewriteStarGM(@Nullable final URI globalGraph) {
@@ -399,17 +405,19 @@ public final class Ruleset {
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteStarGM(globalGraph));
         }
-        return new Ruleset(rewrittenRules, this.staticTerms);
+        return new Ruleset(rewrittenRules, this.metaVocabularyTerms);
     }
 
     /**
      * Returns the ruleset obtained by replacing selected variables in the rules of this ruleset
-     * with the constant values dictated by the supplied bindings. Static terms are not affected.
+     * with the constant values dictated by the supplied bindings. Meta-vocabulary terms are not
+     * affected.
      *
      * @param bindings
      *            the variable = value bindings to use for rewriting rules; if null or empty, no
      *            rewriting will take place
-     * @return a ruleset with the rewritten rules and the same static terms of this ruleset
+     * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
+     *         ruleset
      * @see Rule#rewriteVariables(BindingSet)
      */
     public Ruleset rewriteVariables(@Nullable final BindingSet bindings) {
@@ -420,23 +428,24 @@ public final class Ruleset {
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteVariables(bindings));
         }
-        return new Ruleset(rewrittenRules, this.staticTerms);
+        return new Ruleset(rewrittenRules, this.metaVocabularyTerms);
     }
 
     /**
      * Returns the ruleset obtained by merging the rules in this ruleset with the same WHERE
-     * expression, priority and fixpoint flag. Static terms are not affected.
+     * expression, priority and fixpoint flag. Meta-vocabulary terms are not affected.
      *
-     * @return a ruleset with the merged rules and the same static terms of this ruleset
+     * @return a ruleset with the merged rules and the same meta-vocabulary terms of this ruleset
      * @see Rule#mergeSameWhereExpr(Iterable)
      */
     public Ruleset mergeSameWhereExpr() {
         final List<Rule> rules = Rule.mergeSameWhereExpr(this.rules);
-        return rules.size() == this.rules.size() ? this : new Ruleset(rules, this.staticTerms);
+        return rules.size() == this.rules.size() ? this : new Ruleset(rules,
+                this.metaVocabularyTerms);
     }
 
     /**
-     * {@inheritDoc} Two rulesets are equal if they have the same rules and static terms.
+     * {@inheritDoc} Two rulesets are equal if they have the same rules and meta-vocabulary terms.
      */
     @Override
     public boolean equals(final Object object) {
@@ -447,31 +456,34 @@ public final class Ruleset {
             return false;
         }
         final Ruleset other = (Ruleset) object;
-        return this.rules.equals(other.rules) && this.staticTerms.equals(other.staticTerms);
+        return this.rules.equals(other.rules)
+                && this.metaVocabularyTerms.equals(other.metaVocabularyTerms);
     }
 
     /**
-     * {@inheritDoc} The returned hash code depends on all the rules and static terms in this
-     * ruleset.
+     * {@inheritDoc} The returned hash code depends on all the rules and meta-vocabulary terms in
+     * this ruleset.
      */
     @Override
     public int hashCode() {
         if (this.hash == 0) {
-            this.hash = Objects.hash(this.rules, this.staticTerms);
+            this.hash = Objects.hash(this.rules, this.metaVocabularyTerms);
         }
         return this.hash;
     }
 
     /**
-     * {@inheritDoc} The returned string lists, on multiple lines, all the static terms and rules
-     * in this ruleset.
+     * {@inheritDoc} The returned string lists, on multiple lines, all the meta-vocabulary terms
+     * and rules in this ruleset.
      */
     @Override
     public String toString() {
         final StringBuilder builder = new StringBuilder();
-        builder.append("STATIC TERMS (").append(this.staticTerms.size()).append("):");
-        for (final URI staticTerm : this.staticTerms) {
-            builder.append("\n").append(Statements.formatValue(staticTerm, Namespaces.DEFAULT));
+        builder.append("META-VOCABULARY TERMS (").append(this.metaVocabularyTerms.size())
+                .append("):");
+        for (final URI metaVocabularyTerm : this.metaVocabularyTerms) {
+            builder.append("\n").append(
+                    Statements.formatValue(metaVocabularyTerm, Namespaces.DEFAULT));
         }
         builder.append("\n\nRULES (").append(this.rules.size()).append("):");
         for (final Rule rule : this.rules) {
@@ -490,10 +502,10 @@ public final class Ruleset {
      */
     public <T extends Collection<? super Statement>> T toRDF(final T output) {
 
-        // Emit static terms
+        // Emit meta-vocabulary terms
         final ValueFactory vf = Statements.VALUE_FACTORY;
-        for (final URI staticTerm : this.staticTerms) {
-            vf.createStatement(staticTerm, RDF.TYPE, RR.STATIC_TERM);
+        for (final URI metaVocabularyTerm : this.metaVocabularyTerms) {
+            vf.createStatement(metaVocabularyTerm, RDF.TYPE, RR.META_VOCABULARY_TERM);
         }
 
         // Emit rules
@@ -505,7 +517,8 @@ public final class Ruleset {
 
     /**
      * Parses a ruleset from the supplied RDF statements. The method extracts all the rules and
-     * the static terms defined by supplied statements, and collects them in a new ruleset.
+     * the meta-vocabulary terms defined by supplied statements, and collects them in a new
+     * ruleset.
      *
      * @param model
      *            the RDF statements, not null
@@ -513,12 +526,12 @@ public final class Ruleset {
      */
     public static Ruleset fromRDF(final Iterable<Statement> model) {
 
-        // Parse static terms
-        final List<URI> staticTerms = new ArrayList<>();
+        // Parse meta-vocabulary terms
+        final List<URI> metaVocabularyTerms = new ArrayList<>();
         for (final Statement stmt : model) {
             if (stmt.getSubject() instanceof URI && RDF.TYPE.equals(stmt.getPredicate())
-                    && RR.STATIC_TERM.equals(stmt.getObject())) {
-                staticTerms.add((URI) stmt.getSubject());
+                    && RR.META_VOCABULARY_TERM.equals(stmt.getObject())) {
+                metaVocabularyTerms.add((URI) stmt.getSubject());
             }
         }
 
@@ -526,12 +539,13 @@ public final class Ruleset {
         final List<Rule> rules = Rule.fromRDF(model);
 
         // Build resulting ruleset
-        return new Ruleset(rules, staticTerms);
+        return new Ruleset(rules, metaVocabularyTerms);
     }
 
     /**
      * Parses a ruleset from the RDF located at the specified location. The method extracts all
-     * the rules and the static terms defined in the RDF, and collects them in a new ruleset.
+     * the rules and the meta-vocabulary terms defined in the RDF, and collects them in a new
+     * ruleset.
      *
      * @param location
      *            the location where to load RDF data, not null
@@ -544,9 +558,9 @@ public final class Ruleset {
     }
 
     /**
-     * Merges multiple rulesets in a single ruleset. The method collects all the rules and static
-     * terms in the specified rulesets, and creates a new ruleset (if necessary) containing the
-     * resulting rules and terms.
+     * Merges multiple rulesets in a single ruleset. The method collects all the rules and
+     * meta-vocabulary terms in the specified rulesets, and creates a new ruleset (if necessary)
+     * containing the resulting rules and terms.
      *
      * @param rulesets
      *            the rulesets to merge
@@ -558,13 +572,13 @@ public final class Ruleset {
         } else if (rulesets.length == 1) {
             return rulesets[0];
         } else {
-            final List<URI> staticTerms = new ArrayList<>();
+            final List<URI> metaVocabularyTerms = new ArrayList<>();
             final List<Rule> rules = new ArrayList<>();
             for (final Ruleset ruleset : rulesets) {
-                staticTerms.addAll(ruleset.getStaticTerms());
+                metaVocabularyTerms.addAll(ruleset.getMetaVocabularyTerms());
                 rules.addAll(ruleset.getRules());
             }
-            return new Ruleset(rules, staticTerms);
+            return new Ruleset(rules, metaVocabularyTerms);
         }
     }
 
@@ -573,22 +587,22 @@ public final class Ruleset {
         final Rule rule;
 
         @Nullable
-        final TupleExpr staticDeleteExpr;
+        final TupleExpr tboxDeleteExpr;
 
         @Nullable
-        final TupleExpr dynamicDeleteExpr;
+        final TupleExpr aboxDeleteExpr;
 
         @Nullable
-        final TupleExpr staticInsertExpr;
+        final TupleExpr tboxInsertExpr;
 
         @Nullable
-        final TupleExpr dynamicInsertExpr;
+        final TupleExpr aboxInsertExpr;
 
         @Nullable
-        final TupleExpr staticWhereExpr;
+        final TupleExpr tboxWhereExpr;
 
         @Nullable
-        final TupleExpr dynamicWhereExpr;
+        final TupleExpr aboxWhereExpr;
 
         RuleSplit(final Rule rule, final Set<URI> terms) {
             try {
@@ -600,12 +614,12 @@ public final class Ruleset {
                         Algebra.explodeFilters(rule.getWhereExpr()), terms, 1);
 
                 this.rule = rule;
-                this.staticDeleteExpr = deleteExprs[0];
-                this.dynamicDeleteExpr = deleteExprs[1];
-                this.staticInsertExpr = insertExprs[0];
-                this.dynamicInsertExpr = insertExprs[1];
-                this.staticWhereExpr = whereExprs[0];
-                this.dynamicWhereExpr = whereExprs[1];
+                this.tboxDeleteExpr = deleteExprs[0];
+                this.aboxDeleteExpr = deleteExprs[1];
+                this.tboxInsertExpr = insertExprs[0];
+                this.aboxInsertExpr = insertExprs[1];
+                this.tboxWhereExpr = whereExprs[0];
+                this.aboxWhereExpr = whereExprs[1];
 
                 LOGGER.trace("{}", this);
 
@@ -619,14 +633,14 @@ public final class Ruleset {
             final StringBuilder builder = new StringBuilder();
             builder.append("Splitting of rule ").append(this.rule.getID());
             toStringHelper(builder, "\n  DELETE original: ", this.rule.getDeleteExpr());
-            toStringHelper(builder, "\n  DELETE static:   ", this.staticDeleteExpr);
-            toStringHelper(builder, "\n  DELETE dynamic:  ", this.dynamicDeleteExpr);
+            toStringHelper(builder, "\n  DELETE tbox:     ", this.tboxDeleteExpr);
+            toStringHelper(builder, "\n  DELETE abox:     ", this.aboxDeleteExpr);
             toStringHelper(builder, "\n  INSERT original: ", this.rule.getInsertExpr());
-            toStringHelper(builder, "\n  INSERT static:   ", this.staticInsertExpr);
-            toStringHelper(builder, "\n  INSERT dynamic:  ", this.dynamicInsertExpr);
+            toStringHelper(builder, "\n  INSERT tbox:     ", this.tboxInsertExpr);
+            toStringHelper(builder, "\n  INSERT abox:     ", this.aboxInsertExpr);
             toStringHelper(builder, "\n  WHERE  original: ", this.rule.getWhereExpr());
-            toStringHelper(builder, "\n  WHERE  static:   ", this.staticWhereExpr);
-            toStringHelper(builder, "\n  WHERE  dynamic:  ", this.dynamicWhereExpr);
+            toStringHelper(builder, "\n  WHERE  tbox:     ", this.tboxWhereExpr);
+            toStringHelper(builder, "\n  WHERE  abox:     ", this.aboxWhereExpr);
             return builder.toString();
         }
 

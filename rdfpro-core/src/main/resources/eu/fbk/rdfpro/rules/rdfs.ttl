@@ -1,17 +1,17 @@
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
-@prefix :     <http://dkm.fbk.eu/rdfpro-rules/rdfs#> .
+@prefix rr:   <http://rdfpro.fbk.eu/ontologies/rules#> .
+@prefix :     <http://rdfpro.fbk.eu/ontologies/rules/rdfs#> .
 
-rdfs:Class a rr:StaticTerm.
-rdfs:Datatype a rr:StaticTerm.
-rdf:Property a rr:StaticTerm.
-rdfs:ContainerMembershipProperty a rr:StaticTerm.
-rdfs:domain a rr:StaticTerm.
-rdfs:range a rr:StaticTerm.
-rdfs:subClassOf a rr:StaticTerm.
-rdfs:subPropertyOf a rr:StaticTerm.
-rdf:List a rr:StaticTerm.
+rdfs:Class a rr:MetaVocabularyTerm.
+rdfs:Datatype a rr:MetaVocabularyTerm.
+rdf:Property a rr:MetaVocabularyTerm.
+rdfs:ContainerMembershipProperty a rr:MetaVocabularyTerm.
+rdfs:domain a rr:MetaVocabularyTerm.
+rdfs:range a rr:MetaVocabularyTerm.
+rdfs:subClassOf a rr:MetaVocabularyTerm.
+rdfs:subPropertyOf a rr:MetaVocabularyTerm.
+rdf:List a rr:MetaVocabularyTerm.
 
 :axioms a rr:Rule;
     rr:head """ rdf:type rdf:type rdf:Property.

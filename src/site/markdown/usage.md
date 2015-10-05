@@ -251,9 +251,9 @@ The result represents the complete RDFS closure if the TBOX: (i) contains all th
 
 #### <a class="anchor" id="rules"></a> @rules
 
-    @rules [-r RULESETS] [-B BINDINGS] [-p MODE] [-g MODE] [-G URI] [-t] [-C | -c URI] [-b URI] [-w] URL...
+    @rules [-r RULESETS] [-B BINDINGS] [-p MODE] [-g MODE] [-G URI] [-t] [-u] [-C | -c URI] [-b URI] [-w] URL...
 
-Emit the closure of input quads using the specified RULESETS (comma-separated list), possibly pre-processing rules based on supplied static/TBox data provided by arguments `URL...`.
+Emit the closure of input quads using the specified RULESETS (comma-separated list), possibly pre-processing rules based on supplied TBox data provided by arguments `URL...`.
 
 Option `-r` is a comma-separated list of ruleset names. Names of local files as well URLs can be used. In addition, names `rdfs` and `owl2rl` refer to builtin rulesets for RDFS and OWL 2 RL inference.
 
@@ -265,16 +265,18 @@ Option `-g` specifies if and how to modify the input ruleset to take into accoun
 
 Option `-t` causes uninformative <x rdf:type \_:b> statements, with \_:b a BNode, to be dropped (default: keep).
 
-Options `-C` and `-c URI` control the graph where the closure of static data is emitted.
+Option `-u` enforces the emission of unique statements and can be more efficient than performing a subsequent invocation to processor `@unique`. Without it, the rule engine might return duplicates if this allows it to operate faster.
+
+Options `-C` and `-c URI` control the graph where the closure of TBox data is emitted.
 Option `-C` causes the closure to be emitted as is, using the same graphs computed in the closure.
 Option `-c` causes the closure to be emitted in a specific named graph.
-If none of these options is specified, the closure of static data is not emitted.
+If none of these options is specified, the closure of TBox data is not emitted.
 
-Option `-b BASE` specifies the base URI to be used for resolving relative URIs in static data.
-Option `-w` can be used to rewrite BNodes in static data, similarly to the corresponding option in `@read`.
+Option `-b BASE` specifies the base URI to be used for resolving relative URIs in TBox data.
+Option `-w` can be used to rewrite BNodes in TBox data, similarly to the corresponding option in `@read`.
 
-Arguments `URL...` identify the static files to be read. Typically these files supply TBox quads, but this is not a restriction.
-In case static data is supplied, the processor will compute its closure using the chosen rulesets. Then, rules will be pre-processed with respect to this closure, exploding the static parts of their bodies (based on `rr:StaticTerm` declarations in the rulesets) and deriving more specific rules that are used to perform inference on dynamic data arriving from the input stream.
+Arguments `URL...` identify the TBox files to be read. Typically these files supply TBox quads, but this is not a restriction.
+In case TBox data is supplied, the processor will compute its closure using the chosen rulesets. Then, rules will be pre-processed with respect to this closure, exploding the TBox parts of their bodies (based on `rr:MetaVocabularyTerm` declarations in the rulesets) and deriving more specific rules that are used to perform inference on ABox data arriving from the input stream.
 
 #### <a class="anchor" id="mapreduce"></a> @mapreduce
 

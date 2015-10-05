@@ -16,7 +16,7 @@
     <parent>
         <groupId>eu.fbk.dkm</groupId>
         <artifactId>parent</artifactId>
-        <version>1.1</version>
+        <version>1.2-SNAPSHOT</version>
     </parent>
 
     <developers>
@@ -110,6 +110,7 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
+                        <doctitle>RDFpro ${project.version} API (beta - may change without notice)</doctitle>
                         <groups>
                             <group>
                                 <title>rdfpro-core</title>
@@ -134,23 +135,6 @@
     <properties>
         <site.root>http://rdfpro.fbk.eu/</site.root>
         <rdfpro-version>${project.version}</rdfpro-version>
-
-        <!-- used by rdfpro, to be moved to parent -->
-        <sesame-version>2.8.6</sesame-version>
-        <google-guava-version>19.0-rc2</google-guava-version>
-        <groovy-version>2.4.5</groovy-version>
-
-        <!-- not used by rdfpro, to be moved to parent -->
-        <mustache-version>0.9.1</mustache-version>
-        <paranamer-version>2.8</paranamer-version>
-        <hikari-version>2.3.10</hikari-version>
-        <corenlp-version>3.5.2</corenlp-version>
-        <httpclient-version>4.5.1</httpclient-version>
-        <httpcore-version>4.4.3</httpcore-version>
-        <enunciate-version>1.31</enunciate-version>
-        <drools-version>6.3.0.Final</drools-version>
-        <jetty-version>9.3.4.RC0</jetty-version>
-        <jersey-version>2.22</jersey-version>
     </properties>
 
     <modules>

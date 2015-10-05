@@ -20,13 +20,14 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.URIImpl;
 import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
-
-import eu.fbk.rdfpro.RDFProcessor;
-import eu.fbk.rdfpro.RDFProcessors;
 
 /**
  * Test case for {@link eu.fbk.rdfpro.base.FilterProcessorOld}.
@@ -37,6 +38,29 @@ public class TransformProcessorTest {
 
     @Test
     public void testFilter() throws RDFHandlerException {
+
+        // rdfpro @read dbpedia.abox.nt.gz @rdfs dbpedia.tbox.owl @transform '+p rdf:type
+        // rdfs:label' @mapreduce -u -e '+o dbo:Company' 's' @transform '+p rdfs:label' @write
+        // labels.nt.gz
+
+        URI dboCompany = new URIImpl("http://dbpedia.org/ontology/Company");
+
+        RDFSource aboxSource = RDFSources.read(true, true, null, null, "dbpedia.tbox.owl");
+        RDFSource tboxSource = RDFSources.read(true, true, null, null, "dbpedia.abox.nt.gz");
+
+        RDFHandler labelsSink = RDFHandlers.write(null, 0, "labels.nt.gz");
+
+        final RDFProcessor processor = RDFProcessors.sequence( //
+                RDFProcessors.rdfs(aboxSource, null, false, false), //
+                RDFProcessors.transform(Transformer.filter((final Statement s) -> {
+                    final URI p = s.getPredicate();
+                    return p.equals(RDF.TYPE) || p.equals(RDFS.LABEL);
+                })), //
+                RDFProcessors.mapReduce(Mapper.select("s"), Reducer.filter(Reducer.IDENTITY, (
+                        final Statement s) -> s.getObject().equals(dboCompany), null), true));
+
+        processor.apply(tboxSource, labelsSink, 1);
+
         // Create a filter which matches any subject and object with predicates of statements
         // contained into the file.nt.
         final RDFProcessor filter = RDFProcessors.parse(true, "@filter 'sou +[./file.nt]p -*'");
@@ -88,5 +112,4 @@ public class TransformProcessorTest {
         Assert.assertEquals("(http://sx, http://p1, http://sx)", statements.get(0).toString());
         Assert.assertEquals("(http://sy, http://p2, http://sy)", statements.get(1).toString());
     }
-
 }

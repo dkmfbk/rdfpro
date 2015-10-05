@@ -1,7 +1,7 @@
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix rr:   <http://dkm.fbk.eu/rdfpro-rules#> .
-@prefix :     <http://dkm.fbk.eu/rdfpro-rules/rdfs-rhodf#> .
+@prefix rr:   <http://rdfpro.fbk.eu/ontologies/rules#> .
+@prefix :     <http://rdfpro.fbk.eu/ontologies/rules/rhodf#> .
 
 
 # rules from taken from table 1 of:
@@ -19,10 +19,10 @@ rdf: rr:prefix "rdf" .
 rdfs: rr:prefix "rdfs" .
 
 
-rdfs:domain a rr:StaticTerm.
-rdfs:range a rr:StaticTerm.
-rdfs:subClassOf a rr:StaticTerm.
-rdfs:subPropertyOf a rr:StaticTerm.
+rdfs:domain a rr:MetaVocabularyTerm.
+rdfs:range a rr:MetaVocabularyTerm.
+rdfs:subClassOf a rr:MetaVocabularyTerm.
+rdfs:subPropertyOf a rr:MetaVocabularyTerm.
 
 
 :2a a rr:Rule;

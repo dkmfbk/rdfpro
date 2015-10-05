@@ -5,13 +5,18 @@ import org.openrdf.model.URI;
 import org.openrdf.model.impl.NamespaceImpl;
 import org.openrdf.model.impl.ValueFactoryImpl;
 
+/**
+ * Constants for the RDFpro Rules (RR) vocabulary.
+ *
+ * @see <a href="http://rdfpro.fbk.eu/ontologies/rules">vocabulary specification</a>
+ */
 public final class RR {
 
     /** Recommended prefix for the vocabulary namespace: "rr". */
     public static final String PREFIX = "rr";
 
     /** Vocabulary namespace: "http://dkm.fbk.eu/rdfpro-rules#". */
-    public static final String NAMESPACE = "http://dkm.fbk.eu/rdfpro-rules#";
+    public static final String NAMESPACE = "http://rdfpro.fbk.eu/ontologies/rules#";
 
     /** Immutable {@link Namespace} constant for the vocabulary namespace. */
     public static final Namespace NS = new NamespaceImpl(PREFIX, NAMESPACE);
@@ -28,7 +33,7 @@ public final class RR {
     public static final URI NON_FIXPOINT_RULE = createURI("NonFixpointRule");
 
     /** Class rr:StaticTerm. */
-    public static final URI STATIC_TERM = createURI("StaticTerm");
+    public static final URI META_VOCABULARY_TERM = createURI("MetaVocabularyTerm");
 
     // PROPERTIES
 
