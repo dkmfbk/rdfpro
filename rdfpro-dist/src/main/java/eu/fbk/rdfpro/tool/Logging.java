@@ -17,7 +17,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Constructor;
 
 import org.slf4j.Logger;
 
@@ -33,6 +32,9 @@ import ch.qos.logback.core.util.EnvUtil;
 
 public final class Logging {
 
+    private static final boolean ANSI_ENABLED = !EnvUtil.isWindows()
+            || "true".equalsIgnoreCase(System.getenv("RDFPRO_ANSI_ENABLED"));
+
     public static void setLevel(final Logger logger, final String level) {
         final Level l = Level.valueOf(level);
         ((ch.qos.logback.classic.Logger) logger).setLevel(l);
@@ -43,6 +45,9 @@ public final class Logging {
 
         @Override
         protected String getForegroundColorCode(final ILoggingEvent event) {
+            if (!ANSI_ENABLED) {
+                return ANSIConstants.DEFAULT_FG;
+            }
             final ch.qos.logback.classic.Level level = event.getLevel();
             switch (level.toInt()) {
             case ch.qos.logback.classic.Level.ERROR_INT:
@@ -61,6 +66,9 @@ public final class Logging {
 
         @Override
         protected String getForegroundColorCode(final ILoggingEvent event) {
+            if (!ANSI_ENABLED) {
+                return ANSIConstants.DEFAULT_FG;
+            }
             final ch.qos.logback.classic.Level level = event.getLevel();
             switch (level.toInt()) {
             case ch.qos.logback.classic.Level.ERROR_INT:
@@ -78,21 +86,7 @@ public final class Logging {
 
         private static final int MAX_STATUS_LENGTH = 256;
 
-        private boolean withJansi;
-
         private Encoder<E> encoder;
-
-        public synchronized boolean isWithJansi() {
-            return this.withJansi;
-        }
-
-        public synchronized void setWithJansi(final boolean withJansi) {
-            if (isStarted()) {
-                addStatus(new ErrorStatus("Cannot configure appender named \"" + this.name
-                        + "\" after it has been started.", this));
-            }
-            this.withJansi = withJansi;
-        }
 
         public synchronized Encoder<E> getEncoder() {
             return this.encoder;
@@ -106,7 +100,6 @@ public final class Logging {
             this.encoder = encoder;
         }
 
-        @SuppressWarnings("resource")
         @Override
         public synchronized void start() {
 
@@ -122,27 +115,15 @@ public final class Logging {
                 return;
             }
 
-            // Abort if there is no console attached to the process
-            if (System.console() == null) {
+            // Abort if there is no console attached to the process or cannot enable on Windows
+            if (System.console() == null || !ANSI_ENABLED) {
                 return;
             }
 
             // Setup streams required for generating and displaying status information
             final PrintStream out = System.out;
             final StatusAcceptorStream acceptor = new StatusAcceptorStream(out);
-            OutputStream generator = new StatusGeneratorStream(acceptor);
-
-            // Install Jansi if on Windows and enabled
-            if (EnvUtil.isWindows() && this.withJansi) {
-                try {
-                    final Class<?> clazz = Class
-                            .forName("org.fusesource.jansi.WindowsAnsiOutputStream");
-                    final Constructor<?> constructor = clazz.getConstructor(OutputStream.class);
-                    generator = (OutputStream) constructor.newInstance(generator);
-                } catch (final Throwable ex) {
-                    // ignore
-                }
-            }
+            final OutputStream generator = new StatusGeneratorStream(acceptor);
 
             try {
                 // Setup encoder. On success, replace System.out and start the appender
