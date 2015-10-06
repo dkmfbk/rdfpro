@@ -1,8 +1,9 @@
 AVAILABLE PROCESSORS:
 
-@count          Counts the number of triples for each distinct subject
-  [-p] URI      the predicate URI denoting the number of triples (def. void:triples)
-  [-c] URI      the context URI where to emit count triples (def. sesame:nil)
+@groovy         Transform the stream using a user-supplied Groovy script
+  [-p]          use multiple script instances in parallel (script pooling)
+  SCRIPT        either the script expression or the name of the script file
+  [ARG...]      optional arguments to be passed to the script
 
 @mapreduce      Performs a map/reduce like computation
   [-b PRED]     directly emits input quads matching bypass predicate PRED
@@ -32,9 +33,10 @@ AVAILABLE PROCESSORS:
   [-g] MODE     set graph inference MODE: none (default), global, separate, star
   [-G] URI      set global graph URI for inference modes global and star
   [-t]          drop uninformative <x rdf:type _:b> statements (default: keep)
-  [-C | -c URI] emit static data closure unchanged [-C] or to graph URI [-c]
-  [-b URI][-w]  use base URI [-b] and BNode rewriting [-w] to load static data
-  [FILE...]     load static data (e.g., TBox) from FILE...
+  [-u]          emit unique statements (may be faster than separate @unique)
+  [-C | -c URI] emit TBox data closure unchanged [-C] or to graph URI [-c]
+  [-b URI][-w]  use base URI [-b] and BNode rewriting [-w] to load TBox data
+  [FILE...]     load TBox data (e.g., TBox) from FILE...
 
 @smush          Performs smushing, using a single URI for each sameAs cluster
   URI...        use ranked namespace URIs to select canonical URIs
@@ -51,7 +53,7 @@ AVAILABLE PROCESSORS:
 @transform|@t   Discards/replaces quads based on matching and replace exp.
   [EXP]         sequence of rules on quad components X (values: s, p, o, c):
                   +X value list => quad dropped if X not belongs to list
-                  -X vlaue list => quad dropped if X belongs to list
+                  -X value list => quad dropped if X belongs to list
                   =X value => component X replaced with value (after filters)
                 values are in Turtle and include following wildcard values: <*>
                 => any URI; _:* => any BNode; * => any plain literal; *@* => any

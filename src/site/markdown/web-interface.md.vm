@@ -2,13 +2,7 @@
     <h1>RDFpro web interface</h1>
 </div>
 
----------------------------------------
-
-<h3>Screenshot</h3>
-
-<a href="https://knowledgestore2.fbk.eu/rdfpro-demo/"><img id='demo-img' src='images/demo.png' /></a>
-
-<h3>Description</h3>
+<a style='float: right' href="https://knowledgestore2.fbk.eu/rdfpro-demo/"><img id='demo-img' src='images/demo.png' /></a>
 
 RDFpro 0.4 comes with a web interface, written in [php](http://www.php.net/).
 To install it in your webserver (for example [Apache](http://httpd.apache.org/)), you have first to install the RDFpro command line tool (invoked from the web interface) as described [here](install.html).
@@ -34,3 +28,74 @@ The main options of the web interface can be set by editing the `config.inc.php`
 * `$customFiles` is a list of predefined files, that can be used without uploading them every time.
     The keys of the array is the codename, while the value is the filename (to be copied in the `custom` folder).
 * `$customFilesDesc` is the list of descriptions for the `$customFiles`. The array keys must match.
+
+<h3>Security</h3>
+
+This web interface comes without the security precautions needed to be run on a public server.
+The `index.php` file uses the `escapeshellcmd()` function, that prevent a malicious user to run commands on the
+server.
+Nevertheless, the PRDpro processors are all enabled (although removed from the readme on the right), therefore one
+can write a file on the server filesystem wherever the apache user can write a file.
+To avoid this issue, the RDFpro web interface should run with a Java policy file, using the `java.security.manager`
+and `java.security.policy` parameters.
+The `java` command should be replaced with something like
+
+    java -Djava.security.manager -Djava.security.policy=/path/to/rdfpro.policy
+    
+where the file `rdfpro.policy` should be something similar to
+
+```
+grant {
+    permission java.lang.RuntimePermission "stopThread";
+
+    permission java.net.SocketPermission "localhost:0", "listen";
+
+    permission java.util.PropertyPermission "java.version", "read";
+    permission java.util.PropertyPermission "java.vendor", "read";
+    permission java.util.PropertyPermission "java.vendor.url", "read";
+    permission java.util.PropertyPermission "java.class.version", "read";
+    permission java.util.PropertyPermission "os.name", "read";
+    permission java.util.PropertyPermission "os.version", "read";
+    permission java.util.PropertyPermission "os.arch", "read";
+    permission java.util.PropertyPermission "file.separator", "read";
+    permission java.util.PropertyPermission "path.separator", "read";
+    permission java.util.PropertyPermission "line.separator", "read";
+
+    permission java.util.PropertyPermission "java.specification.version", "read";
+    permission java.util.PropertyPermission "java.specification.vendor", "read";
+    permission java.util.PropertyPermission "java.specification.name", "read";
+
+    permission java.util.PropertyPermission "java.vm.specification.version", "read";
+    permission java.util.PropertyPermission "java.vm.specification.vendor", "read";
+    permission java.util.PropertyPermission "java.vm.specification.name", "read";
+    permission java.util.PropertyPermission "java.vm.version", "read";
+    permission java.util.PropertyPermission "java.vm.vendor", "read";
+    permission java.util.PropertyPermission "java.vm.name", "read";
+
+    permission java.util.PropertyPermission "slf4j.detectLoggerNameMismatch", "read";
+    permission java.util.PropertyPermission "*", "read,write";
+
+    permission java.lang.RuntimePermission "getenv.*";
+    permission java.lang.RuntimePermission "accessClassInPackage.sun.reflect";
+    permission java.lang.RuntimePermission "createClassLoader";
+    permission java.lang.RuntimePermission "writeFileDescriptor";
+    permission java.lang.RuntimePermission "readFileDescriptor";
+    permission java.lang.RuntimePermission "setIO";
+
+    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+
+    permission java.io.FilePermission "/tmp", "read,write";
+    permission java.io.FilePermission "/tmp/*", "read,write";
+
+    permission java.io.FilePermission "/path/to/rdfpro/lib/*", "read";
+    permission java.io.FilePermission "/path/to/rdfpro/etc/*", "read";
+    permission java.io.FilePermission "/path/to/rdfpro/*", "read";
+    permission java.io.FilePermission "/path/to/bin", "read";
+    permission java.io.FilePermission "/path/to/rdfpro/custom/*", "read";
+
+    permission java.io.FilePermission "/path/to/pigz", "execute";
+    permission java.io.FilePermission "/path/to/pbzip2", "execute";
+    permission java.io.FilePermission "/path/to/xz", "execute";
+    permission java.io.FilePermission "/path/to/sort", "execute";
+};
+```

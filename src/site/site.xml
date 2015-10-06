@@ -126,10 +126,6 @@
                 </index>
                 <web-interface>
                     <markPageHeader>false</markPageHeader>
-                    <sections>
-                        <body/>
-                        <columns>2</columns>
-                    </sections>
                 </web-interface>
                 <taglist>
                     <html5Anchor>false</html5Anchor>
