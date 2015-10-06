@@ -21,6 +21,18 @@
 
     <developers>
         <developer>
+            <id>corcoglio</id>
+            <name>Francesco Corcoglioniti</name>
+            <email>corcoglio@fbk.eu</email>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+            <properties>
+                <picUrl>http://rdfpro.fbk.eu/images/team/corcoglio.jpg</picUrl>
+            </properties>
+        </developer>
+        <developer>
             <id>rospocher</id>
             <name>Marco Rospocher</name>
             <email>rospocher@fbk.eu</email>
