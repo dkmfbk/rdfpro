@@ -4,14 +4,21 @@
 
 ---------------------------------------
 
-### Screenshot
+<h3>Screenshot</h3>
 
 <a href="https://knowledgestore2.fbk.eu/rdfpro-demo/"><img id='demo-img' src='images/demo.png' /></a>
 
-### Description
+<h3>Description</h3>
 
 RDFpro 0.4 comes with a web interface, written in [php](http://www.php.net/).
-To install it in your webserver (for example [Apache](http://httpd.apache.org/)), just copy the `src/webdemo` folder in the distributed tar.gz package and copy it to the webserver root folder.
+To install it in your webserver (for example [Apache](http://httpd.apache.org/)), you have first to install the RDFpro command line tool (invoked from the web interface) as described [here](install.html).
+Then, download one of the following packages:
+
+  * [rdfpro-dist-${project-version}-web.tar.gz](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-web.tar.gz) (latest version, tar.gz)
+  * [rdfpro-dist-${project-version}-web.zip](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-web.zip) (latest version, zip)
+  * [browse all versions](https://knowledgestore.fbk.eu/files/rdfpro/)
+
+and copy (and rename, if you want) the `rdfpro-web` folder inside the package to the webserver root folder.
 
 The main options of the web interface can be set by editing the `config.inc.php` file.
 
