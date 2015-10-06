@@ -9,10 +9,10 @@
 <a class="jxr_linenumber" name="L1" href="#L1">1</a>   <em class="jxr_comment">/*</em>
 <a class="jxr_linenumber" name="L2" href="#L2">2</a>   <em class="jxr_comment"> * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.</em>
 <a class="jxr_linenumber" name="L3" href="#L3">3</a>   <em class="jxr_comment"> * </em>
-<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <em class="jxr_comment"> * Written in 2014 by Francesco Corcoglioniti &lt;francesco.corcoglioniti@gmail.com&gt; with support by</em>
-<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <em class="jxr_comment"> * Marco Rospocher, Marco Amadori and Michele Mostarda.</em>
+<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <em class="jxr_comment"> * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,</em>
+<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <em class="jxr_comment"> * Alessio Palmero Aprosio and Marco Rospocher. Contact info on <a href="http://rdfpro.fbk.eu" target="alexandria_uri">http://rdfpro.fbk.eu</a>/</em>
 <a class="jxr_linenumber" name="L6" href="#L6">6</a>   <em class="jxr_comment"> * </em>
-<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <em class="jxr_comment"> * To the extent possible under law, the author has dedicated all copyright and related and</em>
+<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <em class="jxr_comment"> * To the extent possible under law, the authors have dedicated all copyright and related and</em>
 <a class="jxr_linenumber" name="L8" href="#L8">8</a>   <em class="jxr_comment"> * neighboring rights to this software to the public domain worldwide. This software is</em>
 <a class="jxr_linenumber" name="L9" href="#L9">9</a>   <em class="jxr_comment"> * distributed without any warranty.</em>
 <a class="jxr_linenumber" name="L10" href="#L10">10</a>  <em class="jxr_comment"> * </em>
@@ -94,7 +94,7 @@
 <a class="jxr_linenumber" name="L86" href="#L86">86</a>          }
 <a class="jxr_linenumber" name="L87" href="#L87">87</a>      }
 <a class="jxr_linenumber" name="L88" href="#L88">88</a>  
-<a class="jxr_linenumber" name="L89" href="#L89">89</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset;
+<a class="jxr_linenumber" name="L89" href="#L89">89</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset;
 <a class="jxr_linenumber" name="L90" href="#L90">90</a>  
 <a class="jxr_linenumber" name="L91" href="#L91">91</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBox</a> tbox;
 <a class="jxr_linenumber" name="L92" href="#L92">92</a>  
@@ -145,8 +145,8 @@
 <a class="jxr_linenumber" name="L137" href="#L137">137</a> 
 <a class="jxr_linenumber" name="L138" href="#L138">138</a>         });
 <a class="jxr_linenumber" name="L139" href="#L139">139</a>         database.commit();
-<a class="jxr_linenumber" name="L140" href="#L140">140</a>         <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset = excludedRules == <strong class="jxr_keyword">null</strong> || excludedRules.length == 0 ? Ruleset.DEFAULT
-<a class="jxr_linenumber" name="L141" href="#L141">141</a>                 : <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a>(excludedRules);
+<a class="jxr_linenumber" name="L140" href="#L140">140</a>         <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset = excludedRules == <strong class="jxr_keyword">null</strong> || excludedRules.length == 0 ? Ruleset.DEFAULT
+<a class="jxr_linenumber" name="L141" href="#L141">141</a>                 : <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a>(excludedRules);
 <a class="jxr_linenumber" name="L142" href="#L142">142</a> 
 <a class="jxr_linenumber" name="L143" href="#L143">143</a>         <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBoxInferencer</a>(decomposeOWLAxioms, ruleset, database).infer();
 <a class="jxr_linenumber" name="L144" href="#L144">144</a> 
@@ -358,13 +358,13 @@
 <a class="jxr_linenumber" name="L350" href="#L350">350</a> 
 <a class="jxr_linenumber" name="L351" href="#L351">351</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> decomposeOWLAxioms;
 <a class="jxr_linenumber" name="L352" href="#L352">352</a> 
-<a class="jxr_linenumber" name="L353" href="#L353">353</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset;
+<a class="jxr_linenumber" name="L353" href="#L353">353</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset;
 <a class="jxr_linenumber" name="L354" href="#L354">354</a> 
 <a class="jxr_linenumber" name="L355" href="#L355">355</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Database</a> db;
 <a class="jxr_linenumber" name="L356" href="#L356">356</a> 
 <a class="jxr_linenumber" name="L357" href="#L357">357</a>         <strong class="jxr_keyword">private</strong> Iterable&lt;Statement&gt; delta; <em class="jxr_comment">// previously added statements</em>
 <a class="jxr_linenumber" name="L358" href="#L358">358</a> 
-<a class="jxr_linenumber" name="L359" href="#L359">359</a>         <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBoxInferencer</a>(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> decomposeOWLAxioms, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset,
+<a class="jxr_linenumber" name="L359" href="#L359">359</a>         <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBoxInferencer</a>(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> decomposeOWLAxioms, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset,
 <a class="jxr_linenumber" name="L360" href="#L360">360</a>                 <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Database</a> database) {
 <a class="jxr_linenumber" name="L361" href="#L361">361</a>             <strong class="jxr_keyword">this</strong>.decomposeOWLAxioms = decomposeOWLAxioms;
 <a class="jxr_linenumber" name="L362" href="#L362">362</a>             <strong class="jxr_keyword">this</strong>.ruleset = ruleset;
@@ -774,7 +774,7 @@
 <a class="jxr_linenumber" name="L766" href="#L766">766</a> 
 <a class="jxr_linenumber" name="L767" href="#L767">767</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> RDFHandler handler;
 <a class="jxr_linenumber" name="L768" href="#L768">768</a> 
-<a class="jxr_linenumber" name="L769" href="#L769">769</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset;
+<a class="jxr_linenumber" name="L769" href="#L769">769</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset;
 <a class="jxr_linenumber" name="L770" href="#L770">770</a> 
 <a class="jxr_linenumber" name="L771" href="#L771">771</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBox</a> tbox;
 <a class="jxr_linenumber" name="L772" href="#L772">772</a> 
@@ -792,7 +792,7 @@
 <a class="jxr_linenumber" name="L784" href="#L784">784</a> 
 <a class="jxr_linenumber" name="L785" href="#L785">785</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> List&lt;Statement&gt; emitted;
 <a class="jxr_linenumber" name="L786" href="#L786">786</a> 
-<a class="jxr_linenumber" name="L787" href="#L787">787</a>         <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">ABoxInferencer</a>(<strong class="jxr_keyword">final</strong> RDFHandler handler, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> ruleset, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBox</a> tbox,
+<a class="jxr_linenumber" name="L787" href="#L787">787</a>         <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">ABoxInferencer</a>(<strong class="jxr_keyword">final</strong> RDFHandler handler, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> ruleset, <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">TBox</a> tbox,
 <a class="jxr_linenumber" name="L788" href="#L788">788</a>                 <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Deduplicator</a> deduplicator, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> dropBNodesTypes) {
 <a class="jxr_linenumber" name="L789" href="#L789">789</a>             <strong class="jxr_keyword">this</strong>.handler = handler;
 <a class="jxr_linenumber" name="L790" href="#L790">790</a>             <strong class="jxr_keyword">this</strong>.ruleset = ruleset;
@@ -1000,7 +1000,7 @@
 <a class="jxr_linenumber" name="L992" href="#L992">992</a>         }
 <a class="jxr_linenumber" name="L993" href="#L993">993</a> 
 <a class="jxr_linenumber" name="L994" href="#L994">994</a>         <em class="jxr_comment">// TODO</em>
-<a class="jxr_linenumber" name="L995" href="#L995">995</a>         
+<a class="jxr_linenumber" name="L995" href="#L995">995</a> 
 <a class="jxr_linenumber" name="L996" href="#L996">996</a>         <strong class="jxr_keyword">boolean</strong> add(<strong class="jxr_keyword">final</strong> Statement statement, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> buffer) {
 <a class="jxr_linenumber" name="L997" href="#L997">997</a> 
 <a class="jxr_linenumber" name="L998" href="#L998">998</a>             <strong class="jxr_keyword">if</strong> (buffer || VOC.containsKey(statement.getPredicate())
@@ -1026,9 +1026,9 @@
 <a class="jxr_linenumber" name="L1018" href="#L1018">1018</a> 
 <a class="jxr_linenumber" name="L1019" href="#L1019">1019</a>     }
 <a class="jxr_linenumber" name="L1020" href="#L1020">1020</a> 
-<a class="jxr_linenumber" name="L1021" href="#L1021">1021</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> {
+<a class="jxr_linenumber" name="L1021" href="#L1021">1021</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> {
 <a class="jxr_linenumber" name="L1022" href="#L1022">1022</a> 
-<a class="jxr_linenumber" name="L1023" href="#L1023">1023</a>         <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a> DEFAULT = <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a>();
+<a class="jxr_linenumber" name="L1023" href="#L1023">1023</a>         <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a> DEFAULT = <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a>();
 <a class="jxr_linenumber" name="L1024" href="#L1024">1024</a> 
 <a class="jxr_linenumber" name="L1025" href="#L1025">1025</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> rdfD2;
 <a class="jxr_linenumber" name="L1026" href="#L1026">1026</a> 
@@ -1060,7 +1060,7 @@
 <a class="jxr_linenumber" name="L1052" href="#L1052">1052</a> 
 <a class="jxr_linenumber" name="L1053" href="#L1053">1053</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> rdfs13;
 <a class="jxr_linenumber" name="L1054" href="#L1054">1054</a> 
-<a class="jxr_linenumber" name="L1055" href="#L1055">1055</a>         <a href="../../../eu/fbk/rdfpro/ProcessorRDFS.html">Ruleset</a>(<strong class="jxr_keyword">final</strong> String... excludedRules) {
+<a class="jxr_linenumber" name="L1055" href="#L1055">1055</a>         <a href="../../../eu/fbk/rdfpro/Ruleset.html">Ruleset</a>(<strong class="jxr_keyword">final</strong> String... excludedRules) {
 <a class="jxr_linenumber" name="L1056" href="#L1056">1056</a> 
 <a class="jxr_linenumber" name="L1057" href="#L1057">1057</a>             <strong class="jxr_keyword">final</strong> Set&lt;String&gt; set = <strong class="jxr_keyword">new</strong> HashSet&lt;String&gt;();
 <a class="jxr_linenumber" name="L1058" href="#L1058">1058</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">final</strong> String rule : excludedRules) {

@@ -878,7 +878,7 @@
 <a class="jxr_linenumber" name="L870" href="#L870">870</a>         }
 <a class="jxr_linenumber" name="L871" href="#L871">871</a> 
 <a class="jxr_linenumber" name="L872" href="#L872">872</a>         <em class="jxr_comment">// TODO consider caching of loaded file components (very optional)</em>
-<a class="jxr_linenumber" name="L873" href="#L873">873</a>         <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/GroovyProcessor.html">ValueSet</a> loadSet(<strong class="jxr_keyword">final</strong> Object file, <strong class="jxr_keyword">final</strong> Object components) {
+<a class="jxr_linenumber" name="L873" href="#L873">873</a>         <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">final</strong> <a href="../../../eu/fbk/rdfpro/util/QuadModel.html">ValueSet</a> loadSet(<strong class="jxr_keyword">final</strong> Object file, <strong class="jxr_keyword">final</strong> Object components) {
 <a class="jxr_linenumber" name="L874" href="#L874">874</a>             <strong class="jxr_keyword">final</strong> File inputFile;
 <a class="jxr_linenumber" name="L875" href="#L875">875</a>             <strong class="jxr_keyword">if</strong> (file instanceof File) {
 <a class="jxr_linenumber" name="L876" href="#L876">876</a>                 inputFile = (File) file;
@@ -886,7 +886,7 @@
 <a class="jxr_linenumber" name="L878" href="#L878">878</a>                 inputFile = <strong class="jxr_keyword">new</strong> File(file.toString());
 <a class="jxr_linenumber" name="L879" href="#L879">879</a>             }
 <a class="jxr_linenumber" name="L880" href="#L880">880</a>             <strong class="jxr_keyword">final</strong> String pattern = components.toString();
-<a class="jxr_linenumber" name="L881" href="#L881">881</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/GroovyProcessor.html">ValueSet</a>(createHashSet(pattern, inputFile));
+<a class="jxr_linenumber" name="L881" href="#L881">881</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> <a href="../../../eu/fbk/rdfpro/util/QuadModel.html">ValueSet</a>(createHashSet(pattern, inputFile));
 <a class="jxr_linenumber" name="L882" href="#L882">882</a>         }
 <a class="jxr_linenumber" name="L883" href="#L883">883</a> 
 <a class="jxr_linenumber" name="L884" href="#L884">884</a>         <em class="jxr_comment">// UTILITY FUNCTIONS</em>
@@ -1218,11 +1218,11 @@
 <a class="jxr_linenumber" name="L1210" href="#L1210">1210</a> 
 <a class="jxr_linenumber" name="L1211" href="#L1211">1211</a>     }
 <a class="jxr_linenumber" name="L1212" href="#L1212">1212</a> 
-<a class="jxr_linenumber" name="L1213" href="#L1213">1213</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../eu/fbk/rdfpro/GroovyProcessor.html">ValueSet</a> {
+<a class="jxr_linenumber" name="L1213" href="#L1213">1213</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../eu/fbk/rdfpro/util/QuadModel.html">ValueSet</a> {
 <a class="jxr_linenumber" name="L1214" href="#L1214">1214</a> 
 <a class="jxr_linenumber" name="L1215" href="#L1215">1215</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Set&lt;String&gt; hashSet;
 <a class="jxr_linenumber" name="L1216" href="#L1216">1216</a> 
-<a class="jxr_linenumber" name="L1217" href="#L1217">1217</a>         <a href="../../../eu/fbk/rdfpro/GroovyProcessor.html">ValueSet</a>(<strong class="jxr_keyword">final</strong> Set&lt;String&gt; hashSet) {
+<a class="jxr_linenumber" name="L1217" href="#L1217">1217</a>         <a href="../../../eu/fbk/rdfpro/util/QuadModel.html">ValueSet</a>(<strong class="jxr_keyword">final</strong> Set&lt;String&gt; hashSet) {
 <a class="jxr_linenumber" name="L1218" href="#L1218">1218</a>             <strong class="jxr_keyword">this</strong>.hashSet = hashSet;
 <a class="jxr_linenumber" name="L1219" href="#L1219">1219</a>         }
 <a class="jxr_linenumber" name="L1220" href="#L1220">1220</a> 

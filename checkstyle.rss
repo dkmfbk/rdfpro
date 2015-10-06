@@ -25,9 +25,9 @@ under the License.
     <language>en-us</language>
     <copyright>&#169;2015 FBK-irst</copyright>
     <item>
-      <title>File: 75,
-             Errors: 4,
-             Warnings: 536,
+      <title>File: 97,
+             Errors: 9,
+             Warnings: 568,
              Infos: 0
       </title>
             <link>http://rdfpro.fbk.eu//checkstyle.html</link>
@@ -44,6 +44,20 @@ under the License.
             </tr>
           </thead>
           <tbody>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Dictionary.java">eu/fbk/rdfpro/util/Dictionary.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
                           <tr>
                 <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Options.java">eu/fbk/rdfpro/util/Options.java</a>
@@ -66,49 +80,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  6
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLDWriter.java">eu/fbk/rdfpro/jsonld/JSONLDWriter.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  1
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.SailQuadModel.java">eu/fbk/rdfpro/rules/model/SailQuadModel.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.drools.Quad.java">eu/fbk/rdfpro/rules/drools/Quad.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  13
+                  5
                 </td>
                 <td>
                   0
@@ -130,13 +102,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.GroovyProcessorTest.java">eu/fbk/rdfpro/GroovyProcessorTest.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelModelAdapter.java">eu/fbk/rdfpro/util/QuadModelModelAdapter.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  6
+                  0
                 </td>
                 <td>
                   0
@@ -145,34 +117,6 @@ under the License.
                           <tr>
                 <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLDWriterFactory.java">eu/fbk/rdfpro/jsonld/JSONLDWriterFactory.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  5
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFProcessors.java">eu/fbk/rdfpro/RDFProcessors.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  14
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Namespaces.java">eu/fbk/rdfpro/util/Namespaces.java</a>
                 </td>
                 <td>
                   0
@@ -200,7 +144,7 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.functions.MintFunction.java">eu/fbk/rdfpro/rules/functions/MintFunction.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.internal.FunctionMint.java">eu/fbk/rdfpro/internal/FunctionMint.java</a>
                 </td>
                 <td>
                   0
@@ -214,69 +158,41 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.util.SPARQLRenderer.java">eu/fbk/rdfpro/rules/util/SPARQLRenderer.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Hashable.java">eu/fbk/rdfpro/util/Hashable.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#org.openrdf.query.algebra.evaluation.QueryBindingSet.java">org/openrdf/query/algebra/evaluation/QueryBindingSet.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  14
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelLoadTest.java">eu/fbk/rdfpro/util/QuadModelLoadTest.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
                   5
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.RuleProcessor.java">eu/fbk/rdfpro/rules/RuleProcessor.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  3
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.RR.java">eu/fbk/rdfpro/rules/RR.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  5
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.util.Algebra.java">eu/fbk/rdfpro/rules/util/Algebra.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  1
-                </td>
-                <td>
-                  1
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLParser.java">eu/fbk/rdfpro/tql/TQLParser.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  4
                 </td>
                 <td>
                   0
@@ -312,6 +228,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelSailAdapter.java">eu/fbk/rdfpro/util/QuadModelSailAdapter.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.package-info.java">eu/fbk/rdfpro/package-info.java</a>
                 </td>
                 <td>
@@ -336,6 +266,20 @@ under the License.
                 </td>
                 <td>
                   0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelTest.java">eu/fbk/rdfpro/util/QuadModelTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
                 </td>
               </tr>
                           <tr>
@@ -368,48 +312,6 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFSourceException.java">eu/fbk/rdfpro/RDFSourceException.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Transformer.java">eu/fbk/rdfpro/Transformer.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  50
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.MemoryQuadModel.java">eu/fbk/rdfpro/rules/model/MemoryQuadModel.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  1
-                </td>
-                <td>
-                  1
-                </td>
-              </tr>
-                          <tr>
-                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Mapper.java">eu/fbk/rdfpro/Mapper.java</a>
                 </td>
                 <td>
@@ -417,48 +319,6 @@ under the License.
                 </td>
                 <td>
                   23
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.QuadModel.java">eu/fbk/rdfpro/rules/model/QuadModel.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  47
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.vocab.VOIDX.java">eu/fbk/rdfpro/vocab/VOIDX.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  3
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.base.TransformProcessorTest.java">eu/fbk/rdfpro/base/TransformProcessorTest.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  2
                 </td>
                 <td>
                   0
@@ -480,6 +340,34 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.internal.FunctionStarSelectGraph.java">eu/fbk/rdfpro/internal/FunctionStarSelectGraph.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLParserFactory.java">eu/fbk/rdfpro/tql/TQLParserFactory.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Reducer.java">eu/fbk/rdfpro/Reducer.java</a>
                 </td>
                 <td>
@@ -494,13 +382,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StringTest.java">eu/fbk/rdfpro/util/StringTest.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelRepositoryAdapter.java">eu/fbk/rdfpro/util/QuadModelRepositoryAdapter.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  2
+                  1
                 </td>
                 <td>
                   0
@@ -508,7 +396,7 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLParserFactory.java">eu/fbk/rdfpro/tql/TQLParserFactory.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StringTest.java">eu/fbk/rdfpro/util/StringTest.java</a>
                 </td>
                 <td>
                   0
@@ -536,20 +424,6 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tool.Logging.java">eu/fbk/rdfpro/tool/Logging.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  10
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.SetOperator.java">eu/fbk/rdfpro/SetOperator.java</a>
                 </td>
                 <td>
@@ -564,41 +438,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.RuleEngine.java">eu/fbk/rdfpro/rules/RuleEngine.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  17
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.functions.CompatibleDatatypeFunction.java">eu/fbk/rdfpro/rules/functions/CompatibleDatatypeFunction.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  4
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Tracker.java">eu/fbk/rdfpro/util/Tracker.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  5
+                  6
                 </td>
                 <td>
                   0
@@ -606,49 +452,7 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.OptionsTest.java">eu/fbk/rdfpro/util/OptionsTest.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  3
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.drools.Engine.java">eu/fbk/rdfpro/rules/drools/Engine.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  13
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.ScriptTest.java">eu/fbk/rdfpro/ScriptTest.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  7
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLD.java">eu/fbk/rdfpro/jsonld/JSONLD.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RuleEngine.java">eu/fbk/rdfpro/RuleEngine.java</a>
                 </td>
                 <td>
                   0
@@ -662,13 +466,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.Rule.java">eu/fbk/rdfpro/rules/Rule.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Iterators.java">eu/fbk/rdfpro/util/Iterators.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  7
+                  1
                 </td>
                 <td>
                   0
@@ -690,27 +494,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.model.RepositoryQuadModel.java">eu/fbk/rdfpro/rules/model/RepositoryQuadModel.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StatementDeduplicator.java">eu/fbk/rdfpro/util/StatementDeduplicator.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.Ruleset.java">eu/fbk/rdfpro/rules/Ruleset.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  20
+                  15
                 </td>
                 <td>
                   0
@@ -732,16 +522,16 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFProcessor.java">eu/fbk/rdfpro/RDFProcessor.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLWriterFactory.java">eu/fbk/rdfpro/tql/TQLWriterFactory.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  0
+                  5
                 </td>
                 <td>
-                  1
+                  0
                 </td>
               </tr>
                           <tr>
@@ -753,20 +543,6 @@ under the License.
                 </td>
                 <td>
                   2
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLWriterFactory.java">eu/fbk/rdfpro/tql/TQLWriterFactory.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  5
                 </td>
                 <td>
                   0
@@ -816,48 +592,6 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.package-info.java">eu/fbk/rdfpro/util/package-info.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.drools.Dictionary.java">eu/fbk/rdfpro/rules/drools/Dictionary.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  13
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.package-info.java">eu/fbk/rdfpro/jsonld/package-info.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFSources.java">eu/fbk/rdfpro/RDFSources.java</a>
                 </td>
                 <td>
@@ -878,7 +612,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  26
+                  32
                 </td>
                 <td>
                   0
@@ -892,7 +626,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  42
+                  38
                 </td>
                 <td>
                   0
@@ -914,27 +648,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.SparqlFunctions.java">eu/fbk/rdfpro/SparqlFunctions.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Sorting.java">eu/fbk/rdfpro/util/Sorting.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  3
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLDParser.java">eu/fbk/rdfpro/jsonld/JSONLDParser.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  3
+                  2
                 </td>
                 <td>
                   0
@@ -956,48 +676,6 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Environment.java">eu/fbk/rdfpro/util/Environment.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  15
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.util.Iterators.java">eu/fbk/rdfpro/rules/util/Iterators.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  6
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.rules.functions.StarSelectGraphFunction.java">eu/fbk/rdfpro/rules/functions/StarSelectGraphFunction.java</a>
-                </td>
-                <td>
-                  0
-                </td>
-                <td>
-                  1
-                </td>
-                <td>
-                  0
-                </td>
-              </tr>
-                          <tr>
-                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.AbstractRDFHandlerWrapper.java">eu/fbk/rdfpro/AbstractRDFHandlerWrapper.java</a>
                 </td>
                 <td>
@@ -1012,13 +690,629 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.ProcessorRules.java">eu/fbk/rdfpro/ProcessorRules.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.HashValueFactory.java">eu/fbk/rdfpro/util/HashValueFactory.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Rule.java">eu/fbk/rdfpro/Rule.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  18
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RuleProcessorTest.java">eu/fbk/rdfpro/RuleProcessorTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  10
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.GroovyProcessor.java">eu/fbk/rdfpro/GroovyProcessor.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  14
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.NamespacesTest.java">eu/fbk/rdfpro/util/NamespacesTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLDWriter.java">eu/fbk/rdfpro/jsonld/JSONLDWriter.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.GroovyProcessorTest.java">eu/fbk/rdfpro/GroovyProcessorTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  6
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFProcessors.java">eu/fbk/rdfpro/RDFProcessors.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  14
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Namespaces.java">eu/fbk/rdfpro/util/Namespaces.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  5
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StatementComponent.java">eu/fbk/rdfpro/util/StatementComponent.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  13
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StatementMatcherTest.java">eu/fbk/rdfpro/util/StatementMatcherTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  4
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tql.TQLParser.java">eu/fbk/rdfpro/tql/TQLParser.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  4
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Ruleset.java">eu/fbk/rdfpro/Ruleset.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  4
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.TransformProcessorTest.java">eu/fbk/rdfpro/TransformProcessorTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.AlgebraTest.java">eu/fbk/rdfpro/util/AlgebraTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
                   3
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFSourceException.java">eu/fbk/rdfpro/RDFSourceException.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.Transformer.java">eu/fbk/rdfpro/Transformer.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  50
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.vocab.VOIDX.java">eu/fbk/rdfpro/vocab/VOIDX.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  3
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.vocab.RR.java">eu/fbk/rdfpro/vocab/RR.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelImpl.java">eu/fbk/rdfpro/util/QuadModelImpl.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.tool.Logging.java">eu/fbk/rdfpro/tool/Logging.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  8
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.DictionaryProcessor.java">eu/fbk/rdfpro/util/DictionaryProcessor.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.ScriptingTest.java">eu/fbk/rdfpro/util/ScriptingTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.OptionsTest.java">eu/fbk/rdfpro/util/OptionsTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  2
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RuleEngineDrools.java">eu/fbk/rdfpro/RuleEngineDrools.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  42
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.ScriptTest.java">eu/fbk/rdfpro/ScriptTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  7
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLD.java">eu/fbk/rdfpro/jsonld/JSONLD.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelSubModel.java">eu/fbk/rdfpro/util/QuadModelSubModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Buffer.java">eu/fbk/rdfpro/util/Buffer.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  4
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModel.java">eu/fbk/rdfpro/util/QuadModel.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RDFProcessor.java">eu/fbk/rdfpro/RDFProcessor.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Algebra.java">eu/fbk/rdfpro/util/Algebra.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.DictionaryTest.java">eu/fbk/rdfpro/util/DictionaryTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  6
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.package-info.java">eu/fbk/rdfpro/util/package-info.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StringIndex.java">eu/fbk/rdfpro/util/StringIndex.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.internal.FunctionCompatibleDatatype.java">eu/fbk/rdfpro/internal/FunctionCompatibleDatatype.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  4
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.StatementBuffer.java">eu/fbk/rdfpro/StatementBuffer.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  3
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.package-info.java">eu/fbk/rdfpro/jsonld/package-info.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.SPARQLRenderer.java">eu/fbk/rdfpro/util/SPARQLRenderer.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.SparqlFunctions.java">eu/fbk/rdfpro/SparqlFunctions.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  3
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.RuleEngineImpl.java">eu/fbk/rdfpro/RuleEngineImpl.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.jsonld.JSONLDParser.java">eu/fbk/rdfpro/jsonld/JSONLDParser.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  3
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.Environment.java">eu/fbk/rdfpro/util/Environment.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  15
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StatementMatcher.java">eu/fbk/rdfpro/util/StatementMatcher.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  18
                 </td>
                 <td>
                   0
@@ -1033,6 +1327,20 @@ under the License.
                 </td>
                 <td>
                   1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StringIndexTest.java">eu/fbk/rdfpro/util/StringIndexTest.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  3
                 </td>
                 <td>
                   0
@@ -1082,13 +1390,13 @@ under the License.
               </tr>
                           <tr>
                 <td>
-                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.GroovyProcessor.java">eu/fbk/rdfpro/GroovyProcessor.java</a>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.StatementTemplate.java">eu/fbk/rdfpro/util/StatementTemplate.java</a>
                 </td>
                 <td>
                   0
                 </td>
                 <td>
-                  14
+                  9
                 </td>
                 <td>
                   0

@@ -9,10 +9,10 @@
 <a class="jxr_linenumber" name="L1" href="#L1">1</a>   <em class="jxr_comment">/*</em>
 <a class="jxr_linenumber" name="L2" href="#L2">2</a>   <em class="jxr_comment"> * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.</em>
 <a class="jxr_linenumber" name="L3" href="#L3">3</a>   <em class="jxr_comment"> * </em>
-<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <em class="jxr_comment"> * Written in 2014 by Francesco Corcoglioniti &lt;francesco.corcoglioniti@gmail.com&gt; with support by</em>
-<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <em class="jxr_comment"> * Marco Rospocher, Marco Amadori and Michele Mostarda.</em>
+<a class="jxr_linenumber" name="L4" href="#L4">4</a>   <em class="jxr_comment"> * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,</em>
+<a class="jxr_linenumber" name="L5" href="#L5">5</a>   <em class="jxr_comment"> * Alessio Palmero Aprosio and Marco Rospocher. Contact info on <a href="http://rdfpro.fbk.eu" target="alexandria_uri">http://rdfpro.fbk.eu</a>/</em>
 <a class="jxr_linenumber" name="L6" href="#L6">6</a>   <em class="jxr_comment"> * </em>
-<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <em class="jxr_comment"> * To the extent possible under law, the author has dedicated all copyright and related and</em>
+<a class="jxr_linenumber" name="L7" href="#L7">7</a>   <em class="jxr_comment"> * To the extent possible under law, the authors have dedicated all copyright and related and</em>
 <a class="jxr_linenumber" name="L8" href="#L8">8</a>   <em class="jxr_comment"> * neighboring rights to this software to the public domain worldwide. This software is</em>
 <a class="jxr_linenumber" name="L9" href="#L9">9</a>   <em class="jxr_comment"> * distributed without any warranty.</em>
 <a class="jxr_linenumber" name="L10" href="#L10">10</a>  <em class="jxr_comment"> * </em>
@@ -795,11 +795,11 @@
 <a class="jxr_linenumber" name="L787" href="#L787">787</a> 
 <a class="jxr_linenumber" name="L788" href="#L788">788</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> GenericIndex&lt;URI&gt; datatypeIndex;
 <a class="jxr_linenumber" name="L789" href="#L789">789</a> 
-<a class="jxr_linenumber" name="L790" href="#L790">790</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a> namespaceIndex;
+<a class="jxr_linenumber" name="L790" href="#L790">790</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a> namespaceIndex;
 <a class="jxr_linenumber" name="L791" href="#L791">791</a> 
-<a class="jxr_linenumber" name="L792" href="#L792">792</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a> vocabNameIndex;
+<a class="jxr_linenumber" name="L792" href="#L792">792</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a> vocabNameIndex;
 <a class="jxr_linenumber" name="L793" href="#L793">793</a> 
-<a class="jxr_linenumber" name="L794" href="#L794">794</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a> otherNameIndex;
+<a class="jxr_linenumber" name="L794" href="#L794">794</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a> otherNameIndex;
 <a class="jxr_linenumber" name="L795" href="#L795">795</a> 
 <a class="jxr_linenumber" name="L796" href="#L796">796</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> vocabNamespaces;
 <a class="jxr_linenumber" name="L797" href="#L797">797</a> 
@@ -812,9 +812,9 @@
 <a class="jxr_linenumber" name="L804" href="#L804">804</a>         <strong class="jxr_keyword">public</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">Dictionary</a>() {
 <a class="jxr_linenumber" name="L805" href="#L805">805</a>             <strong class="jxr_keyword">this</strong>.languageIndex = <strong class="jxr_keyword">new</strong> GenericIndex&lt;String&gt;(LANGUAGE_INDEX_SIZE);
 <a class="jxr_linenumber" name="L806" href="#L806">806</a>             <strong class="jxr_keyword">this</strong>.datatypeIndex = <strong class="jxr_keyword">new</strong> GenericIndex&lt;URI&gt;(DATATYPE_INDEX_SIZE);
-<a class="jxr_linenumber" name="L807" href="#L807">807</a>             <strong class="jxr_keyword">this</strong>.namespaceIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a>(NAMESPACE_INDEX_SIZE);
-<a class="jxr_linenumber" name="L808" href="#L808">808</a>             <strong class="jxr_keyword">this</strong>.vocabNameIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a>(VOCAB_INDEX_SIZE);
-<a class="jxr_linenumber" name="L809" href="#L809">809</a>             <strong class="jxr_keyword">this</strong>.otherNameIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a>(OTHER_INDEX_SIZE);
+<a class="jxr_linenumber" name="L807" href="#L807">807</a>             <strong class="jxr_keyword">this</strong>.namespaceIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a>(NAMESPACE_INDEX_SIZE);
+<a class="jxr_linenumber" name="L808" href="#L808">808</a>             <strong class="jxr_keyword">this</strong>.vocabNameIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a>(VOCAB_INDEX_SIZE);
+<a class="jxr_linenumber" name="L809" href="#L809">809</a>             <strong class="jxr_keyword">this</strong>.otherNameIndex = <strong class="jxr_keyword">new</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a>(OTHER_INDEX_SIZE);
 <a class="jxr_linenumber" name="L810" href="#L810">810</a> 
 <a class="jxr_linenumber" name="L811" href="#L811">811</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">final</strong> String ns : Namespaces.DEFAULT.uris()) {
 <a class="jxr_linenumber" name="L812" href="#L812">812</a>                 <strong class="jxr_keyword">int</strong> nsHash = 0;
@@ -957,7 +957,7 @@
 <a class="jxr_linenumber" name="L949" href="#L949">949</a>             <strong class="jxr_keyword">return</strong> builder.toString();
 <a class="jxr_linenumber" name="L950" href="#L950">950</a>         }
 <a class="jxr_linenumber" name="L951" href="#L951">951</a> 
-<a class="jxr_linenumber" name="L952" href="#L952">952</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a> {
+<a class="jxr_linenumber" name="L952" href="#L952">952</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a> {
 <a class="jxr_linenumber" name="L953" href="#L953">953</a> 
 <a class="jxr_linenumber" name="L954" href="#L954">954</a>             <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> NUM_LOCKS = 32;
 <a class="jxr_linenumber" name="L955" href="#L955">955</a> 
@@ -971,7 +971,7 @@
 <a class="jxr_linenumber" name="L963" href="#L963">963</a> 
 <a class="jxr_linenumber" name="L964" href="#L964">964</a>             <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Object[] locks;
 <a class="jxr_linenumber" name="L965" href="#L965">965</a> 
-<a class="jxr_linenumber" name="L966" href="#L966">966</a>             <a href="../../../../eu/fbk/rdfpro/util/Sorter.html">StringIndex</a>(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> capacity) {
+<a class="jxr_linenumber" name="L966" href="#L966">966</a>             <a href="../../../../eu/fbk/rdfpro/util/StringIndex.html">StringIndex</a>(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> capacity) {
 <a class="jxr_linenumber" name="L967" href="#L967">967</a>                 <strong class="jxr_keyword">this</strong>.capacity = capacity;
 <a class="jxr_linenumber" name="L968" href="#L968">968</a>                 <strong class="jxr_keyword">this</strong>.size = <strong class="jxr_keyword">new</strong> AtomicInteger(0);
 <a class="jxr_linenumber" name="L969" href="#L969">969</a>                 <strong class="jxr_keyword">this</strong>.list = <strong class="jxr_keyword">new</strong> ArrayList&lt;String&gt;();
@@ -989,7 +989,7 @@
 <a class="jxr_linenumber" name="L981" href="#L981">981</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> tableSize = <strong class="jxr_keyword">this</strong>.table.length / 2;
 <a class="jxr_linenumber" name="L982" href="#L982">982</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> segmentSize = (tableSize + NUM_LOCKS - 1) / NUM_LOCKS;
 <a class="jxr_linenumber" name="L983" href="#L983">983</a> 
-<a class="jxr_linenumber" name="L984" href="#L984">984</a>                 <strong class="jxr_keyword">int</strong> index = Math.abs(hash) % tableSize;
+<a class="jxr_linenumber" name="L984" href="#L984">984</a>                 <strong class="jxr_keyword">int</strong> index = (hash &amp; 0x7FFFFFFF) % tableSize;
 <a class="jxr_linenumber" name="L985" href="#L985">985</a> 
 <a class="jxr_linenumber" name="L986" href="#L986">986</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> segment = index / segmentSize;
 <a class="jxr_linenumber" name="L987" href="#L987">987</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> segmentStart = segment * segmentSize;
@@ -1102,7 +1102,7 @@
 <a class="jxr_linenumber" name="L1094" href="#L1094">1094</a> 
 <a class="jxr_linenumber" name="L1095" href="#L1095">1095</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> tableSize = <strong class="jxr_keyword">this</strong>.table.length / 2;
 <a class="jxr_linenumber" name="L1096" href="#L1096">1096</a>                 <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> hash = element.hashCode();
-<a class="jxr_linenumber" name="L1097" href="#L1097">1097</a>                 <strong class="jxr_keyword">int</strong> index = Math.abs(hash) % tableSize;
+<a class="jxr_linenumber" name="L1097" href="#L1097">1097</a>                 <strong class="jxr_keyword">int</strong> index = (hash &amp; 0x7FFFFFFF) % tableSize;
 <a class="jxr_linenumber" name="L1098" href="#L1098">1098</a> 
 <a class="jxr_linenumber" name="L1099" href="#L1099">1099</a>                 <em class="jxr_comment">// first we operate read-only with no synchronization, as it is likely the entry</em>
 <a class="jxr_linenumber" name="L1100" href="#L1100">1100</a>                 <em class="jxr_comment">// is already there (for datatypes and langagues, at least)</em>
