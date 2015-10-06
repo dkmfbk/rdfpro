@@ -1,4 +1,4 @@
-RDFpro %s - https://github.com/dkmfbk/rdfpro (Public Domain software)
+RDFpro %s - http://rdfpro.fbk.eu/ (Public Domain software)
 
 Builds and runs an RDF processing pipeline composed of one or more processors,
 reading/writing compressed RDF data from/to FILEs or SPARQL endpoints.
@@ -37,4 +37,4 @@ RDF format and compression are detected based from the file extension or from a
 
 RDF formats: rdf, rj, jsonld, nt, nq, trix, trig, tql, ttl, n3, brf, geonames
 Compression schemes: gz, bz2, xz, 7z (need resp. gzip, bzip2, xz, 7za)
-Builtin rulesets: owl2rl, rdfs, rdfs-min (rhoDF)
+Builtin rulesets: owl2rl, horst, rdfs, rhodf

@@ -3,7 +3,7 @@
 */.settings/
 */target/
 target/
-test/
+/test/
 *.iml
 .idea/
 **/*.versionsBackup

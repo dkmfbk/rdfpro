@@ -1,10 +1,10 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
  * 
- * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
- * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
+ * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
  * 
- * To the extent possible under law, the author has dedicated all copyright and related and
+ * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
  * 
@@ -26,15 +26,15 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 /**
  * Constants for the VOID Extension (VOIDX) vocabulary.
  *
- * @see <a href="http://dkm.fbk.eu/ontologies/voidx">vocabulary specification</a>
+ * @see <a href="http://rdfpro.fbk.eu/ontologies/voidx">vocabulary specification</a>
  */
 public final class VOIDX {
 
     /** Recommended prefix for the vocabulary namespace: "voidx". */
     public static final String PREFIX = "voidx";
 
-    /** Vocabulary namespace: "http://dkm.fbk.eu/ontologies/voidx#". */
-    public static final String NAMESPACE = "http://dkm.fbk.eu/ontologies/voidx#";
+    /** Vocabulary namespace: "http://rdfpro.fbk.eu/ontologies/voidx#". */
+    public static final String NAMESPACE = "http://rdfpro.fbk.eu/ontologies/voidx#";
 
     /** Immutable {@link Namespace} constant for the vocabulary namespace. */
     public static final Namespace NS = new NamespaceImpl(PREFIX, NAMESPACE);

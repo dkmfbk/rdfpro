@@ -9,7 +9,7 @@
     <parent>
         <groupId>eu.fbk.rdfpro</groupId>
         <artifactId>rdfpro</artifactId>
-        <version>0.4.1</version>
+        <version>0.5</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -43,6 +43,16 @@
         <dependency>
             <groupId>org.openrdf.sesame</groupId>
             <artifactId>sesame-rio-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-queryalgebra-evaluation</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openrdf.sesame</groupId>
+                    <artifactId>sesame-queryresultio-sparqlxml</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -81,11 +91,6 @@
         <dependency>
             <groupId>eu.fbk.rdfpro</groupId>
             <artifactId>rdfpro-tql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>eu.fbk.rdfpro</groupId>
-            <artifactId>rdfpro-rules</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -133,6 +138,14 @@
             <artifactId>sesame-rio-turtle</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-query</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
     </dependencies>
 
     <profiles>
@@ -159,6 +172,7 @@
                             <descriptors>
                                 <descriptor>src/main/assembly/src.xml</descriptor>
                                 <descriptor>src/main/assembly/bin.xml</descriptor>
+                                <descriptor>src/main/assembly/web.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </plugin>

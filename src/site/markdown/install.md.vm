@@ -2,10 +2,11 @@
 RDFpro installation
 ===================
 
-The RDFpro command line tool is packaged as a self-contained, cross-platform Java 8 application. Download it from the following links and unpack in the location you prefer:
+The RDFpro command line tool is packaged as a self-contained, cross-platform Java 8 application. In order to install it, download one of the following packages and unpack it in the location you prefer (if you are interested in the PHP web interface of RDFpro, please refer to [this page](web-interface.html)):
 
-  * [rdfpro-dist-${project-version}-bin.tar.gz](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-bin.tar.gz) (latest version)
-  * [Browse old versions](https://knowledgestore.fbk.eu/files/rdfpro/)
+  * [rdfpro-dist-${project-version}-bin.tar.gz](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-bin.tar.gz) (latest version, tar.gz)
+  * [rdfpro-dist-${project-version}-bin.zip](https://knowledgestore.fbk.eu/files/rdfpro/${project-version}/rdfpro-dist-${project-version}-bin.zip) (latest version, zip)
+  * [browse all versions](https://knowledgestore.fbk.eu/files/rdfpro/)
 
 You can run RDFpro by executing the `rdfpro` script. For instance, you can test if everything works correctly by executing the following command, which should display the tool version and other relevant system information:
 
@@ -15,21 +16,35 @@ You can run RDFpro by executing the `rdfpro` script. For instance, you can test 
     This is free software released into the public domain
 
 RDFpro configuration is performed either editing its configuration file `etc/rdfpro.properties` (syntax `property = value`) or by supplying configuration properties as Java system properties (`export JAVA_OPTS="-Dproperty=value"`) or as environment variables (`export PROPERTY=value`, with property name uppercase with dots replaced with underlines).
+Logging is controlled by file `etc/logback.xml`.
+Custom prefix/namespace bindings can be added (possibly overriding the ones predefined in RDFpro and taken from [prefix.cc](http://prefix.cc/)) by manually modifying the file `etc/rdfpro.prefixes`.
+JARs with additional RDFpro processors can be placed under `lib`.
 
-The following, optional steps are recommended after downloading and extracting RDFpro:
+**Additional installation steps for Windows users**. Windows users should perform the following steps in order to access all the features of RDFpro:
 
-  * Add the rdfpro directory to your PATH variable, or add a symlink to the `rdfpro` script in some directory already in your PATH (e.g., symlink `/usr/bin/rdfpro`), so that the `rdfpro` script can be called without specifying its full path.
+  * Obtain `sort`, `gzip` and `bzip2` for Windows.
+    The Windows versions of these utilities can be obtained from the [GnuWin](http://gnuwin32.sourceforge.net/) project.
+    We suggest to install all the GnuWin utilities using [GetGnuWin](http://sourceforge.net/projects/getgnuwin32) and then add the `c:\gnuwin32` directory to the `PATH` system variable.
+    Alternatively, you can edit file `etc/rdfpro.properties` and set properties `rdfpro.cmd.sort`, `rdfpro.cmd.gzip` and `rdfpro.cmd.bzip2` to the full paths of the corresponding utilities.
+    Beware that there is a name clash between the GnuWin `sort` utility and the (different) Windows `sort` utility: either you add the `c:\gnuwin32` folder as the first `PATH` entry or you manually edit `etc/rdfpro.properties` setting `rdfpro.cmd.sort = C:/gnuwin32/bin/sort.exe` (we suggest the latter option).
 
-  * Make sure you have the `sort`, `gzip`, `bzip2` utilities (also `xz` and `7za` are useful).
-    On a Mac/Linux machine they should be already installed.
-    On Windows, you can get them from the [GnuWin](http://gnuwin32.sourceforge.net/) project.
+  * Enable ANSI escape sequences on Windows command prompt (strongly suggested, not mandatory).
+    RDFpro uses ANSI escape sequences for colored output and for displaying informative status messages during long operations.
+    These features are both disabled on Windows as the Windows console does not support ANSI escape codes.
+    To enable them you have to install [ansicon](https://github.com/adoxa/ansicon) for proper handling of ANSI escape sequences on Windows, unpacking it somewhere on your drive and calling `ansicon -i` to install it permanently on the command prompt (if needed, you can uninstall ansicon by calling `ansicon -u`).
+    Then, you have to edit the script `rdfpro.cmd` and change `RDFPRO_ANSI_ENABLED=false` to `RDFPRO_ANSI_ENABLED=true`.
+
+**Optional installation steps for all users**. The following optional steps can be performed by all users (Linux/Mac/Windows) to improve RDFpro performances or ease of use:
+
+  * Add the rdfpro directory to your PATH variable, or (on Mac/Linux) add a symlink to the `rdfpro` script in some directory already in your PATH (e.g., symlink `/usr/bin/rdfpro`), so that the `rdfpro` script can be called without specifying its full path.
+
+  * To improve performances, it is advised to configure `sort` to use more memory and to compress temporary files, e.g., by setting property `rdfpro.cmd.sort = sort -S 1024M --compress-program gzip` (you can use a value larger than 1024M and `pigz` in place of `gzip`).
+    Also make sure that you have enough space under your `/tmp` folder, or configure `sort` to use a specific folder for temporary files (option `-T tmp_directory_path`).
 
   * To improve performances, install the multi-threaded versions of `gzip` and `bzip2`, called [`pigz`](http://zlib.net/pigz/) and [`pbzip2`](http://compression.ca/pbzip2/)
-    These utilities are available also for Windows (for `pigz` see [here](http://sourceforge.net/projects/pigzforwindows/) and [here](http://blog.kowalczyk.info/software/pigz-for-windows.html)).
+    These utilities are available also for Windows (for `pigz` see [here](http://sourceforge.net/projects/pigzforwindows/) and [here](http://blog.kowalczyk.info/software/pigz-for-windows.html), while `pbzip2` should be compiled from sources on Windows).
     After their installation, you have to configure RDFpro to use them by setting properties `rdfpro.cmd.gzip = path_to_pigz` and `rdfpro.cmd.bzip2 = path_to_pbzip2` (you can omit the full path if pigz and pbzip2 are already in your PATH).
 
-  * To improve performances, it is advised to configure `sort` to use more memory and to compress temporary files, e.g., by setting property `rdfpro.cmd.sort = sort -S 1024M --compress-program gzip` (you can use a value larger than 1024M and `pigz` in place of `gzip`). Also make sure that you have enough space under your `/tmp` folder, or configure `sort` to use a specific folder for temporary files (option `-T tmp_directory_path`).
-
-  * Custom prefix/namespace bindings can be added (possibly overriding the ones predefined in RDFpro and taken from [prefix.cc](http://prefix.cc/)) by manually modifying the file `etc/rdfpro.prefixes`.
-
-  * JARs with additional RDFpro processors can be placed under `lib`
+  * If you wish to directly manipulate RDF files compressed with `xz` or `lz4` with RDFpro, make sure that you have the corresponding utilities installed (on Windows, `xz` is available [here](http://tukaani.org/xz/) and `lz4` is available [here](http://fastcompression.blogspot.fr/p/lz4.html)).
+    If not available on the `PATH` you have to manually enter the full path to their executable in file `etc/rdfpro.properties`.
+    the Make sure you have the `xz` and `7za` utilities

@@ -1,7 +1,22 @@
+/*
+ * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
+ * 
+ * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
+ * Rospocher. Contact info on http://rdfpro.fbk.eu/
+ * 
+ * To the extent possible under law, the authors have dedicated all copyright and related and
+ * neighboring rights to this software to the public domain worldwide. This software is
+ * distributed without any warranty.
+ * 
+ * You should have received a copy of the CC0 Public Domain Dedication along with this software.
+ * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 package eu.fbk.rdfpro.util;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -14,27 +29,83 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.datatypes.XMLDatatypeUtil;
+import org.openrdf.model.impl.ContextStatementImpl;
+import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.ValueFactoryBase;
 import org.openrdf.model.util.URIUtil;
-import org.openrdf.model.vocabulary.SESAME;
+import org.openrdf.model.vocabulary.OWL;
+import org.openrdf.model.vocabulary.RDF;
+import org.openrdf.model.vocabulary.RDFS;
+import org.openrdf.model.vocabulary.XMLSchema;
 
 final class HashValueFactory extends ValueFactoryBase {
 
     public static final HashValueFactory INSTANCE = new HashValueFactory();
 
-    private static final URI NIL = normalize(SESAME.NIL);
+    private final Map<String, URI> w3cURIs;
 
     private HashValueFactory() {
+        this.w3cURIs = new HashMap<>(1024);
+        for (final URI uri : new URI[] { XMLSchema.DECIMAL, XMLSchema.INTEGER,
+                XMLSchema.NON_POSITIVE_INTEGER, XMLSchema.NEGATIVE_INTEGER,
+                XMLSchema.NON_NEGATIVE_INTEGER, XMLSchema.POSITIVE_INTEGER, XMLSchema.LONG,
+                XMLSchema.INT, XMLSchema.SHORT, XMLSchema.BYTE, XMLSchema.UNSIGNED_LONG,
+                XMLSchema.UNSIGNED_INT, XMLSchema.UNSIGNED_SHORT, XMLSchema.UNSIGNED_BYTE,
+                XMLSchema.DOUBLE, XMLSchema.FLOAT, XMLSchema.BOOLEAN, XMLSchema.DATETIME,
+                XMLSchema.DATE, XMLSchema.TIME, XMLSchema.GYEARMONTH, XMLSchema.GMONTHDAY,
+                XMLSchema.GYEAR, XMLSchema.GMONTH, XMLSchema.GDAY, XMLSchema.DURATION,
+                XMLSchema.DAYTIMEDURATION, XMLSchema.STRING, XMLSchema.BASE64BINARY,
+                XMLSchema.HEXBINARY, XMLSchema.ANYURI, XMLSchema.QNAME, XMLSchema.NOTATION,
+                XMLSchema.NORMALIZEDSTRING, XMLSchema.TOKEN, XMLSchema.LANGUAGE,
+                XMLSchema.NMTOKEN, XMLSchema.NMTOKENS, XMLSchema.NAME, XMLSchema.NCNAME,
+                XMLSchema.ID, XMLSchema.IDREF, XMLSchema.IDREFS, XMLSchema.ENTITY,
+                XMLSchema.ENTITIES, RDF.TYPE, RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT,
+                RDF.PREDICATE, RDF.OBJECT, RDF.STATEMENT, RDF.BAG, RDF.ALT, RDF.SEQ, RDF.VALUE,
+                RDF.LI, RDF.LIST, RDF.FIRST, RDF.REST, RDF.NIL, RDF.LANGSTRING, RDF.HTML,
+                RDFS.RESOURCE, RDFS.LITERAL, RDFS.CLASS, RDFS.SUBCLASSOF, RDFS.SUBPROPERTYOF,
+                RDFS.DOMAIN, RDFS.RANGE, RDFS.COMMENT, RDFS.LABEL, RDFS.DATATYPE, RDFS.CONTAINER,
+                RDFS.MEMBER, RDFS.ISDEFINEDBY, RDFS.SEEALSO, RDFS.CONTAINERMEMBERSHIPPROPERTY,
+                OWL.CLASS, OWL.INDIVIDUAL, OWL.THING, OWL.NOTHING, OWL.EQUIVALENTCLASS,
+                OWL.EQUIVALENTPROPERTY, OWL.SAMEAS, OWL.DIFFERENTFROM, OWL.ALLDIFFERENT,
+                OWL.DISTINCTMEMBERS, OWL.OBJECTPROPERTY, OWL.DATATYPEPROPERTY, OWL.INVERSEOF,
+                OWL.TRANSITIVEPROPERTY, OWL.SYMMETRICPROPERTY, OWL.FUNCTIONALPROPERTY,
+                OWL.INVERSEFUNCTIONALPROPERTY, OWL.RESTRICTION, OWL.ONPROPERTY, OWL.ALLVALUESFROM,
+                OWL.SOMEVALUESFROM, OWL.MINCARDINALITY, OWL.MAXCARDINALITY, OWL.CARDINALITY,
+                OWL.ONTOLOGY, OWL.IMPORTS, OWL.INTERSECTIONOF, OWL.VERSIONINFO, OWL.VERSIONIRI,
+                OWL.PRIORVERSION, OWL.BACKWARDCOMPATIBLEWITH, OWL.INCOMPATIBLEWITH,
+                OWL.DEPRECATEDCLASS, OWL.DEPRECATEDPROPERTY, OWL.ANNOTATIONPROPERTY,
+                OWL.ONTOLOGYPROPERTY, OWL.ONEOF, OWL.HASVALUE, OWL.DISJOINTWITH, OWL.UNIONOF,
+                OWL.COMPLEMENTOF }) {
+            final HashURI h = new HashURI(uri.stringValue());
+            h.initHash();
+            this.w3cURIs.put(uri.stringValue(), h);
+        }
+    }
+
+    private boolean isPossibleW3CURI(final String uri) {
+        return uri.length() > 33 && uri.charAt(12) == '3';
     }
 
     @Override
     public URI createURI(final String uri) {
+        if (isPossibleW3CURI(uri)) {
+            final URI u = this.w3cURIs.get(uri);
+            if (u != null) {
+                return u;
+            }
+        }
         return new HashURI(uri);
     }
 
     @Override
     public URI createURI(final String namespace, final String localName) {
         final String uri = namespace + localName;
+        if (isPossibleW3CURI(uri)) {
+            final URI u = this.w3cURIs.get(uri);
+            if (u != null) {
+                return u;
+            }
+        }
         if (URIUtil.isCorrectURISplit(namespace, localName)) {
             return new HashURI(uri, namespace, localName);
         } else {
@@ -54,7 +125,7 @@ final class HashValueFactory extends ValueFactoryBase {
 
     @Override
     public Literal createLiteral(final String label, final String language) {
-        return new HashLiteral(label, language, null);
+        return new HashLiteral(label, language.intern(), null);
     }
 
     @Override
@@ -63,16 +134,15 @@ final class HashValueFactory extends ValueFactoryBase {
     }
 
     @Override
-    public Statement createStatement(final Resource subject, final URI predicate,
-            final Value object) {
-        return new HashStatement(normalize(subject), normalize(predicate), normalize(object), null);
+    public Statement createStatement(final Resource subj, final URI pred, final Value obj) {
+        return new StatementImpl(subj, pred, obj);
     }
 
     @Override
-    public Statement createStatement(final Resource subject, final URI predicate,
-            final Value object, final Resource context) {
-        return new HashStatement(normalize(subject), normalize(predicate), normalize(object),
-                normalize(context));
+    public Statement createStatement(final Resource subj, final URI pred, final Value obj,
+            final Resource ctx) {
+        return ctx == null ? new StatementImpl(subj, pred, obj) //
+                : new ContextStatementImpl(subj, pred, obj, ctx);
     }
 
     @SuppressWarnings("unchecked")
@@ -93,91 +163,45 @@ final class HashValueFactory extends ValueFactoryBase {
         }
     }
 
-    public static <T extends Value> T normalize(@Nullable final T value,
-            @Nullable final T valueIfNull) {
-        if (value == null) {
-            return valueIfNull;
-        } else {
-            return normalize(value);
-        }
-    }
-
-    @Nullable
-    public static Statement normalize(@Nullable final Statement statement) {
-        if (statement instanceof HashStatement) {
-            return statement;
-        } else if (statement != null) {
-            return new HashStatement(normalize(statement.getSubject()),
-                    normalize(statement.getPredicate()), normalize(statement.getObject()),
-                    normalize(statement.getContext()));
-        } else {
-            return null;
-        }
-    }
-
-    @Nullable
-    public static Hash hash(@Nullable final Value value) {
-        if (value instanceof HashValue) {
-            return ((HashValue) value).getHash();
-        } else if (value != null) {
-            return doHash(value);
-        } else {
-            return null;
-        }
-    }
-
-    @Nullable
-    public static Hash hash(@Nullable final Statement statement) {
-        if (statement instanceof HashStatement) {
-            return ((HashStatement) statement).getHash();
-        } else if (statement != null) {
-            return doHash(statement);
-        } else {
-            return null;
-        }
-    }
-
-    private static Hash doHash(final Value value) {
-        if (value instanceof URI) {
-            return Hash.murmur3("\u0001", value.stringValue());
-        } else if (value instanceof BNode) {
-            return Hash.murmur3("\u0002", ((BNode) value).getID());
-        } else {
-            final Literal l = (Literal) value;
-            if (l.getLanguage() != null) {
-                return Hash.murmur3("\u0003", l.getLanguage(), l.getLabel());
-            } else if (l.getDatatype() != null) {
-                return Hash.murmur3("\u0004", l.getDatatype().stringValue(), l.getLabel());
-            } else {
-                return Hash.murmur3("\u0005", l.getLabel());
-            }
-        }
-    }
-
-    private static Hash doHash(final Statement statement) {
-        final Hash subjHash = hash(statement.getSubject());
-        final Hash predHash = hash(statement.getPredicate());
-        final Hash objHash = hash(statement.getObject());
-        final Hash ctxHash = hash(normalize(statement.getContext(), NIL));
-        return Hash.combine(subjHash, predHash, objHash, ctxHash);
-    }
-
-    private static abstract class HashValue implements Value {
+    private static abstract class HashValue implements Value, Hashable {
 
         private static final long serialVersionUID = 1L;
 
-        @Nullable
-        private transient Hash hash;
+        transient long hashLo;
 
-        HashValue() {
-            this.hash = null;
+        transient long hashHi;
+
+        transient int hashCode;
+
+        @Override
+        public final Hash getHash() {
+            Hash hash;
+            if (this.hashLo != 0L) {
+                hash = Hash.fromLongs(this.hashHi, this.hashLo);
+            } else {
+                hash = Statements.computeHash(this);
+                this.hashHi = hash.getHigh();
+                this.hashLo = hash.getLow();
+            }
+            return hash;
         }
 
-        final Hash getHash() {
-            if (this.hash == null) {
-                this.hash = doHash(this);
+        final boolean hasHash() {
+            return this.hashLo != 0L;
+        }
+
+        final void initHash() {
+            if (this.hashLo == 0L) {
+                final Hash hash = Statements.computeHash(this);
+                this.hashLo = hash.getLow();
+                this.hashHi = hash.getHigh();
             }
-            return this.hash;
+        }
+
+        final boolean sameHash(final HashValue other) {
+            initHash();
+            other.initHash();
+            return this.hashLo == other.hashLo && this.hashHi == other.hashHi;
         }
 
     }
@@ -195,15 +219,11 @@ final class HashValueFactory extends ValueFactoryBase {
         private final String label;
 
         @Nullable
-        private final String language;
-
-        @Nullable
-        private final URI datatype;
+        private final Object languageOrDatatype;
 
         HashLiteral(final String label, final String language, final URI datatype) {
             this.label = label;
-            this.language = language == null ? null : language.toLowerCase();
-            this.datatype = datatype;
+            this.languageOrDatatype = language != null ? language : datatype;
         }
 
         @Override
@@ -213,12 +233,19 @@ final class HashValueFactory extends ValueFactoryBase {
 
         @Override
         public String getLanguage() {
-            return this.language;
+            return this.languageOrDatatype instanceof String ? (String) this.languageOrDatatype
+                    : null;
         }
 
         @Override
         public URI getDatatype() {
-            return this.datatype;
+            if (this.languageOrDatatype instanceof URI) {
+                return (URI) this.languageOrDatatype;
+            } else if (this.languageOrDatatype instanceof String) {
+                return RDF.LANGSTRING;
+            } else {
+                return XMLSchema.STRING;
+            }
         }
 
         @Override
@@ -280,16 +307,13 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashLiteral) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashLiteral) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+            } else if (object instanceof HashLiteral && hasHash() && ((HashURI) object).hasHash()) {
+                return sameHash((HashLiteral) object);
             } else if (object instanceof Literal) {
                 final Literal other = (Literal) object;
                 return this.label.equals(other.getLabel())
-                        && Objects.equals(this.datatype, other.getDatatype())
-                        && Objects.equals(this.language, other.getLanguage());
+                        && Objects.equals(getDatatype(), other.getDatatype())
+                        && Objects.equals(getLanguage(), other.getLanguage());
             } else {
                 return false;
             }
@@ -297,7 +321,16 @@ final class HashValueFactory extends ValueFactoryBase {
 
         @Override
         public int hashCode() {
-            return this.label.hashCode();
+            if (this.hashCode == 0) {
+                int hashCode = this.label.hashCode();
+                final String language = getLanguage();
+                if (language != null) {
+                    hashCode = 31 * hashCode + language.hashCode();
+                }
+                hashCode = 31 * hashCode + getDatatype().hashCode();
+                this.hashCode = hashCode;
+            }
+            return this.hashCode;
         }
 
         @Override
@@ -306,14 +339,17 @@ final class HashValueFactory extends ValueFactoryBase {
             sb.append('"');
             sb.append(this.label);
             sb.append('"');
-            if (this.language != null) {
+            final String language = getLanguage();
+            if (language != null) {
                 sb.append('@');
-                sb.append(this.language);
-            }
-            if (this.datatype != null) {
-                sb.append("^^<");
-                sb.append(this.datatype.toString());
-                sb.append(">");
+                sb.append(language);
+            } else {
+                final URI datatype = getDatatype();
+                if (datatype != null && !datatype.equals(XMLSchema.STRING)) {
+                    sb.append("^^<");
+                    sb.append(datatype.stringValue());
+                    sb.append(">");
+                }
             }
             return sb.toString();
         }
@@ -344,11 +380,8 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashBNode) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashBNode) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+            } else if (object instanceof HashBNode && hasHash() && ((HashURI) object).hasHash()) {
+                return sameHash((HashBNode) object);
             } else if (object instanceof BNode) {
                 final BNode other = (BNode) object;
                 return this.id.equals(other.getID());
@@ -359,7 +392,10 @@ final class HashValueFactory extends ValueFactoryBase {
 
         @Override
         public int hashCode() {
-            return this.id.hashCode();
+            if (this.hashCode == 0) {
+                this.hashCode = this.id.hashCode();
+            }
+            return this.hashCode;
         }
 
         @Override
@@ -424,13 +460,11 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashURI) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashURI) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
+            } else if (object instanceof HashURI && hasHash() && ((HashURI) object).hasHash()) {
+                final HashURI other = (HashURI) object;
+                return sameHash(other);
             } else if (object instanceof URI) {
-                return this.uri.equals(object.toString());
+                return this.uri.equals(((URI) object).stringValue());
             } else {
                 return false;
             }
@@ -438,107 +472,15 @@ final class HashValueFactory extends ValueFactoryBase {
 
         @Override
         public int hashCode() {
-            return this.uri.hashCode();
+            if (this.hashCode == 0) {
+                this.hashCode = this.uri.hashCode();
+            }
+            return this.hashCode;
         }
 
         @Override
         public String toString() {
             return this.uri;
-        }
-
-    }
-
-    private static final class HashStatement implements Statement {
-
-        private static final long serialVersionUID = 1L;
-
-        private final Resource subject;
-
-        private final URI predicate;
-
-        private final Value object;
-
-        @Nullable
-        private final Resource context;
-
-        @Nullable
-        private transient Hash hash;
-
-        HashStatement(final Resource subject, final URI predicate, final Value object,
-                @Nullable final Resource context) {
-            this.subject = subject;
-            this.predicate = predicate;
-            this.object = object;
-            this.context = context;
-        }
-
-        @Override
-        public Resource getSubject() {
-            return this.subject;
-        }
-
-        @Override
-        public URI getPredicate() {
-            return this.predicate;
-        }
-
-        @Override
-        public Value getObject() {
-            return this.object;
-        }
-
-        @Override
-        public Resource getContext() {
-            return this.context;
-        }
-
-        final Hash getHash() {
-            if (this.hash == null) {
-                this.hash = doHash(this);
-            }
-            return this.hash;
-        }
-
-        @Override
-        public boolean equals(final Object object) {
-            if (this == object) {
-                return true;
-            } else if (object instanceof HashStatement) {
-                final Hash thisHash = getHash();
-                final Hash otherHash = ((HashStatement) object).getHash();
-                return thisHash.getHigh() == otherHash.getHigh()
-                        && thisHash.getLow() == otherHash.getLow();
-            } else if (object instanceof Statement) {
-                final Statement other = (Statement) object;
-                return this.object.equals(other.getObject())
-                        && this.subject.equals(other.getSubject())
-                        && this.predicate.equals(other.getPredicate());
-            } else {
-                return false;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return 961 * this.subject.hashCode() + 31 * this.predicate.hashCode()
-                    + this.object.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            final StringBuilder builder = new StringBuilder(256);
-            builder.append("(");
-            builder.append(this.subject);
-            builder.append(", ");
-            builder.append(this.predicate);
-            builder.append(", ");
-            builder.append(this.object);
-            builder.append(")");
-            if (this.context != null) {
-                builder.append(super.toString());
-                builder.append(" [").append(getContext()).append("]");
-            }
-            return builder.toString();
         }
 
     }

@@ -1,10 +1,10 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
  * 
- * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
- * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
+ * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
  * 
- * To the extent possible under law, the author has dedicated all copyright and related and
+ * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
  * 
@@ -34,12 +34,19 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Splitter;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,11 +76,16 @@ public final class Environment {
         final Properties properties = new Properties();
         properties.setProperty("rdfpro.cores", "" + Runtime.getRuntime().availableProcessors());
         try {
+            final List<String> envSources = Lists.newArrayList("rdfpro.properties");
+            envSources.addAll(Splitter.on(',').omitEmptyStrings()
+                    .splitToList(System.getProperty("rdfpro.environment.sources", "")));
             final List<URL> urls = new ArrayList<>();
             final ClassLoader cl = Environment.class.getClassLoader();
-            for (final String p : new String[] { "META-INF/rdfpro.properties", "rdfpro.properties" }) {
-                for (final Enumeration<URL> e = cl.getResources(p); e.hasMoreElements();) {
-                    urls.add(e.nextElement());
+            for (final String envSource : envSources) {
+                for (final String p : new String[] { "META-INF/" + envSource, envSource }) {
+                    for (final Enumeration<URL> e = cl.getResources(p); e.hasMoreElements();) {
+                        urls.add(e.nextElement());
+                    }
                 }
             }
             for (final URL url : urls) {
@@ -165,6 +177,55 @@ public final class Environment {
             }
         }
         return frozenPool;
+    }
+
+    public static void run(final Iterable<? extends Runnable> runnables) {
+
+        final List<Runnable> runnableList = ImmutableList.copyOf(runnables);
+        final int parallelism = Math.min(Environment.getCores(), runnableList.size());
+
+        final CountDownLatch latch = new CountDownLatch(parallelism);
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicInteger index = new AtomicInteger(0);
+
+        final List<Runnable> threadRunnables = new ArrayList<Runnable>();
+        for (int i = 0; i < parallelism; ++i) {
+            threadRunnables.add(new Runnable() {
+
+                @Override
+                public void run() {
+                    try {
+                        while (true) {
+                            final int i = index.getAndIncrement();
+                            if (i >= runnableList.size() || exception.get() != null) {
+                                break;
+                            }
+                            runnableList.get(i).run();
+                        }
+                    } catch (final Throwable ex) {
+                        exception.set(ex);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+            });
+        }
+
+        try {
+            for (int i = 1; i < parallelism; ++i) {
+                Environment.getPool().submit(threadRunnables.get(i));
+            }
+            if (!threadRunnables.isEmpty()) {
+                threadRunnables.get(0).run();
+            }
+            latch.await();
+            if (exception.get() != null) {
+                throw exception.get();
+            }
+        } catch (final Throwable ex) {
+            Throwables.propagate(ex);
+        }
     }
 
     @Nullable
@@ -310,8 +371,7 @@ public final class Environment {
                             method.setAccessible(true);
                             plugins.add(new Plugin(pluginNames, value, method));
                         } catch (final Throwable ex) {
-                            LOGGER.warn("Invalid plugin definition " + name
-                                    + " in file - ignoring", ex);
+                            LOGGER.warn("Invalid plugin definition " + name + " - ignoring", ex);
                         }
                     }
                 }

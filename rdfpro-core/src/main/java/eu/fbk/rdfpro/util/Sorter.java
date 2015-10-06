@@ -1,10 +1,10 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
  * 
- * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
- * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
+ * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
  * 
- * To the extent possible under law, the author has dedicated all copyright and related and
+ * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
  * 
@@ -981,7 +981,7 @@ public abstract class Sorter<T> implements AutoCloseable {
                 final int tableSize = this.table.length / 2;
                 final int segmentSize = (tableSize + NUM_LOCKS - 1) / NUM_LOCKS;
 
-                int index = Math.abs(hash) % tableSize;
+                int index = (hash & 0x7FFFFFFF) % tableSize;
 
                 final int segment = index / segmentSize;
                 final int segmentStart = segment * segmentSize;
@@ -1094,7 +1094,7 @@ public abstract class Sorter<T> implements AutoCloseable {
 
                 final int tableSize = this.table.length / 2;
                 final int hash = element.hashCode();
-                int index = Math.abs(hash) % tableSize;
+                int index = (hash & 0x7FFFFFFF) % tableSize;
 
                 // first we operate read-only with no synchronization, as it is likely the entry
                 // is already there (for datatypes and langagues, at least)

@@ -18,6 +18,7 @@ If you don't use Maven, you have to download and include the following JARs in t
 
   * [rdfpro-jsonld-${project-version}.jar](http://central.maven.org/maven2/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-jsonld-${project-version}.jar)
   * [slf4j-api-${slf4j-version}.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/${slf4j-version}/slf4j-api-${slf4j-version}.jar) (or newer version)
+  * [guava-${google-guava-version}.jar](http://central.maven.org/maven2/com/google/guava/guava/${google-guava-version}/guava-${google-guava-version}.jar) (or newer version)
   * [sesame-rio-api-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/${sesame-version}/sesame-rio-api-${sesame-version}.jar) (or newer version)
   * [sesame-model-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/${sesame-version}/sesame-model-${sesame-version}.jar) (or newer version)
   * [sesame-util-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/${sesame-version}/sesame-util-${sesame-version}.jar) (or newer version)

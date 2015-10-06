@@ -1,10 +1,10 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
  * 
- * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
- * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
+ * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
  * 
- * To the extent possible under law, the author has dedicated all copyright and related and
+ * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
  * 
@@ -89,7 +89,7 @@ public final class RDFSources {
         config.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
         config.set(BasicParserSettings.VERIFY_LANGUAGE_TAGS, false);
         config.set(BasicParserSettings.VERIFY_RELATIVE_URIS, false);
-        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, true);
+        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
         config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
         config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
         config.set(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES, false);
@@ -188,8 +188,8 @@ public final class RDFSources {
 
                 Objects.requireNonNull(handler);
 
-                if (handler instanceof RDFSource) {
-                    ((RDFSource) handler).emit(new AbstractRDFHandlerWrapper(handler) {
+                if (statements instanceof RDFSource) {
+                    ((RDFSource) statements).emit(new AbstractRDFHandlerWrapper(handler) {
 
                         @Override
                         public void startRDF() throws RDFHandlerException {
@@ -513,7 +513,9 @@ public final class RDFSources {
                 for (int i = 1; i < parallelism; ++i) {
                     Environment.getPool().execute(runnables.get(i));
                 }
-                runnables.get(0).run();
+                if (!runnables.isEmpty()) {
+                    runnables.get(0).run();
+                }
                 latch.await();
                 if (exception.get() != null) {
                     throw exception.get();
