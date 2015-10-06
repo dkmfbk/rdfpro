@@ -52,5 +52,8 @@ if [ -n "$OLD_CLASSPATH" ] ; then
     export RDFPRO_GROOVY_CLASSPATH=$RDFPRO_GROOVY_CLASSPATH:$OLD_CLASSPATH
 fi
 
+# Enable ANSI escape sequences (for colored text and status messages)
+export RDFPRO_ANSI_ENABLED=true
+
 # Execute the program
 $_JAVA $JAVA_OPTS -classpath $_CLASSPATH eu.fbk.rdfpro.tool.Main "$@"

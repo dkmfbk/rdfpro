@@ -18,7 +18,7 @@ echo Error. Could not locate RDFpro installation directory (tried "%RDFPRO_HOME%
 goto error
 :rdfpro_home_correct
 
-% set the following to true to enable ANSI escape sequences under Windows
+REM set the following to true to enable ANSI escape sequences under Windows
 set RDFPRO_ANSI_ENABLED=false
 
 "%JAVA_HOME%\bin\java.exe" %JAVA_OPTS% -classpath "%RDFPRO_HOME%etc;%RDFPRO_HOME%lib\*" eu.fbk.rdfpro.tool.Main %*

@@ -1,10 +1,10 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
  * 
- * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
- * Marco Rospocher, Marco Amadori and Michele Mostarda.
+ * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
+ * Alessio Palmero Aprosio, and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
  * 
- * To the extent possible under law, the author has dedicated all copyright and related and
+ * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
  * 
@@ -18,66 +18,78 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.encoder.Encoder;
+import ch.qos.logback.core.pattern.CompositeConverter;
 import ch.qos.logback.core.pattern.color.ANSIConstants;
-import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase;
 import ch.qos.logback.core.spi.DeferredProcessingAware;
 import ch.qos.logback.core.status.ErrorStatus;
-import ch.qos.logback.core.util.EnvUtil;
 
 public final class Logging {
 
-    private static final boolean ANSI_ENABLED = !EnvUtil.isWindows()
-            || "true".equalsIgnoreCase(System.getenv("RDFPRO_ANSI_ENABLED"));
+    private static final boolean ANSI_ENABLED = "true".equalsIgnoreCase(System
+            .getenv("RDFPRO_ANSI_ENABLED"));
+
+    private static final String SET_DEFAULT_COLOR = ANSIConstants.ESC_START + "0;"
+            + ANSIConstants.DEFAULT_FG + ANSIConstants.ESC_END;
+
+    private static String format(final String text, @Nullable final String ansiCode) {
+        if (ansiCode == null) {
+            return text;
+        } else {
+            final StringBuilder builder = new StringBuilder(text.length() + 16);
+            builder.append(ANSIConstants.ESC_START);
+            builder.append(ansiCode);
+            builder.append(ANSIConstants.ESC_END);
+            builder.append(text);
+            builder.append(SET_DEFAULT_COLOR);
+            return builder.toString();
+        }
+    }
 
     public static void setLevel(final Logger logger, final String level) {
         final Level l = Level.valueOf(level);
         ((ch.qos.logback.classic.Logger) logger).setLevel(l);
     }
 
-    public static final class NormalConverter extends
-            ForegroundCompositeConverterBase<ILoggingEvent> {
+    public static final class NormalConverter extends CompositeConverter<ILoggingEvent> {
 
         @Override
-        protected String getForegroundColorCode(final ILoggingEvent event) {
-            if (!ANSI_ENABLED) {
-                return ANSIConstants.DEFAULT_FG;
+        protected String transform(final ILoggingEvent event, final String in) {
+            if (ANSI_ENABLED) {
+                final int levelCode = event.getLevel().toInt();
+                if (levelCode == ch.qos.logback.classic.Level.ERROR_INT) {
+                    return format(in, ANSIConstants.RED_FG);
+                } else if (levelCode == ch.qos.logback.classic.Level.WARN_INT) {
+                    return format(in, ANSIConstants.MAGENTA_FG);
+                }
             }
-            final ch.qos.logback.classic.Level level = event.getLevel();
-            switch (level.toInt()) {
-            case ch.qos.logback.classic.Level.ERROR_INT:
-                return ANSIConstants.RED_FG;
-            case ch.qos.logback.classic.Level.WARN_INT:
-                return ANSIConstants.MAGENTA_FG;
-            default:
-                return ANSIConstants.DEFAULT_FG;
-            }
+            return format(in, null);
         }
 
     }
 
-    public static final class BoldConverter extends
-            ForegroundCompositeConverterBase<ILoggingEvent> {
+    public static final class BoldConverter extends CompositeConverter<ILoggingEvent> {
 
         @Override
-        protected String getForegroundColorCode(final ILoggingEvent event) {
-            if (!ANSI_ENABLED) {
-                return ANSIConstants.DEFAULT_FG;
+        protected String transform(final ILoggingEvent event, final String in) {
+            if (ANSI_ENABLED) {
+                final int levelCode = event.getLevel().toInt();
+                if (levelCode == ch.qos.logback.classic.Level.ERROR_INT) {
+                    return format(in, ANSIConstants.BOLD + ANSIConstants.RED_FG);
+                } else if (levelCode == ch.qos.logback.classic.Level.WARN_INT) {
+                    return format(in, ANSIConstants.BOLD + ANSIConstants.MAGENTA_FG);
+                } else {
+                    return format(in, ANSIConstants.BOLD + ANSIConstants.DEFAULT_FG);
+                }
             }
-            final ch.qos.logback.classic.Level level = event.getLevel();
-            switch (level.toInt()) {
-            case ch.qos.logback.classic.Level.ERROR_INT:
-                return ANSIConstants.BOLD + ANSIConstants.RED_FG;
-            case ch.qos.logback.classic.Level.WARN_INT:
-                return ANSIConstants.BOLD + ANSIConstants.MAGENTA_FG;
-            default:
-                return ANSIConstants.BOLD + ANSIConstants.DEFAULT_FG;
-            }
+            return format(in, null);
         }
 
     }
