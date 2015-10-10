@@ -44,7 +44,6 @@ import org.openrdf.query.Dataset;
 import org.openrdf.query.IncompatibleOperationException;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.algebra.And;
 import org.openrdf.query.algebra.Extension;
 import org.openrdf.query.algebra.ExtensionElem;
@@ -891,23 +890,6 @@ public final class Algebra {
     public static String renderExpr(final TupleExpr expr,
             @Nullable final Map<String, String> prefixes) {
         return new SPARQLRenderer(prefixes, false).renderTupleExpr(expr);
-    }
-
-    public static org.openrdf.queryrender.QueryRenderer newRenderer(
-            @Nullable final Map<String, String> prefixes, final boolean forceSelect) {
-        return new org.openrdf.queryrender.QueryRenderer() {
-
-            @Override
-            public QueryLanguage getLanguage() {
-                return QueryLanguage.SPARQL;
-            }
-
-            @Override
-            public String render(final ParsedQuery query) throws Exception {
-                return renderQuery(query.getTupleExpr(), query.getDataset(), prefixes, forceSelect);
-            }
-
-        };
     }
 
     public static String format(final TupleExpr expr) {
