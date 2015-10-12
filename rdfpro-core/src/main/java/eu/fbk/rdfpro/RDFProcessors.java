@@ -845,21 +845,24 @@ public final class RDFProcessors {
 
                     @Override
                     public void startRDF() throws RDFHandlerException {
-                        super.startRDF();
                         tracker.start();
+                        super.startRDF();
                     }
 
                     @Override
                     public void handleStatement(final Statement statement)
                             throws RDFHandlerException {
-                        tracker.increment();
                         super.handleStatement(statement);
+                        tracker.increment();
                     }
 
                     @Override
                     public void endRDF() throws RDFHandlerException {
-                        tracker.end();
-                        super.endRDF();
+                        try {
+                            super.endRDF();
+                        } finally {
+                            tracker.end();
+                        }
                     }
                 };
             }
@@ -870,7 +873,7 @@ public final class RDFProcessors {
     /**
      * Returns an {@code RDFProcessor} that applies the ruleset specified on input statements
      * either as a whole or partitioned based on an optional {@code Mapper}.
-     * 
+     *
      * @param ruleset
      *            the ruleset to apply
      * @param mapper

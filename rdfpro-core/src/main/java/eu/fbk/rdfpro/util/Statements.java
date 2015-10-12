@@ -1235,8 +1235,8 @@ public final class Statements {
         public int compare(final Value v1, final Value v2) {
             if (v1 instanceof URI) {
                 if (v2 instanceof URI) {
-                    final int rank1 = this.rankedNamespaces.indexOf(((URI) v1).getNamespace());
-                    final int rank2 = this.rankedNamespaces.indexOf(((URI) v2).getNamespace());
+                    final int rank1 = rankOf(((URI) v1).getNamespace());
+                    final int rank2 = rankOf(((URI) v2).getNamespace());
                     if (rank1 >= 0 && (rank1 < rank2 || rank2 < 0)) {
                         return -1;
                     } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
@@ -1271,6 +1271,15 @@ public final class Statements {
                     return 1;
                 }
             }
+        }
+
+        private int rankOf(final String ns) {
+            for (int i = 0; i < this.rankedNamespaces.size(); ++i) {
+                if (ns.startsWith(this.rankedNamespaces.get(i))) {
+                    return i;
+                }
+            }
+            return -1;
         }
 
     }

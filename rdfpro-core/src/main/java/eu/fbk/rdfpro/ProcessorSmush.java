@@ -15,6 +15,7 @@ package eu.fbk.rdfpro;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -179,6 +180,8 @@ final class ProcessorSmush implements RDFProcessor {
         }
 
         private void normalize() throws RDFHandlerException {
+            final Comparator<Value> comparator = Statements
+                    .valueComparator(ProcessorSmush.this.rankedNamespaces);
             int numClusters = 0;
             int numResources = 0;
             for (int j = 0; j < this.table.length; j += 2) {
@@ -189,35 +192,39 @@ final class ProcessorSmush implements RDFProcessor {
                 final List<Resource> resources = new ArrayList<Resource>();
                 Resource chosenResource = null;
                 int chosenPointer = 0;
-                int chosenRank = Integer.MAX_VALUE;
+                // int chosenRank = Integer.MAX_VALUE;
                 for (int p = pointer; p != pointer || chosenPointer == 0; p = readNext(p)) {
                     final Resource resource = readResource(p);
                     resources.add(resource);
-                    if (resource instanceof BNode) {
-                        if (chosenResource == null
-                                || chosenResource instanceof BNode
-                                && resource.stringValue().length() < chosenResource.stringValue()
-                                        .length()) {
-                            chosenResource = resource;
-                            chosenPointer = p;
-                        }
-                    } else if (resource instanceof URI) {
-                        final String string = resource.stringValue();
-                        int rank = Integer.MAX_VALUE;
-                        for (int i = 0; i < ProcessorSmush.this.rankedNamespaces.length; ++i) {
-                            if (string.startsWith(ProcessorSmush.this.rankedNamespaces[i])) {
-                                rank = i;
-                                break;
-                            }
-                        }
-                        if (!(chosenResource instanceof URI) || rank < chosenRank
-                                || rank == chosenRank
-                                && string.length() < chosenResource.stringValue().length()) {
-                            chosenResource = resource;
-                            chosenPointer = p;
-                            chosenRank = rank;
-                        }
+                    if (chosenResource == null || comparator.compare(resource, chosenResource) < 0) {
+                        chosenResource = resource;
+                        chosenPointer = p;
                     }
+                    // if (resource instanceof BNode) {
+                    // if (chosenResource == null
+                    // || chosenResource instanceof BNode
+                    // && resource.stringValue().length() < chosenResource.stringValue()
+                    // .length()) {
+                    // chosenResource = resource;
+                    // chosenPointer = p;
+                    // }
+                    // } else if (resource instanceof URI) {
+                    // final String string = resource.stringValue();
+                    // int rank = Integer.MAX_VALUE;
+                    // for (int i = 0; i < ProcessorSmush.this.rankedNamespaces.length; ++i) {
+                    // if (string.startsWith(ProcessorSmush.this.rankedNamespaces[i])) {
+                    // rank = i;
+                    // break;
+                    // }
+                    // }
+                    // if (!(chosenResource instanceof URI) || rank < chosenRank
+                    // || rank == chosenRank
+                    // && string.length() < chosenResource.stringValue().length()) {
+                    // chosenResource = resource;
+                    // chosenPointer = p;
+                    // chosenRank = rank;
+                    // }
+                    // }
                 }
                 ++numClusters;
                 numResources += resources.size();
