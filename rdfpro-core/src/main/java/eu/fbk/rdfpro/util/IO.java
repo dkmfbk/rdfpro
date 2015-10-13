@@ -16,6 +16,7 @@ package eu.fbk.rdfpro.util;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,6 +36,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 
@@ -222,7 +224,7 @@ public final class IO {
             throw new IllegalArgumentException("Invalid file:// URL: " + location);
         }
 
-        String cmd = null;
+        final String cmd;
         if (ext.endsWith(".bz2")) {
             cmd = Environment.getProperty("rdfpro.cmd.bzip2", "bzip2") + " -c -9";
         } else if (ext.endsWith(".gz")) {
@@ -231,6 +233,8 @@ public final class IO {
             cmd = Environment.getProperty("rdfpro.cmd.xz", "xz") + " -c -9";
         } else if (ext.endsWith(".lz4")) {
             cmd = Environment.getProperty("rdfpro.cmd.lz4", "lz4") + " -c -9";
+        } else {
+            cmd = null;
         }
 
         if (cmd == null) {
@@ -238,14 +242,46 @@ public final class IO {
             return new FileOutputStream(file);
 
         } else {
-            // FIXME: here we should wrap the returned output stream, making sure that an
-            // invocation to close waits for the process to exit; otherwise, if we immediately try
-            // opening the written file, we may find it unfinished as the process is still
-            // flushing data to it.
             LOGGER.debug("Writing file {} using {}", file, cmd);
             final Process process = new ProcessBuilder(cmd.split("\\s+")) //
                     .redirectOutput(file).redirectError(Redirect.INHERIT).start();
-            return process.getOutputStream();
+            return new FilterOutputStream(process.getOutputStream()) {
+
+                private final AtomicBoolean closed = new AtomicBoolean(false);
+
+                @Override
+                public void write(final int b) throws IOException {
+                    this.out.write(b);
+                }
+
+                @Override
+                public void write(final byte[] b) throws IOException {
+                    this.out.write(b);
+                }
+
+                @Override
+                public void write(final byte[] b, final int off, final int len) throws IOException {
+                    this.out.write(b, off, len);
+                }
+
+                @Override
+                public void close() throws IOException {
+                    if (this.closed.compareAndSet(false, true)) {
+                        LOGGER.debug("Completing '{}'", cmd);
+                        this.out.flush();
+                        this.out.close();
+                        try {
+                            final int code = process.waitFor();
+                            LOGGER.debug("Process completed with exit code {}", code);
+                        } catch (final InterruptedException ex) {
+                            throw new IOException("Didn't wait till IO completion", ex);
+                        } finally {
+                            process.destroy(); // not strictly necessary
+                        }
+                    }
+                }
+
+            };
         }
     }
 

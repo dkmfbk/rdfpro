@@ -337,7 +337,7 @@ public final class QueryBindingSet implements BindingSet {
     }
 
     static {
-        LOGGER.info("Using patched QueryBindingSet class");
+        LOGGER.debug("Using patched QueryBindingSet class");
     }
 
     private static abstract class AbstractIterator<T> implements Iterator<T> {
