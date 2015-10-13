@@ -25,9 +25,9 @@ under the License.
     <language>en-us</language>
     <copyright>&#169;2015 FBK-irst</copyright>
     <item>
-      <title>File: 97,
+      <title>File: 98,
              Errors: 9,
-             Warnings: 568,
+             Warnings: 570,
              Infos: 0
       </title>
             <link>http://rdfpro.fbk.eu//checkstyle.html</link>
@@ -1082,6 +1082,20 @@ under the License.
               </tr>
                           <tr>
                 <td>
+                  <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QueryRendererImpl.java">eu/fbk/rdfpro/util/QueryRendererImpl.java</a>
+                </td>
+                <td>
+                  0
+                </td>
+                <td>
+                  1
+                </td>
+                <td>
+                  0
+                </td>
+              </tr>
+                          <tr>
+                <td>
                   <a href="http://rdfpro.fbk.eu//checkstyle.html#eu.fbk.rdfpro.util.QuadModelSubModel.java">eu/fbk/rdfpro/util/QuadModelSubModel.java</a>
                 </td>
                 <td>
@@ -1326,7 +1340,7 @@ under the License.
                   0
                 </td>
                 <td>
-                  1
+                  2
                 </td>
                 <td>
                   0
