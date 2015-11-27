@@ -45,10 +45,13 @@ p.copyright { display: none }
 
 /* Reflow bugfix */
 
-h1[id]:before, h2[id]:before, h3[id]:before, h4[id]:before, h5[id]:before, h6[id]:before, a[name]:before {
+.no-before:before {
     display: none !important;
 }
 
+/* Check here */
+
+/*
 a.anchor {
     border-top: 100px solid transparent;
     margin-top: -100px;
@@ -56,3 +59,4 @@ a.anchor {
     -moz-background-clip: padding;
     background-clip: padding-box;
 }
+*/
