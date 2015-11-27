@@ -17,7 +17,7 @@
 
 ---------------------------------------
 
-### About
+<h3 class='no-before'>About</h3>
 
 **RDFpro** (RDF Processor) is a public domain, Java command line tool and library for **RDF processing**.
 RDFpro offers a suite of stream-oriented, highly optimized **RDF processors** for common tasks that can be assembled in complex **pipelines** to efficiently process RDF data in one or more passes.
@@ -25,7 +25,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 [learn more...](model.html)
 
-### Features
+<h3 class='no-before'>Features</h3>
 
 - RDF quad (triple + graph) filtering and replacement (with [JavaScript](http://openjdk.java.net/projects/nashorn/) and [Groovy](http://groovy.codehaus.org/) scripting support)
 - SPARQL-like rule inference, incl. RDFS, OWL2RL
@@ -39,7 +39,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 - public domain software ([Creative Commons CC0](license.html))
 
 
-### News
+<h3 class='no-before'>News</h3>
 
 - 2015-10-13 Version 0.5.1 has been released
 - 2015-10-06 Version 0.5 has been released
