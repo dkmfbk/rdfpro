@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -65,6 +66,7 @@ import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
+import eu.fbk.rdfpro.util.QuadModel;
 import eu.fbk.rdfpro.util.Sorter;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -110,36 +112,11 @@ public final class RDFHandlers {
     }
 
     /**
-     * Returns an {@code RDFHandler} that populates the supplied {@code Model} with received
-     * statements and namespaces. Access to the model is externally synchronized, so it does not
-     * need to be thread-safe. If you don't want to populate namespaces, cast the model to a
-     * {@code Collection} so that method {@link #wrap(Collection)} is instead called.
-     *
-     * @param model
-     *            the model to populate, not null
-     * @return the created {@code RDFHandler}
-     */
-    public static RDFHandler wrap(final Model model) {
-        Objects.requireNonNull(model);
-        return new AbstractRDFHandler() {
-
-            @Override
-            public void handleNamespace(final String prefix, final String uri) {
-                model.setNamespace(prefix, uri);
-            }
-
-            @Override
-            public void handleStatement(final Statement statement) {
-                model.add(statement);
-            }
-
-        };
-    }
-
-    /**
-     * Returns an {@code RDFHandler} that populates the supplied statement collection. Namespaces
-     * and comments are dropped. Access to the collection is not synchronized, so the collection
-     * must be thread-safe.
+     * Returns an {@code RDFHandler} that populates the supplied statement collection. If the
+     * collection is a {@link Model} or a {@link QuadModel}, it is also populated with namespaces.
+     * If you don't want to populate namespaces, use {@link #wrap(Collection, Collection)} passing
+     * null as second argument. Note that access to the collection is not synchronized, so it must
+     * be thread-safe.
      *
      * @param statements
      *            the statement collection to populate, not null
@@ -147,74 +124,43 @@ public final class RDFHandlers {
      */
     public static RDFHandler wrap(final Collection<? super Statement> statements) {
         Objects.requireNonNull(statements);
-        return new AbstractRDFHandler() {
-
-            @Override
-            public void handleStatement(final Statement statement) {
-                statements.add(statement);
-            }
-
-        };
+        return new WrapHandler(statements, statements instanceof Model
+                || statements instanceof QuadModel ? statements : null);
     }
 
     /**
      * Returns an {@code RDFHandler} that populates the supplied statement and namespace
-     * collections. Access to the two collections is externally synchronized, so they do not need
-     * to be thread-safe.
+     * collections. Access to the two collections is not synchronized, so they MUST be thread safe
+     * (may use {@link Collections#synchronizedCollection(Collection)}).
      *
      * @param statements
      *            the statement collection to populate, not null
      * @param namespaces
-     *            the namespace collection to populate, not null
+     *            the namespace collection to populate, or null to discard namespaces
      * @return the created {@code RDFHandler}
      */
     public static RDFHandler wrap(final Collection<? super Statement> statements,
-            final Collection<? super Namespace> namespaces) {
+            @Nullable final Collection<? super Namespace> namespaces) {
         Objects.requireNonNull(statements);
-        Objects.requireNonNull(namespaces);
-        return new AbstractRDFHandler() {
-
-            @Override
-            public synchronized void handleNamespace(final String prefix, final String uri) {
-                namespaces.add(new NamespaceImpl(prefix, uri));
-            }
-
-            @Override
-            public synchronized void handleStatement(final Statement statement) {
-                statements.add(statement);
-            }
-
-        };
+        return new WrapHandler(statements, namespaces);
     }
 
     /**
      * Returns an {@code RDFHandler} that populates the supplied statement collection and
-     * prefix-to-namespace-uri map. Access to the collection and map is externally synchronized,
-     * so they do not need to be thread-safe.
+     * prefix-to-namespace-uri map. Access to the collection and map is not synchronized, so they
+     * MUST be thread-safe (may use {@link Collections#synchronizedCollection(Collection)} and
+     * {@link Collections#synchronizedMap(Map)}).
      *
      * @param statements
      *            the statement collection to populate, not null
      * @param namespaces
-     *            the prefix-to-namespace-uri map to populate, not null
+     *            the prefix-to-namespace-uri map to populate, or null to discard namespaces
      * @return the created {@code RDFHandler}
      */
     public static RDFHandler wrap(final Collection<? super Statement> statements,
-            final Map<? super String, ? super String> namespaces) {
+            @Nullable final Map<? super String, ? super String> namespaces) {
         Objects.requireNonNull(statements);
-        Objects.requireNonNull(namespaces);
-        return new AbstractRDFHandler() {
-
-            @Override
-            public synchronized void handleNamespace(final String prefix, final String uri) {
-                namespaces.put(prefix, uri);
-            }
-
-            @Override
-            public synchronized void handleStatement(final Statement statement) {
-                statements.add(statement);
-            }
-
-        };
+        return new WrapHandler(statements, namespaces);
     }
 
     /**
@@ -540,6 +486,41 @@ public final class RDFHandlers {
             return handler;
         }
         return new SynchronizeHandler(handler);
+    }
+
+    private static final class WrapHandler extends AbstractRDFHandler {
+
+        private final Collection<? super Statement> statementSink;
+
+        private final Object namespaceSink;
+
+        public WrapHandler(final Collection<? super Statement> statementSink,
+                @Nullable final Object namespaceSink) {
+            this.statementSink = statementSink;
+            this.namespaceSink = namespaceSink;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public synchronized void handleNamespace(final String prefix, final String uri)
+                throws RDFHandlerException {
+            if (this.namespaceSink instanceof Model) {
+                ((Model) this.namespaceSink).setNamespace(prefix, uri);
+            } else if (this.namespaceSink instanceof QuadModel) {
+                ((QuadModel) this.namespaceSink).setNamespace(prefix, uri);
+            } else if (this.namespaceSink instanceof Collection<?>) {
+                ((Collection<Namespace>) this.namespaceSink).add(new NamespaceImpl(prefix, uri));
+            } else if (this.namespaceSink instanceof Map<?, ?>) {
+                ((Map<String, String>) this.namespaceSink).put(prefix, uri);
+            }
+        }
+
+        @Override
+        public synchronized void handleStatement(final Statement statement)
+                throws RDFHandlerException {
+            this.statementSink.add(statement);
+        }
+
     }
 
     private static final class SequentialWriteHandler extends AbstractRDFHandler {
