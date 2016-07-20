@@ -609,9 +609,9 @@ public final class RDFSources {
                         }
                     }
                 } finally {
-                    IO.closeQuietly(this.in);
-                    this.in = null;
                     synchronized (this.streams) {
+                        IO.closeQuietly(this.in);
+                        this.in = null;
                         this.streams.put(this.location, null); // ensure stream is not read again
                     }
                 }
