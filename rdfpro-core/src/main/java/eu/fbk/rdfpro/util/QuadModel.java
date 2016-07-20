@@ -30,6 +30,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import org.openrdf.model.Graph;
 import org.openrdf.model.Literal;
@@ -400,6 +401,27 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     public final boolean remove(@Nullable final Resource subj, @Nullable final URI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         return doRemove(subj, pred, obj, ctxs);
+    }
+
+    @Override
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public boolean removeAll(final Collection<?> c) {
+        Collection<?> toRemove = c;
+        if ((c instanceof Set<?> || c instanceof Model || c instanceof QuadModel)
+                && c.size() > size()) {
+            toRemove = Lists.newArrayList();
+            for (final Statement stmt : this) {
+                if (c.contains(stmt)) {
+                    ((Collection) toRemove).add(stmt);
+                }
+            }
+        }
+        boolean modified = false;
+        for (final Object element : toRemove) {
+            final boolean removed = remove(element);
+            modified |= removed;
+        }
+        return modified;
     }
 
     /**
