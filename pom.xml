@@ -123,6 +123,16 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
                         <doctitle>RDFpro ${project.version} API (beta - may change without notice)</doctitle>
+                        <links>
+                            <link>http://java.sun.com/javase/8/docs/api/</link>
+                            <link>http://junit.sourceforge.net/javadoc/</link>
+                            <link>https://google.github.io/guava/releases/18.0/api/docs/</link>
+                            <!--<link>http://openrdf.callimachus.net/sesame/2.7/apidocs/</link>-->
+                            <link>http://hadoop.apache.org/docs/r1.0.4/api/</link>
+                            <link>http://hbase.apache.org/0.94/apidocs/</link>
+                            <link>http://commons.apache.org/proper/commons-configuration/apidocs/</link>
+                            <link>http://www.slf4j.org/apidocs/</link>
+                        </links>
                         <groups>
                             <group>
                                 <title>rdfpro-core</title>
