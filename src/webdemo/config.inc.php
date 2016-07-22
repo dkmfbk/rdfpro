@@ -12,7 +12,7 @@ $compressionFormat = array('gz', 'bz2', 'xz', '7z');
 $inputFormatDefault = "trig";
 $outputFormatDefault = "trig";
 
-$allowedCommands = array('count', 'esoreasoner', 'groovy', 'prefix', 'rdfs', 'rules', 'smush', 'stats', 'tbox', 'transform', 'unique');
+$allowedCommands = array('groovy', 'mapreduce', 'prefix', 'rdfs', 'rules', 'smush', 'stats', 'tbox', 'transform', 'unique');
 
 // $inputExample = "abox10k.tql.gz";
 $inputExample = "1000soccerPlayersDBpedia_10000.ttl";

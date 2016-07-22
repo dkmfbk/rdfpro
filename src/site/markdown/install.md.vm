@@ -1,6 +1,6 @@
 
-RDFpro installation
-===================
+RDFpro download and installation
+================================
 
 The RDFpro command line tool is packaged as a self-contained, cross-platform Java 8 application. In order to install it, download one of the following packages and unpack it in the location you prefer (if you are interested in the PHP web interface of RDFpro, please refer to [this page](web-interface.html)):
 

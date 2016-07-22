@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -219,10 +219,10 @@ final class StringIndex {
 
         byte[] buffer;
         int offset;
-        int id;
+        final int id;
         if (small) {
             offset = getOffset(this.smallNextID);
-            if (offset + 1 + length * 3 > SMALL_BUFFER_SIZE) {
+            if (offset + 1 + length * 3 >= SMALL_BUFFER_SIZE) {
                 this.smallBuffers.add(new byte[SMALL_BUFFER_SIZE]);
                 this.smallNextID = getID(true, this.smallBuffers.size() - 1, 0);
                 offset = 0;
@@ -232,7 +232,7 @@ final class StringIndex {
             buffer[offset++] = (byte) length;
         } else {
             offset = getOffset(this.largeNextID);
-            if (offset + 4 + length * 3 > LARGE_BUFFER_SIZE) {
+            if (offset + 4 + length * 3 >= LARGE_BUFFER_SIZE) {
                 this.largeBuffers.add(new byte[LARGE_BUFFER_SIZE]);
                 this.largeNextID = getID(false, this.largeBuffers.size() - 1, 0);
                 offset = 0;
@@ -264,8 +264,8 @@ final class StringIndex {
     }
 
     private int getID(final boolean small, final int page, final int offset) {
-        return small ? (page + 1 & 0x7FFF) << 16 | offset & 0xFFFF : 0x80000000
-                | (page + 1 & 0x7FFF) << 16 | offset + 7 >> 3 & 0xFFFF;
+        return small ? (page + 1 & 0x7FFF) << 16 | offset & 0xFFFF
+                : 0x80000000 | (page + 1 & 0x7FFF) << 16 | offset + 7 >> 3 & 0xFFFF;
     }
 
     private int getPage(final int id) {

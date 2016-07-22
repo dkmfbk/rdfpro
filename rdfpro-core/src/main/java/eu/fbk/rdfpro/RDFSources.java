@@ -73,6 +73,7 @@ import org.slf4j.LoggerFactory;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.IO;
+import eu.fbk.rdfpro.util.QuadModel;
 import eu.fbk.rdfpro.util.Statements;
 
 /**
@@ -135,31 +136,26 @@ public final class RDFSources {
     };
 
     /**
-     * Returns an {@code RDFSource} providing access to the statements and namespaces in the
-     * supplied model. The model MUST NOT be changed while the returned source is being used, as
-     * this will cause the source to return different data in different passes. Access to the
-     * model is sequential, so it does not need to be thread-safe.
-     *
-     * @param model
-     *            the model, not null
-     * @return the created {@code RDFSource}.
-     */
-    public static RDFSource wrap(final Model model) {
-        return wrap(model, model.getNamespaces());
-    }
-
-    /**
      * Returns an {@code RDFSource} providing access to the statements in the supplied collection.
-     * The collection MUST NOT be changed while the returned source is being used, as this will
-     * cause the source to return different statements in different passes. Access to the
-     * collection is sequential, so it does not need to be thread-safe.
+     * If the collection is a {@link Model} or {@link QuadModel}, also its namespaces are wrapped
+     * and returned when reading from the source. If you don't want namespaces to be read, use
+     * {@link #wrap(Iterable, Iterable)} passing null as second argument. The collection MUST NOT
+     * be changed while the returned source is being used, as this will cause the source to return
+     * different statements in different passes. Access to the collection is sequential, so it
+     * does not need to be thread-safe.
      *
      * @param statements
      *            the statements collection, not null (can also be another {@code RDFSource})
      * @return the created {@code RDFSource}.
      */
     public static RDFSource wrap(final Iterable<? extends Statement> statements) {
-        return wrap(statements, Collections.emptyList());
+        if (statements instanceof Model) {
+            return wrap(statements, ((Model) statements).getNamespaces());
+        } else if (statements instanceof QuadModel) {
+            return wrap(statements, ((QuadModel) statements).getNamespaces());
+        } else {
+            return wrap(statements, Collections.emptyList());
+        }
     }
 
     /**
@@ -171,14 +167,13 @@ public final class RDFSources {
      * @param statements
      *            the statements collection, not null (can also be another {@code RDFSource})
      * @param namespaces
-     *            the namespaces collection, not null
+     *            the namespaces collection, possibly null
      * @return the created {@code RDFSource}.
      */
     public static RDFSource wrap(final Iterable<? extends Statement> statements,
-            final Iterable<? extends Namespace> namespaces) {
+            @Nullable final Iterable<? extends Namespace> namespaces) {
 
         Objects.requireNonNull(statements);
-        Objects.requireNonNull(namespaces);
 
         return new RDFSource() {
 
@@ -194,8 +189,10 @@ public final class RDFSources {
                         @Override
                         public void startRDF() throws RDFHandlerException {
                             super.startRDF();
-                            for (final Namespace ns : namespaces) {
-                                this.handler.handleNamespace(ns.getPrefix(), ns.getName());
+                            if (namespaces != null) {
+                                for (final Namespace ns : namespaces) {
+                                    this.handler.handleNamespace(ns.getPrefix(), ns.getName());
+                                }
                             }
                         }
 
@@ -216,8 +213,10 @@ public final class RDFSources {
                     try {
                         for (int i = 0; i < passes; ++i) {
                             handler.startRDF();
-                            for (final Namespace ns : namespaces) {
-                                handler.handleNamespace(ns.getPrefix(), ns.getName());
+                            if (namespaces != null) {
+                                for (final Namespace ns : namespaces) {
+                                    handler.handleNamespace(ns.getPrefix(), ns.getName());
+                                }
                             }
                             for (final Statement statement : statements) {
                                 handler.handleStatement(statement);
@@ -255,14 +254,14 @@ public final class RDFSources {
      * @param statements
      *            the statements collection, not null (can also be another {@code RDFSource})
      * @param namespaces
-     *            the namespaces map, not null
+     *            the namespaces map, possibly null
      * @return the created {@code RDFSource}
      */
     public static RDFSource wrap(final Iterable<? extends Statement> statements,
-            final Map<String, String> namespaces) {
+            @Nullable final Map<String, String> namespaces) {
 
         List<Namespace> list;
-        if (namespaces.isEmpty()) {
+        if (namespaces == null || namespaces.isEmpty()) {
             list = Collections.emptyList();
         } else {
             list = new ArrayList<Namespace>(namespaces.size());
@@ -610,9 +609,9 @@ public final class RDFSources {
                         }
                     }
                 } finally {
-                    IO.closeQuietly(this.in);
-                    this.in = null;
                     synchronized (this.streams) {
+                        IO.closeQuietly(this.in);
+                        this.in = null;
                         this.streams.put(this.location, null); // ensure stream is not read again
                     }
                 }
