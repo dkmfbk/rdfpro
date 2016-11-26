@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti and Alessio Palmero Aprosio with support by Marco
  * Amadori, Michele Mostarda and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.vocabulary.SESAME;
+import org.openrdf.query.MalformedQueryException;
 import org.openrdf.rio.ParserConfig;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
@@ -41,6 +43,7 @@ import org.openrdf.rio.WriterConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.fbk.rdfpro.util.Algebra;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
@@ -142,8 +145,8 @@ public final class RDFProcessors {
         case "r":
         case "read": {
             final Options options = Options.parse("b!|w|+", args);
-            final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
-                    new String[0]);
+            final String[] fileSpecs = options.getPositionalArgs(String.class)
+                    .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
             final URI base = parseURI(options.getOptionArg("b", String.class));
             return read(true, preserveBNodes, base == null ? null : base.stringValue(), null,
@@ -154,17 +157,27 @@ public final class RDFProcessors {
         case "write": {
             final Options options = Options.parse("c!|+", args);
             final int chunkSize = options.getOptionArg("c", Integer.class, 1);
-            final String[] locations = options.getPositionalArgs(String.class).toArray(
-                    new String[0]);
+            final String[] locations = options.getPositionalArgs(String.class)
+                    .toArray(new String[0]);
             return write(null, chunkSize, locations);
+        }
+
+        case "tsv": {
+            final Options options = Options.parse("p!|q!|!", args);
+            final Mapper mapper = Mapper.parse(options.getOptionArg("p", String.class));
+            final String query = options.getOptionArg("q", String.class,
+                    "SELECT ?s ?p ?o ?c { GRAPH ?c { ?s ?p ?o } }");
+            final String location = options.getPositionalArg(0, String.class);
+            return tsv(mapper, query, location);
         }
 
         case "t":
         case "transform": {
             final Options options = Options.parse("+", args);
             final String spec = String.join(" ", options.getPositionalArgs(String.class));
-            final Transformer transformer = Scripting.isScript(spec) ? Scripting.compile(
-                    Transformer.class, spec, "q", "h") : Transformer.rules(spec);
+            final Transformer transformer = Scripting.isScript(spec)
+                    ? Scripting.compile(Transformer.class, spec, "q", "h")
+                    : Transformer.rules(spec);
             return transform(transformer);
         }
 
@@ -192,7 +205,8 @@ public final class RDFProcessors {
                 } catch (final Throwable ex) {
                     throw new IllegalArgumentException(
                             "Cannot load prefix/namespace bindings from " + source + ": "
-                                    + ex.getMessage(), ex);
+                                    + ex.getMessage(),
+                            ex);
                 }
             }
             return prefix(namespaces.prefixMap());
@@ -200,8 +214,8 @@ public final class RDFProcessors {
 
         case "smush": {
             final Options options = Options.parse("x|*", args);
-            final String[] namespaces = options.getPositionalArgs(String.class).toArray(
-                    new String[0]);
+            final String[] namespaces = options.getPositionalArgs(String.class)
+                    .toArray(new String[0]);
             final boolean hasSmushEasterEgg = options.hasOption("x");
             if (hasSmushEasterEgg) {
                 // Below you can find one of the most important contributions by Alessio :-)
@@ -235,11 +249,14 @@ public final class RDFProcessors {
                 p.println("||                                                                ||");
                 p.println("|'================================================================'|");
                 p.println("||              __________________                                ||");
-                p.println("||              | ___ \\  _  \\  ___|                               ||");
+                p.println(
+                        "||              | ___ \\  _  \\  ___|                               ||");
                 p.println("||              | |_/ / | | | |_                                  ||");
                 p.println("||              |    /| | | |  _|                                 ||");
-                p.println("||              | |\\ \\| |/ /| |  ___  ___  ____                   ||");
-                p.println("||              \\_| \\_|___/ \\_| / _ \\/ _ \\/ __ \\                  ||");
+                p.println(
+                        "||              | |\\ \\| |/ /| |  ___  ___  ____                   ||");
+                p.println(
+                        "||              \\_| \\_|___/ \\_| / _ \\/ _ \\/ __ \\                  ||");
                 p.println("||                             / ___/ , _/ /_/ /                  ||");
                 p.println("||                            /_/  /_/|_|\\____/                   ||");
                 p.println("||                                                                ||");
@@ -262,12 +279,12 @@ public final class RDFProcessors {
             final Options options = Options.parse("d|e!|C|c!|b!|t|w|+", args);
             final URI base = parseURI(options.getOptionArg("b", String.class));
             final boolean preserveBNodes = !options.hasOption("w");
-            final String[] fileSpecs = options.getPositionalArgs(String.class).toArray(
-                    new String[0]);
-            final RDFSource tbox = RDFProcessors.track(
-                    new Tracker(LOGGER, null, "%d TBox triples read (%d tr/s avg)", //
-                            "%d TBox triples read (%d tr/s, %d tr/s avg)")).wrap(
-                    RDFSources.read(true, preserveBNodes,
+            final String[] fileSpecs = options.getPositionalArgs(String.class)
+                    .toArray(new String[0]);
+            final RDFSource tbox = RDFProcessors
+                    .track(new Tracker(LOGGER, null, "%d TBox triples read (%d tr/s avg)", //
+                            "%d TBox triples read (%d tr/s, %d tr/s avg)"))
+                    .wrap(RDFSources.read(true, preserveBNodes,
                             base == null ? null : base.stringValue(), null, fileSpecs));
             final boolean decomposeOWLAxioms = options.hasOption("d");
             final boolean dropBNodeTypes = options.hasOption("t");
@@ -311,8 +328,8 @@ public final class RDFProcessors {
                     } else {
                         url = RDFProcessors.class.getClassLoader().getResource(source);
                     }
-                    final BufferedReader reader = new BufferedReader(new InputStreamReader(
-                            url.openStream()));
+                    final BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(url.openStream()));
                     try {
                         final StringBuilder builder = new StringBuilder();
                         String line;
@@ -324,8 +341,9 @@ public final class RDFProcessors {
                         IO.closeQuietly(reader);
                     }
                 } catch (final Throwable ex) {
-                    throw new IllegalArgumentException("Cannot load SPARQL query from " + source
-                            + ": " + ex.getMessage(), ex);
+                    throw new IllegalArgumentException(
+                            "Cannot load SPARQL query from " + source + ": " + ex.getMessage(),
+                            ex);
                 }
             }
             return download(true, preserveBNodes, endpointURL, query);
@@ -349,7 +367,7 @@ public final class RDFProcessors {
             final Predicate<Statement> existsPred = Statements.statementMatcher(existsExp);
             final Predicate<Statement> forallPred = Statements.statementMatcher(forallExp);
             Reducer reducer = reducerExp == null ? Reducer.IDENTITY //
-                    : Scripting.compile(Reducer.class, reducerExp, "k", "p", "h");
+                    : Reducer.parse(reducerExp);
             reducer = Reducer.filter(reducer, existsPred, forallPred);
             final List<Mapper> mappers = new ArrayList<>();
             for (final String mapperExp : options.getPositionalArgs(String.class)) {
@@ -408,8 +426,8 @@ public final class RDFProcessors {
         Objects.requireNonNull(operator);
 
         if (processors.length == 0) {
-            throw new IllegalArgumentException("At least one processor should be supplied "
-                    + "in a parallel composition");
+            throw new IllegalArgumentException(
+                    "At least one processor should be supplied " + "in a parallel composition");
         }
 
         int count = 0;
@@ -433,8 +451,8 @@ public final class RDFProcessors {
                 final int numProcessors = processors.length;
 
                 final int[] extraPasses = new int[numProcessors];
-                final RDFHandler[] handlers = RDFHandlers
-                        .collect(handler, numProcessors, operator);
+                final RDFHandler[] handlers = RDFHandlers.collect(handler, numProcessors,
+                        operator);
 
                 for (int i = 0; i < numProcessors; ++i) {
                     final RDFProcessor processor = processors[i];
@@ -460,8 +478,8 @@ public final class RDFProcessors {
     public static RDFProcessor sequence(final RDFProcessor... processors) {
 
         if (processors.length == 0) {
-            throw new IllegalArgumentException("At least one processor should be supplied "
-                    + "in a sequence composition");
+            throw new IllegalArgumentException(
+                    "At least one processor should be supplied " + "in a sequence composition");
         }
 
         if (processors.length == 1) {
@@ -712,9 +730,9 @@ public final class RDFProcessors {
     public static RDFProcessor read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseURI, @Nullable final ParserConfig config,
             final String... locations) {
-        final RDFProcessor tracker = track(new Tracker(LOGGER, null,
-                "%d triples read (%d tr/s avg)", //
-                "%d triples read (%d tr/s, %d tr/s avg)"));
+        final RDFProcessor tracker = track(
+                new Tracker(LOGGER, null, "%d triples read (%d tr/s avg)", //
+                        "%d triples read (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseURI, config,
                 locations);
         return inject(tracker.wrap(source));
@@ -742,9 +760,9 @@ public final class RDFProcessors {
      */
     public static RDFProcessor download(final boolean parallelize, final boolean preserveBNodes,
             final String endpointURL, final String query) {
-        final RDFProcessor tracker = track(new Tracker(LOGGER, null,
-                "%d triples queried (%d tr/s avg)", //
-                "%d triples queried (%d tr/s, %d tr/s avg)"));
+        final RDFProcessor tracker = track(
+                new Tracker(LOGGER, null, "%d triples queried (%d tr/s avg)", //
+                        "%d triples queried (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.query(parallelize, preserveBNodes, endpointURL, query);
         return inject(tracker.wrap(source));
     }
@@ -775,6 +793,17 @@ public final class RDFProcessors {
             }
 
         };
+    }
+
+    public static RDFProcessor tsv(@Nullable final Mapper mapper, final String query,
+            final String location) {
+        try {
+            return new ProcessorTSV(Paths.get(location),
+                    Algebra.parseTupleExpr(query, null, Namespaces.DEFAULT.uriMap()), mapper);
+        } catch (final MalformedQueryException ex) {
+            throw new IllegalArgumentException(
+                    "Invalid query - " + ex.getMessage() + "\n" + query);
+        }
     }
 
     /**
@@ -918,8 +947,8 @@ public final class RDFProcessors {
             final boolean dropBNodeTypes, final boolean deduplicate,
             @Nullable final RDFSource tboxData, final boolean emitTBox,
             @Nullable final URI tboxContext) {
-        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, tboxData,
-                emitTBox, tboxContext);
+        return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, tboxData, emitTBox,
+                tboxContext);
     }
 
     private static class InjectSourceHandler extends AbstractRDFHandler {

@@ -59,8 +59,8 @@ public final class Scripting {
                             throw new Error("Invalid language: " + language);
                         }
                         final StringBuilder builder = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(IO.utf8Reader(IO
-                                .read(location)))) {
+                        try (BufferedReader reader = new BufferedReader(
+                                IO.utf8Reader(IO.read(location)))) {
                             String line;
                             while ((line = reader.readLine()) != null) {
                                 builder.append(line).append("\n");
@@ -70,8 +70,8 @@ public final class Scripting {
                         }
                         final String newInclude = builder.toString();
                         final String oldInclude = includes.get(language);
-                        includes.put(language, oldInclude == null ? newInclude : oldInclude
-                                + newInclude);
+                        includes.put(language,
+                                oldInclude == null ? newInclude : oldInclude + newInclude);
                         LOGGER.debug("Loaded {}", location);
                     } catch (final Throwable ex) {
                         LOGGER.error("Failed to process include " + property, ex);
@@ -85,7 +85,7 @@ public final class Scripting {
     public static boolean isScript(final String spec) {
         final int index = spec.indexOf(':');
         if (index > 0) {
-            final String language = spec.substring(0, 1);
+            final String language = spec.substring(0, index);
             return LANGUAGE_PATTERN.matcher(language).matches();
         }
         return false;
@@ -98,8 +98,8 @@ public final class Scripting {
         Objects.requireNonNull(interfaceClass);
         Objects.requireNonNull(spec);
         if (!interfaceClass.isInterface()) {
-            throw new IllegalArgumentException("Class " + interfaceClass.getName()
-                    + " is not an interface");
+            throw new IllegalArgumentException(
+                    "Class " + interfaceClass.getName() + " is not an interface");
         }
 
         // Identify the single abstract method in the interface (throw error if more than one)
@@ -107,8 +107,8 @@ public final class Scripting {
         for (final Method m : interfaceClass.getMethods()) {
             if (Modifier.isAbstract(m.getModifiers())) {
                 if (method != null) {
-                    throw new IllegalArgumentException(interfaceClass
-                            + " defines multiple methods");
+                    throw new IllegalArgumentException(
+                            interfaceClass + " defines multiple methods");
                 }
                 method = m;
             }
@@ -188,8 +188,8 @@ public final class Scripting {
         return interfaceClass.cast(((Invocable) engine).getInterface(interfaceClass));
     }
 
-    private static String wrap(final Method method, final String expression,
-            final String language, final String... parameterNames) {
+    private static String wrap(final Method method, final String expression, final String language,
+            final String... parameterNames) {
 
         if ("js".equals(language)) {
             final StringBuilder builder = new StringBuilder();
@@ -246,8 +246,9 @@ public final class Scripting {
                 } else if (isPN_CHARS_BASE(c)) {
                     final int end = parseQName(script, i);
                     if (end >= 0) {
-                        final String uri = Statements.parseValue(script.substring(i, end),
-                                Namespaces.DEFAULT).stringValue();
+                        final String uri = Statements
+                                .parseValue(script.substring(i, end), Namespaces.DEFAULT)
+                                .stringValue();
                         builder.append("(new org.openrdf.model.impl.URIImpl(\"").append(uri)
                                 .append("\"))");
                         i = end;
@@ -332,8 +333,8 @@ public final class Scripting {
     }
 
     private static boolean isPN_CHARS(final int c) {
-        return isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183 || c >= 768
-                && c <= 879 || c >= 8255 && c <= 8256;
+        return isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183
+                || c >= 768 && c <= 879 || c >= 8255 && c <= 8256;
     }
 
     private static boolean isPN_CHARS_U(final int c) {
@@ -341,10 +342,10 @@ public final class Scripting {
     }
 
     private static boolean isPN_CHARS_BASE(final int c) {
-        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246 || c >= 248
-                && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191 || c >= 8204
-                && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271 || c >= 12289
-                && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
+        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246
+                || c >= 248 && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191
+                || c >= 8204 && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271
+                || c >= 12289 && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
                 || c >= 65536 && c <= 983039;
     }
 

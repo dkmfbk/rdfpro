@@ -1,28 +1,34 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 package eu.fbk.rdfpro;
 
+import java.util.Arrays;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
 import org.openrdf.model.Value;
+import org.openrdf.model.ValueFactory;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 
+import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Scripting;
+import eu.fbk.rdfpro.util.Statements;
 
 /**
  * Reduce function in a MapReduce job.
@@ -155,6 +161,70 @@ public interface Reducer {
         };
     }
 
+    // TODO: add comment
+
+    static Reducer aggregate(final String expression) {
+
+        final String[] tokens = expression.split("\\s+");
+        final Object[] components = new Object[4];
+        for (int i = 0; i < tokens.length; ++i) {
+            tokens[i] = tokens[i].trim();
+            try {
+                components[i] = Statements.parseValue(tokens[i], Namespaces.DEFAULT);
+            } catch (final Throwable ex) {
+                final String t = tokens[i].toLowerCase().intern();
+                if (t == "s" || t == "p" || t == "o" || t == "c" || t == "n") {
+                    components[i] = t;
+                } else {
+                    throw new IllegalArgumentException(
+                            "Invalid component " + tokens[i] + " in expression " + expression);
+                }
+            }
+        }
+
+        return new Reducer() {
+
+            @Override
+            public void reduce(final Value key, final Statement[] statements,
+                    final RDFHandler handler) throws RDFHandlerException {
+
+                final ValueFactory vf = Statements.VALUE_FACTORY;
+
+                final Value[] values = new Value[4];
+                for (int i = 0; i < 4; ++i) {
+                    final Object c = components[i];
+                    if (c instanceof Value) {
+                        values[i] = (Value) c;
+                    } else if (c == "s") {
+                        values[i] = statements[0].getSubject();
+                    } else if (c == "p") {
+                        values[i] = statements[0].getPredicate();
+                    } else if (c == "o") {
+                        values[i] = statements[0].getObject();
+                    } else if (c == "c") {
+                        values[i] = statements[0].getContext();
+                    } else if (c == "n") {
+                        values[i] = vf.createLiteral(statements.length);
+                    }
+                }
+
+                if (values[0] instanceof Resource && values[1] instanceof URI
+                        && values[2] instanceof Value) {
+                    final Resource s = (Resource) values[0];
+                    final URI p = (URI) values[1];
+                    final Value o = values[2];
+                    if (values[3] instanceof Resource) {
+                        final Resource c = (Resource) values[3];
+                        handler.handleStatement(vf.createStatement(s, p, o, c));
+                    } else {
+                        handler.handleStatement(vf.createStatement(s, p, o));
+                    }
+                }
+            }
+
+        };
+    }
+
     /**
      * Parses a {@code Reducer} out of the supplied expression string. The expression must be a
      * {@code language: expression} script.
@@ -164,9 +234,14 @@ public interface Reducer {
      * @return the parsed reducer, or null if a null expression was supplied
      */
     @Nullable
-    static Mapper parse(@Nullable final String expression) {
-        return expression == null ? null //
-                : Scripting.compile(Mapper.class, expression, "k", "p", "h");
+    static Reducer parse(@Nullable final String expression) {
+        if (expression == null) {
+            return null;
+        } else if (Scripting.isScript(expression)) {
+            return Scripting.compile(Reducer.class, expression, "k", "p", "h");
+        } else {
+            return aggregate(expression);
+        }
     }
 
     /**
