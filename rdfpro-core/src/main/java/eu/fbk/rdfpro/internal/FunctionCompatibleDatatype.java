@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -18,14 +18,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.query.algebra.evaluation.ValueExprEvaluationException;
-import org.openrdf.query.algebra.evaluation.function.Function;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.query.algebra.evaluation.ValueExprEvaluationException;
+import org.eclipse.rdf4j.query.algebra.evaluation.function.Function;
 
 import eu.fbk.rdfpro.vocab.RR;
 
@@ -94,7 +94,7 @@ public class FunctionCompatibleDatatype implements Function {
             }
         }
 
-        for (final URI uri : new URI[] { RDFS.LITERAL, RDF.XMLLITERAL, XMLSchema.DURATION,
+        for (final IRI iri : new IRI[] { RDFS.LITERAL, RDF.XMLLITERAL, XMLSchema.DURATION,
                 XMLSchema.DATETIME, XMLSchema.DATE, XMLSchema.TIME, XMLSchema.GYEARMONTH,
                 XMLSchema.GMONTHDAY, XMLSchema.GYEAR, XMLSchema.GMONTH, XMLSchema.GDAY,
                 XMLSchema.BOOLEAN, XMLSchema.BASE64BINARY, XMLSchema.HEXBINARY, XMLSchema.FLOAT,
@@ -106,7 +106,7 @@ public class FunctionCompatibleDatatype implements Function {
                 XMLSchema.INT, XMLSchema.SHORT, XMLSchema.BYTE, XMLSchema.NORMALIZEDSTRING,
                 XMLSchema.TOKEN, XMLSchema.LANGUAGE, XMLSchema.NAME, XMLSchema.NMTOKEN,
                 XMLSchema.NCNAME, XMLSchema.ID, XMLSchema.IDREF, XMLSchema.ENTITY, }) {
-            set.add(new Pair(uri, uri));
+            set.add(new Pair(iri, iri));
         }
 
         COMPATIBILITIES = set;
@@ -120,19 +120,19 @@ public class FunctionCompatibleDatatype implements Function {
     @Override
     public Value evaluate(final ValueFactory factory, final Value... args)
             throws ValueExprEvaluationException {
-        final URI d1 = (URI) args[0]; // parent
-        final URI d2 = (URI) args[1]; // child
+        final IRI d1 = (IRI) args[0]; // parent
+        final IRI d2 = (IRI) args[1]; // child
         final Pair pair = new Pair(d1, d2);
-        return factory.createLiteral(COMPATIBILITIES.contains(pair));
+        return factory.createLiteral(FunctionCompatibleDatatype.COMPATIBILITIES.contains(pair));
     }
 
     private static final class Pair {
 
-        public URI parent;
+        public IRI parent;
 
-        public URI child;
+        public IRI child;
 
-        public Pair(final URI parent, final URI child) {
+        public Pair(final IRI parent, final IRI child) {
             this.parent = parent;
             this.child = child;
         }

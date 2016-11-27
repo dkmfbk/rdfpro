@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -27,24 +27,25 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.xml.datatype.XMLGregorianCalendar;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.datatypes.XMLDatatypeUtil;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.util.URIUtil;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 
 final class QuadModelImpl extends QuadModel {
 
@@ -52,10 +53,11 @@ final class QuadModelImpl extends QuadModel {
 
     private static final int INITIAL_STATEMENT_TABLE_SIZE = 256 - 1;
 
-    private static final ModelURI NULL_VALUE = new ModelURI(null, "sesame:null");
+    private static final ModelIRI NULL_VALUE = new ModelIRI(null, "sesame:null");
 
-    private static final ModelStatement NULL_STATEMENT = new ModelStatement(NULL_VALUE,
-            NULL_VALUE, NULL_VALUE, NULL_VALUE);
+    private static final ModelStatement NULL_STATEMENT = new ModelStatement(
+            QuadModelImpl.NULL_VALUE, QuadModelImpl.NULL_VALUE, QuadModelImpl.NULL_VALUE,
+            QuadModelImpl.NULL_VALUE);
 
     private static final int SUBJ = 0;
 
@@ -77,9 +79,9 @@ final class QuadModelImpl extends QuadModel {
 
     private int valueSlots;
 
-    private final ModelURI valueNil;
+    private final ModelIRI valueNil;
 
-    private final ModelURI valueLang;
+    private final ModelIRI valueLang;
 
     private ModelStatement[] statementTable;
 
@@ -92,15 +94,15 @@ final class QuadModelImpl extends QuadModel {
     public QuadModelImpl() {
         this.namespaces = new HashMap<>();
         this.stringIndex = new StringIndex();
-        this.valueTable = new ModelValue[INITIAL_VALUE_TABLE_SIZE];
+        this.valueTable = new ModelValue[QuadModelImpl.INITIAL_VALUE_TABLE_SIZE];
         this.valueCount = 0;
         this.valueSlots = 0;
-        this.statementTable = new ModelStatement[INITIAL_STATEMENT_TABLE_SIZE];
+        this.statementTable = new ModelStatement[QuadModelImpl.INITIAL_STATEMENT_TABLE_SIZE];
         this.statementCount = 0;
         this.statementSlots = 0;
         this.statementZombies = 0;
-        this.valueNil = (ModelURI) lookupValue(SESAME.NIL, true);
-        this.valueLang = (ModelURI) lookupValue(RDF.LANGSTRING, true);
+        this.valueNil = (ModelIRI) this.lookupValue(SESAME.NIL, true);
+        this.valueLang = (ModelIRI) this.lookupValue(RDF.LANGSTRING, true);
     }
 
     // NAMESPACE HANDLING
@@ -121,7 +123,7 @@ final class QuadModelImpl extends QuadModel {
         if (name == null) {
             return this.namespaces.remove(prefix);
         } else {
-            return this.namespaces.put(prefix, new NamespaceImpl(prefix, name));
+            return this.namespaces.put(prefix, new SimpleNamespace(prefix, name));
         }
     }
 
@@ -133,101 +135,105 @@ final class QuadModelImpl extends QuadModel {
     // operating on a single context (possibly a wildcard)
 
     @Override
-    protected int doSize(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSize(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
 
         // Null context arrays are forbidden
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
-        final ModelURI mpred = (ModelURI) lookupValue(pred, false);
-        final ModelValue mobj = lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
+        final ModelValue mobj = this.lookupValue(obj, false);
 
         // If one of SPO is missing in the table, then no statements can exist for that component
-        if (msubj == NULL_VALUE || mpred == NULL_VALUE || mobj == NULL_VALUE) {
+        if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
+                || mobj == QuadModelImpl.NULL_VALUE) {
             return 0;
         }
 
         // Otherwise, handle two cases based on the contents of the context array
         if (ctxs.length == 0) {
             // (1) Match any context
-            return doSize(msubj, mpred, mobj, (ModelResource) null);
+            return this.doSize(msubj, mpred, mobj, (ModelResource) null);
 
         } else {
             // (2) Match multiple contexts, summing the # of statements for each of them
             int size = 0;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) lookupValue(ctx, false);
-                size += mctx == NULL_VALUE ? 0 : doSize(msubj, mpred, mobj, mctx);
+                        : (ModelResource) this.lookupValue(ctx, false);
+                size += mctx == QuadModelImpl.NULL_VALUE ? 0
+                        : this.doSize(msubj, mpred, mobj, mctx);
             }
             return size;
         }
     }
 
     @Override
-    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, @Nullable final Resource ctx) {
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
-        final ModelURI mpred = (ModelURI) lookupValue(pred, false);
-        final ModelValue mobj = lookupValue(obj, false);
-        final ModelResource mctx = (ModelResource) lookupValue(ctx, false);
+        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
+        final ModelValue mobj = this.lookupValue(obj, false);
+        final ModelResource mctx = (ModelResource) this.lookupValue(ctx, false);
 
         // If one of SPOC is missing in the table, then no statements can exist for that component
-        if (msubj == NULL_VALUE || mpred == NULL_VALUE || mobj == NULL_VALUE || mctx == NULL_VALUE) {
+        if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
+                || mobj == QuadModelImpl.NULL_VALUE || mctx == QuadModelImpl.NULL_VALUE) {
             return 0;
         }
 
         // Otherwise, delegate
-        return doSizeEstimate(msubj, mpred, mobj, mctx);
+        return this.doSizeEstimate(msubj, mpred, mobj, mctx);
     }
 
     @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
 
         // Null context arrays are forbidden
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
-        final ModelURI mpred = (ModelURI) lookupValue(pred, false);
-        final ModelValue mobj = lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
+        final ModelValue mobj = this.lookupValue(obj, false);
 
         // If any of SPO is missing in the table, then no statements can exist for that component
-        if (msubj == NULL_VALUE || mpred == NULL_VALUE || mobj == NULL_VALUE) {
+        if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
+                || mobj == QuadModelImpl.NULL_VALUE) {
             return Collections.emptyIterator();
         }
 
         // Otherwise handle three cases based on the contexts array
         if (ctxs.length == 0) {
             // (1) Match any context
-            return doIterator(msubj, mpred, mobj, (ModelResource) null);
+            return this.doIterator(msubj, mpred, mobj, (ModelResource) null);
 
         } else if (ctxs.length == 1) {
             // (2) Match exactly one context. If not defined, return an empty iterator
             final ModelResource mctx = ctxs[0] == null ? this.valueNil
-                    : (ModelResource) lookupValue(ctxs[0], false);
-            return mctx == NULL_VALUE ? Collections.emptyIterator() //
-                    : doIterator(msubj, mpred, mobj, mctx);
+                    : (ModelResource) this.lookupValue(ctxs[0], false);
+            return mctx == QuadModelImpl.NULL_VALUE ? Collections.emptyIterator() //
+                    : this.doIterator(msubj, mpred, mobj, mctx);
 
         } else {
             // (3) Match multiple contexts, concatenating the iterators for each context
             final Iterator<Resource> ctxIterator = Arrays.asList(ctxs).iterator();
             return Iterators.concat(Iterators.transform(ctxIterator, (final Resource ctx) -> {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) lookupValue(ctx, false);
-                return ctx == NULL_VALUE ? Collections.emptyIterator() //
-                        : doIterator(msubj, mpred, mobj, mctx);
+                        : (ModelResource) this.lookupValue(ctx, false);
+                return ctx == QuadModelImpl.NULL_VALUE ? Collections.emptyIterator() //
+                        : this.doIterator(msubj, mpred, mobj, mctx);
             }));
         }
     }
 
     @Override
-    protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
+    protected boolean doAdd(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
 
         // All SPOC components must be specified
@@ -237,22 +243,22 @@ final class QuadModelImpl extends QuadModel {
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO model values in the values hash table, creating them if necessary
-        final ModelResource msubj = (ModelResource) lookupValue(subj, true);
-        final ModelURI mpred = (ModelURI) lookupValue(pred, true);
-        final ModelValue mobj = lookupValue(obj, true);
+        final ModelResource msubj = (ModelResource) this.lookupValue(subj, true);
+        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, true);
+        final ModelValue mobj = this.lookupValue(obj, true);
 
         // Handle two cases based on the context array
         if (ctxs.length == 0) {
             // (1) Add a single statement in the default context (sesame:nil)
-            return doAdd(msubj, mpred, mobj, this.valueNil);
+            return this.doAdd(msubj, mpred, mobj, this.valueNil);
 
         } else {
             // (2) Add multiple statements in different contexts
             boolean modified = false;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) lookupValue(ctx, true);
-                final boolean isNew = doAdd(msubj, mpred, mobj, mctx);
+                        : (ModelResource) this.lookupValue(ctx, true);
+                final boolean isNew = this.doAdd(msubj, mpred, mobj, mctx);
                 modified |= isNew;
             }
             return modified;
@@ -260,35 +266,36 @@ final class QuadModelImpl extends QuadModel {
     }
 
     @Override
-    protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+    protected boolean doRemove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
 
         // Null context arrays are forbidden
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
-        final ModelURI mpred = (ModelURI) lookupValue(pred, false);
-        final ModelValue mobj = lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
+        final ModelValue mobj = this.lookupValue(obj, false);
 
         // If any of SPO is missing in the table, then no statements can exist for that component
-        if (msubj == NULL_VALUE || mpred == NULL_VALUE || mobj == NULL_VALUE) {
+        if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
+                || mobj == QuadModelImpl.NULL_VALUE) {
             return false;
         }
 
         // Otherwise handle two cases based on the contents of the contexts array
         if (ctxs.length == 0) {
             // (1) Wildcard context: remove statements matching SPO in any context
-            return doRemove(msubj, mpred, mobj, (ModelResource) null);
+            return this.doRemove(msubj, mpred, mobj, (ModelResource) null);
 
         } else {
             // (2) Specific contexts: remove statements matching SPO in the given contexts
             boolean modified = false;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) lookupValue(ctx, false);
-                if (mctx != NULL_VALUE) {
-                    final boolean m = doRemove(msubj, mpred, mobj, mctx);
+                        : (ModelResource) this.lookupValue(ctx, false);
+                if (mctx != QuadModelImpl.NULL_VALUE) {
+                    final boolean m = this.doRemove(msubj, mpred, mobj, mctx);
                     modified |= m;
                 }
             }
@@ -298,16 +305,16 @@ final class QuadModelImpl extends QuadModel {
 
     @Override
     protected synchronized Value doNormalize(final Value value) {
-        return lookupValue(value, true);
+        return this.lookupValue(value, true);
     }
 
     // STATEMENT HANDLING - SINGLE CONTEXTS
 
-    private int doSize(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+    private int doSize(@Nullable final ModelResource subj, @Nullable final ModelIRI pred,
             @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
 
         // Select the SPOC component associated to the minimum number of statements
-        final int comp = selectComponent(subj, pred, obj, ctx);
+        final int comp = QuadModelImpl.selectComponent(subj, pred, obj, ctx);
 
         // If no component has been specified, return the total model size
         if (comp < 0) {
@@ -326,7 +333,7 @@ final class QuadModelImpl extends QuadModel {
         return size;
     }
 
-    private int doSizeEstimate(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+    private int doSizeEstimate(@Nullable final ModelResource subj, @Nullable final ModelIRI pred,
             @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
 
         int size = this.statementCount;
@@ -346,11 +353,11 @@ final class QuadModelImpl extends QuadModel {
     }
 
     private Iterator<Statement> doIterator(@Nullable final ModelResource subj,
-            @Nullable final ModelURI pred, @Nullable final ModelValue obj,
+            @Nullable final ModelIRI pred, @Nullable final ModelValue obj,
             @Nullable final ModelResource ctx) {
 
         // Select the SPOC component associated to the min number of statements
-        final int comp = selectComponent(subj, pred, obj, ctx);
+        final int comp = QuadModelImpl.selectComponent(subj, pred, obj, ctx);
 
         // If no component has been specified, return an iterator over all the statements
         // The returned iterator supports element removal (delegating to removeStatement)
@@ -370,7 +377,7 @@ final class QuadModelImpl extends QuadModel {
                     }
                     while (this.index < QuadModelImpl.this.statementTable.length) {
                         final ModelStatement stmt = QuadModelImpl.this.statementTable[this.index++];
-                        if (stmt != null && stmt != NULL_STATEMENT) {
+                        if (stmt != null && stmt != QuadModelImpl.NULL_STATEMENT) {
                             this.next = stmt;
                             return true;
                         }
@@ -380,7 +387,7 @@ final class QuadModelImpl extends QuadModel {
 
                 @Override
                 public Statement next() {
-                    if (!hasNext()) {
+                    if (!this.hasNext()) {
                         throw new NoSuchElementException();
                     }
                     this.last = this.next;
@@ -393,7 +400,8 @@ final class QuadModelImpl extends QuadModel {
                     if (this.last == null) {
                         throw new NoSuchElementException();
                     }
-                    removeStatement(this.last.subj, this.last.pred, this.last.obj, this.last.ctx);
+                    QuadModelImpl.this.removeStatement(this.last.subj, this.last.pred,
+                            this.last.obj, this.last.ctx);
                     this.last = null;
                 }
 
@@ -430,8 +438,8 @@ final class QuadModelImpl extends QuadModel {
                 this.last = this.next;
                 while (true) {
                     this.next = this.next.next(comp);
-                    if (this.next == null || !this.next.isZombie()
-                            && this.next.match(subj, pred, obj, ctx)) {
+                    if (this.next == null
+                            || !this.next.isZombie() && this.next.match(subj, pred, obj, ctx)) {
                         break;
                     }
                 }
@@ -443,14 +451,15 @@ final class QuadModelImpl extends QuadModel {
                 if (this.last == null) {
                     throw new NoSuchElementException();
                 }
-                removeStatement(this.last.subj, this.last.pred, this.last.obj, this.last.ctx);
+                QuadModelImpl.this.removeStatement(this.last.subj, this.last.pred, this.last.obj,
+                        this.last.ctx);
                 this.last = null;
             }
 
         };
     }
 
-    private boolean doAdd(final ModelResource subj, final ModelURI pred, final ModelValue obj,
+    private boolean doAdd(final ModelResource subj, final ModelIRI pred, final ModelValue obj,
             final ModelResource ctx) {
 
         // Identify the first slot where the statement could be stored in the hash table
@@ -464,7 +473,7 @@ final class QuadModelImpl extends QuadModel {
             // Retrieve the statement for the current slot (if any) and handle three cases
             ModelStatement stmt = this.statementTable[slot];
             final boolean isNull = stmt == null;
-            if (isNull || stmt == NULL_STATEMENT) {
+            if (isNull || stmt == QuadModelImpl.NULL_STATEMENT) {
 
                 // (1) Empty/deleted slot: add the statement
                 // First add the statement to the hash table and rehash if necessary
@@ -474,7 +483,7 @@ final class QuadModelImpl extends QuadModel {
                 if (isNull) {
                     ++this.statementSlots;
                     if (this.statementSlots * 2 >= this.statementTable.length) {
-                        rehashStatements();
+                        this.rehashStatements();
                     }
                 }
 
@@ -506,13 +515,13 @@ final class QuadModelImpl extends QuadModel {
             } else {
 
                 // (3) Another statement in the slot: move to next slot
-                slot = incrementSlot(slot, this.statementTable.length);
+                slot = QuadModelImpl.incrementSlot(slot, this.statementTable.length);
 
             }
         }
     }
 
-    private boolean doRemove(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+    private boolean doRemove(@Nullable final ModelResource subj, @Nullable final ModelIRI pred,
             @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
 
         // Do nothing if model is empty
@@ -522,15 +531,15 @@ final class QuadModelImpl extends QuadModel {
 
         // Remove exactly one statement (at most) if all the components were supplied
         if (subj != null && pred != null && obj != null && ctx != null) {
-            return removeStatement(subj, pred, obj, ctx);
+            return this.removeStatement(subj, pred, obj, ctx);
         }
 
         // Select the SPOC component associated to the min number of statements
-        final int comp = selectComponent(subj, pred, obj, ctx);
+        final int comp = QuadModelImpl.selectComponent(subj, pred, obj, ctx);
 
         // Clear the whole model (preserving generated values) if no component was specified
         if (comp < 0) {
-            this.statementTable = new ModelStatement[INITIAL_STATEMENT_TABLE_SIZE];
+            this.statementTable = new ModelStatement[QuadModelImpl.INITIAL_STATEMENT_TABLE_SIZE];
             this.statementCount = 0;
             this.statementSlots = 0;
             for (final ModelValue value : this.valueTable) {
@@ -543,10 +552,10 @@ final class QuadModelImpl extends QuadModel {
                         resource.numSubj = 0;
                         resource.nextByCtx = null;
                         resource.numCtx = 0;
-                        if (value instanceof ModelURI) {
-                            final ModelURI uri = (ModelURI) value;
-                            uri.nextByPred = null;
-                            uri.numPred = 0;
+                        if (value instanceof ModelIRI) {
+                            final ModelIRI iri = (ModelIRI) value;
+                            iri.nextByPred = null;
+                            iri.numPred = 0;
                         }
                     }
                 }
@@ -561,7 +570,7 @@ final class QuadModelImpl extends QuadModel {
         while (stmt != null) {
             final ModelStatement next = stmt.next(comp);
             if (stmt.match(subj, pred, obj, ctx)) {
-                final boolean m = removeStatement(stmt.subj, stmt.pred, stmt.obj, stmt.ctx);
+                final boolean m = this.removeStatement(stmt.subj, stmt.pred, stmt.obj, stmt.ctx);
                 modified |= m;
             }
             stmt = next;
@@ -571,7 +580,7 @@ final class QuadModelImpl extends QuadModel {
 
     // STATEMENT HANDLING - MISC METHODS
 
-    private boolean removeStatement(final ModelResource subj, final ModelURI pred,
+    private boolean removeStatement(final ModelResource subj, final ModelIRI pred,
             final ModelValue obj, final ModelResource ctx) {
 
         // Delete a matching statement from the hash table, aborting if it does not exist
@@ -582,12 +591,12 @@ final class QuadModelImpl extends QuadModel {
             mstmt = this.statementTable[slot];
             if (mstmt == null) {
                 return false;
-            } else if (mstmt != NULL_STATEMENT && subj == mstmt.subj && pred == mstmt.pred
-                    && obj == mstmt.obj && ctx == mstmt.ctx) {
-                this.statementTable[slot] = NULL_STATEMENT;
+            } else if (mstmt != QuadModelImpl.NULL_STATEMENT && subj == mstmt.subj
+                    && pred == mstmt.pred && obj == mstmt.obj && ctx == mstmt.ctx) {
+                this.statementTable[slot] = QuadModelImpl.NULL_STATEMENT;
                 break;
             } else {
-                slot = incrementSlot(slot, this.statementTable.length);
+                slot = QuadModelImpl.incrementSlot(slot, this.statementTable.length);
             }
         }
 
@@ -604,7 +613,7 @@ final class QuadModelImpl extends QuadModel {
 
         // Remove zombie statements if too many
         if (this.statementZombies >= this.statementCount) {
-            cleanZombies();
+            this.cleanZombies();
         }
 
         // Signal that a statement was removed
@@ -632,25 +641,26 @@ final class QuadModelImpl extends QuadModel {
         while (true) {
             ModelValue mv = this.valueTable[slot];
             final boolean isNull = mv == null;
-            if (isNull || mv == NULL_VALUE) {
+            if (isNull || mv == QuadModelImpl.NULL_VALUE) {
 
                 // Return null if missing and cannot create
                 if (!canCreate) {
-                    return NULL_VALUE;
+                    return QuadModelImpl.NULL_VALUE;
                 }
 
                 // Otherwise create the model value
-                if (value instanceof URI) {
-                    mv = new ModelURI(this, value.stringValue());
+                if (value instanceof IRI) {
+                    mv = new ModelIRI(this, value.stringValue());
                 } else if (value instanceof BNode) {
                     mv = new ModelBNode(this, ((BNode) value).getID());
                 } else if (value instanceof Literal) {
                     final Literal lit = (Literal) value;
-                    final String language = lit.getLanguage();
-                    final URI datatype = lit.getLanguage() != null ? RDF.LANGSTRING //
+                    final String language = lit.getLanguage().orElse(null);
+                    final IRI datatype = lit.getLanguage().isPresent() ? RDF.LANGSTRING //
                             : lit.getDatatype() != null ? lit.getDatatype() : XMLSchema.STRING;
-                    mv = new ModelLiteral(this, lit.getLabel(), language == null ? null
-                            : language.intern(), (ModelURI) lookupValue(datatype, true));
+                    mv = new ModelLiteral(this, lit.getLabel(),
+                            language == null ? null : language.intern(),
+                            (ModelIRI) this.lookupValue(datatype, true));
                 } else {
                     throw new Error(value.getClass().getName());
                 }
@@ -661,7 +671,7 @@ final class QuadModelImpl extends QuadModel {
                 if (isNull) {
                     ++this.valueSlots;
                     if (this.valueSlots * 2 >= this.valueTable.length) {
-                        rehashValues();
+                        this.rehashValues();
                     }
                 }
 
@@ -676,7 +686,7 @@ final class QuadModelImpl extends QuadModel {
             } else {
 
                 // Move to next slot
-                slot = incrementSlot(slot, this.valueTable.length);
+                slot = QuadModelImpl.incrementSlot(slot, this.valueTable.length);
 
             }
         }
@@ -698,11 +708,11 @@ final class QuadModelImpl extends QuadModel {
         final ModelValue[] oldTable = this.valueTable;
         this.valueTable = new ModelValue[newLength];
         for (final ModelValue mv : oldTable) {
-            if (mv != null && mv != NULL_VALUE) {
+            if (mv != null && mv != QuadModelImpl.NULL_VALUE) {
                 final int hash = mv.hashCode();
                 int slot = (hash & 0x7FFFFFFF) % this.valueTable.length;
                 while (this.valueTable[slot] != null) {
-                    slot = incrementSlot(slot, this.valueTable.length);
+                    slot = QuadModelImpl.incrementSlot(slot, this.valueTable.length);
                 }
                 this.valueTable[slot] = mv;
             }
@@ -728,11 +738,11 @@ final class QuadModelImpl extends QuadModel {
         final ModelStatement[] oldTable = this.statementTable;
         this.statementTable = new ModelStatement[newLength];
         for (final ModelStatement mstmt : oldTable) {
-            if (mstmt != null && mstmt != NULL_STATEMENT) {
+            if (mstmt != null && mstmt != QuadModelImpl.NULL_STATEMENT) {
                 final int hash = mstmt.hash();
                 int slot = (hash & 0x7FFFFFFF) % this.statementTable.length;
                 while (this.statementTable[slot] != null) {
-                    slot = incrementSlot(slot, this.statementTable.length);
+                    slot = QuadModelImpl.incrementSlot(slot, this.statementTable.length);
                 }
                 this.statementTable[slot] = mstmt;
             }
@@ -750,7 +760,7 @@ final class QuadModelImpl extends QuadModel {
         for (final ModelValue mv : this.valueTable) {
 
             // Skip empty slots
-            if (mv == null || mv == NULL_VALUE) {
+            if (mv == null || mv == QuadModelImpl.NULL_VALUE) {
                 continue;
             }
 
@@ -793,11 +803,11 @@ final class QuadModelImpl extends QuadModel {
                 }
             }
 
-            // Proceed only if the value is a URI with predicate list
-            if (!(mv instanceof ModelURI)) {
+            // Proceed only if the value is a IRI with predicate list
+            if (!(mv instanceof ModelIRI)) {
                 continue;
             }
-            final ModelURI mu = (ModelURI) mv;
+            final ModelIRI mu = (ModelIRI) mv;
 
             // Remove zombie statements from predicate list
             for (prev = null, stmt = mu.nextByPred; stmt != null; stmt = stmt.nextByPred) {
@@ -816,7 +826,7 @@ final class QuadModelImpl extends QuadModel {
     }
 
     private static int selectComponent(@Nullable final ModelResource subj,
-            @Nullable final ModelURI pred, @Nullable final ModelValue obj,
+            @Nullable final ModelIRI pred, @Nullable final ModelValue obj,
             @Nullable final ModelResource ctx) {
 
         // Start with no component selected
@@ -825,19 +835,19 @@ final class QuadModelImpl extends QuadModel {
 
         // Then, choose the component with the minimum number of associated statements
         if (subj != null && subj.numSubj < num) {
-            result = SUBJ;
+            result = QuadModelImpl.SUBJ;
             num = subj.numSubj;
         }
         if (pred != null && pred.numPred < num) {
-            result = PRED;
+            result = QuadModelImpl.PRED;
             num = pred.numPred;
         }
         if (obj != null && obj.numObj < num) {
-            result = OBJ;
+            result = QuadModelImpl.OBJ;
             num = obj.numObj;
         }
         if (ctx != null && ctx.numCtx < num) {
-            result = CTX;
+            result = QuadModelImpl.CTX;
             num = ctx.numCtx;
         }
 
@@ -928,7 +938,7 @@ final class QuadModelImpl extends QuadModel {
 
     }
 
-    private static final class ModelURI extends ModelResource implements URI {
+    private static final class ModelIRI extends ModelResource implements IRI {
 
         private static final long serialVersionUID = 1L;
 
@@ -945,7 +955,7 @@ final class QuadModelImpl extends QuadModel {
 
         transient int numPred;
 
-        ModelURI(@Nullable final QuadModelImpl model, final String string) {
+        ModelIRI(@Nullable final QuadModelImpl model, final String string) {
             super(model);
             final int index = URIUtil.getLocalNameIndex(string);
             if (model != null) {
@@ -1001,7 +1011,7 @@ final class QuadModelImpl extends QuadModel {
         }
 
         private void writeObject(final ObjectOutputStream out) throws IOException {
-            final String string = getCachedString(true);
+            final String string = this.getCachedString(true);
             final Object oldCachedString = this.cachedString;
             this.cachedString = string;
             out.defaultWriteObject();
@@ -1032,7 +1042,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String stringValue() {
-            return getCachedString(true);
+            return this.getCachedString(true);
         }
 
         @Override
@@ -1040,13 +1050,13 @@ final class QuadModelImpl extends QuadModel {
             if (object == this) {
                 return true;
             }
-            if (this.model != null && object instanceof ModelURI
-                    && this.model == ((ModelURI) object).model) {
+            if (this.model != null && object instanceof ModelIRI
+                    && this.model == ((ModelIRI) object).model) {
                 return false;
             }
-            if (object instanceof URI) {
-                final String string = ((URI) object).stringValue();
-                final String s = getCachedString(false);
+            if (object instanceof IRI) {
+                final String string = ((IRI) object).stringValue();
+                final String s = this.getCachedString(false);
                 if (s != null) {
                     return s.equals(string);
                 } else {
@@ -1069,7 +1079,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String toString() {
-            return stringValue();
+            return this.stringValue();
         }
 
     }
@@ -1095,7 +1105,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String stringValue() {
-            return getID();
+            return this.getID();
         }
 
         @Override
@@ -1141,7 +1151,7 @@ final class QuadModelImpl extends QuadModel {
         private Object cachedLabel;
 
         ModelLiteral(@Nullable final QuadModelImpl model, final String label,
-                @Nullable final String language, final ModelURI datatype) {
+                @Nullable final String language, final ModelIRI datatype) {
 
             super(model);
 
@@ -1185,7 +1195,7 @@ final class QuadModelImpl extends QuadModel {
         }
 
         private void writeObject(final ObjectOutputStream out) throws IOException {
-            final String label = getCachedLabel(true);
+            final String label = this.getCachedLabel(true);
             final Object oldCachedLabel = this.cachedLabel;
             this.cachedLabel = label;
             out.defaultWriteObject();
@@ -1194,74 +1204,75 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String getLabel() {
-            return getCachedLabel(true);
+            return this.getCachedLabel(true);
         }
 
         @Override
-        public String getLanguage() {
-            return this.langOrDatatype instanceof String ? (String) this.langOrDatatype : null;
+        public Optional<String> getLanguage() {
+            return this.langOrDatatype instanceof String
+                    ? Optional.of((String) this.langOrDatatype) : Optional.empty();
         }
 
         @Override
-        public URI getDatatype() {
-            return this.langOrDatatype instanceof String ? this.model != null ? this.model.valueLang
-                    : RDF.LANGSTRING
-                    : (URI) this.langOrDatatype;
+        public IRI getDatatype() {
+            return this.langOrDatatype instanceof String
+                    ? this.model != null ? this.model.valueLang : RDF.LANGSTRING
+                    : (IRI) this.langOrDatatype;
         }
 
         @Override
         public String stringValue() {
-            return getLabel();
+            return this.getLabel();
         }
 
         @Override
         public boolean booleanValue() {
-            return XMLDatatypeUtil.parseBoolean(getLabel());
+            return XMLDatatypeUtil.parseBoolean(this.getLabel());
         }
 
         @Override
         public byte byteValue() {
-            return XMLDatatypeUtil.parseByte(getLabel());
+            return XMLDatatypeUtil.parseByte(this.getLabel());
         }
 
         @Override
         public short shortValue() {
-            return XMLDatatypeUtil.parseShort(getLabel());
+            return XMLDatatypeUtil.parseShort(this.getLabel());
         }
 
         @Override
         public int intValue() {
-            return XMLDatatypeUtil.parseInt(getLabel());
+            return XMLDatatypeUtil.parseInt(this.getLabel());
         }
 
         @Override
         public long longValue() {
-            return XMLDatatypeUtil.parseLong(getLabel());
+            return XMLDatatypeUtil.parseLong(this.getLabel());
         }
 
         @Override
         public float floatValue() {
-            return XMLDatatypeUtil.parseFloat(getLabel());
+            return XMLDatatypeUtil.parseFloat(this.getLabel());
         }
 
         @Override
         public double doubleValue() {
-            return XMLDatatypeUtil.parseDouble(getLabel());
+            return XMLDatatypeUtil.parseDouble(this.getLabel());
         }
 
         @Override
         public BigInteger integerValue() {
-            return XMLDatatypeUtil.parseInteger(getLabel());
+            return XMLDatatypeUtil.parseInteger(this.getLabel());
         }
 
         @Override
         public BigDecimal decimalValue() {
-            return XMLDatatypeUtil.parseDecimal(getLabel());
+            return XMLDatatypeUtil.parseDecimal(this.getLabel());
         }
 
         @Override
         public XMLGregorianCalendar calendarValue() {
-            return XMLDatatypeUtil.parseCalendar(getLabel());
+            return XMLDatatypeUtil.parseCalendar(this.getLabel());
         }
 
         @Override
@@ -1276,12 +1287,12 @@ final class QuadModelImpl extends QuadModel {
             if (object instanceof Literal) {
                 final Literal l = (Literal) object;
                 if (this.langOrDatatype instanceof String
-                        && this.langOrDatatype.equals(l.getLanguage()) //
-                        || this.langOrDatatype instanceof URI
-                        && this.langOrDatatype.equals(l.getDatatype())) {
-                    final String s = getCachedLabel(false);
-                    return s != null ? s.equals(l.getLabel()) : this.model.stringIndex.equals(
-                            this.label, l.getLabel());
+                        && this.langOrDatatype.equals(l.getLanguage().orElse(null)) //
+                        || this.langOrDatatype instanceof IRI
+                                && this.langOrDatatype.equals(l.getDatatype())) {
+                    final String s = this.getCachedLabel(false);
+                    return s != null ? s.equals(l.getLabel())
+                            : this.model.stringIndex.equals(this.label, l.getLabel());
                 }
             }
             return false;
@@ -1294,7 +1305,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String toString() {
-            final String s = getCachedLabel(false);
+            final String s = this.getCachedLabel(false);
             final StringBuilder builder = new StringBuilder(256);
             builder.append('"');
             if (s != null) {
@@ -1325,7 +1336,7 @@ final class QuadModelImpl extends QuadModel {
 
         final ModelResource subj;
 
-        final ModelURI pred;
+        final ModelIRI pred;
 
         final ModelValue obj;
 
@@ -1343,12 +1354,13 @@ final class QuadModelImpl extends QuadModel {
         @Nullable
         transient ModelStatement nextByCtx;
 
-        ModelStatement(final ModelResource subj, final ModelURI pred, final ModelValue obj,
+        ModelStatement(final ModelResource subj, final ModelIRI pred, final ModelValue obj,
                 final ModelResource ctx) {
 
             final int cachedHash = 961 * subj.hashCode() + 31 * pred.hashCode() + obj.hashCode();
 
-            this.hash = cachedHash != HASH_ZOMBIE ? cachedHash : HASH_UNCACHED;
+            this.hash = cachedHash != ModelStatement.HASH_ZOMBIE ? cachedHash
+                    : ModelStatement.HASH_UNCACHED;
             this.subj = subj;
             this.pred = pred;
             this.obj = obj;
@@ -1372,28 +1384,28 @@ final class QuadModelImpl extends QuadModel {
             }
         }
 
-        boolean match(@Nullable final ModelResource subj, @Nullable final ModelURI pred,
+        boolean match(@Nullable final ModelResource subj, @Nullable final ModelIRI pred,
                 @Nullable final ModelValue obj, @Nullable final ModelResource ctx) {
             return (subj == null || subj == this.subj) && (pred == null || pred == this.pred)
                     && (obj == null || obj == this.obj) && (ctx == null || ctx == this.ctx);
         }
 
         int hash() {
-            return hash(this.subj, this.pred, this.obj, this.ctx);
+            return ModelStatement.hash(this.subj, this.pred, this.obj, this.ctx);
         }
 
-        static int hash(final ModelResource subj, final ModelURI pred, final ModelValue obj,
+        static int hash(final ModelResource subj, final ModelIRI pred, final ModelValue obj,
                 final ModelResource ctx) {
-            return 6661 * System.identityHashCode(subj) + 961 * System.identityHashCode(pred) + 31
-                    * System.identityHashCode(obj) + System.identityHashCode(ctx);
+            return 6661 * System.identityHashCode(subj) + 961 * System.identityHashCode(pred)
+                    + 31 * System.identityHashCode(obj) + System.identityHashCode(ctx);
         }
 
         boolean isZombie() {
-            return this.hash == HASH_ZOMBIE;
+            return this.hash == ModelStatement.HASH_ZOMBIE;
         }
 
         void markZombie() {
-            this.hash = HASH_ZOMBIE;
+            this.hash = ModelStatement.HASH_ZOMBIE;
         }
 
         @Override
@@ -1402,7 +1414,7 @@ final class QuadModelImpl extends QuadModel {
         }
 
         @Override
-        public URI getPredicate() {
+        public IRI getPredicate() {
             return this.pred;
         }
 
@@ -1443,7 +1455,8 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public int hashCode() {
-            if (this.hash != HASH_ZOMBIE && this.hash != HASH_UNCACHED) {
+            if (this.hash != ModelStatement.HASH_ZOMBIE
+                    && this.hash != ModelStatement.HASH_UNCACHED) {
                 return this.hash;
             } else {
                 return 961 * this.subj.hashCode() + 31 * this.pred.hashCode()

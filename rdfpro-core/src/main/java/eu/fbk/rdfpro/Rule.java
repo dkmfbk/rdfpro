@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -44,45 +44,43 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.CharStreams;
 import com.google.common.io.LineProcessor;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Model;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.algebra.Compare;
-import org.openrdf.query.algebra.Compare.CompareOp;
-import org.openrdf.query.algebra.Exists;
-import org.openrdf.query.algebra.Extension;
-import org.openrdf.query.algebra.ExtensionElem;
-import org.openrdf.query.algebra.Filter;
-import org.openrdf.query.algebra.FunctionCall;
-import org.openrdf.query.algebra.Join;
-import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.ValueExpr;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.algebra.evaluation.EvaluationStrategy;
-import org.openrdf.query.algebra.evaluation.TripleSource;
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
-import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
-import org.openrdf.query.impl.EmptyBindingSet;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.algebra.Compare;
+import org.eclipse.rdf4j.query.algebra.Compare.CompareOp;
+import org.eclipse.rdf4j.query.algebra.Exists;
+import org.eclipse.rdf4j.query.algebra.Extension;
+import org.eclipse.rdf4j.query.algebra.ExtensionElem;
+import org.eclipse.rdf4j.query.algebra.Filter;
+import org.eclipse.rdf4j.query.algebra.FunctionCall;
+import org.eclipse.rdf4j.query.algebra.Join;
+import org.eclipse.rdf4j.query.algebra.QueryModelNode;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.algebra.evaluation.EvaluationStrategy;
+import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
+import org.eclipse.rdf4j.query.algebra.evaluation.impl.EvaluationStatistics;
+import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
+import org.eclipse.rdf4j.query.algebra.helpers.AbstractQueryModelVisitor;
+import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import info.aduna.iteration.CloseableIteration;
 
 import eu.fbk.rdfpro.util.Algebra;
 import eu.fbk.rdfpro.util.Environment;
@@ -104,7 +102,7 @@ public final class Rule implements Comparable<Rule> {
 
     private static final AtomicInteger DLOG_RULE_COUNTER = new AtomicInteger(0);
 
-    private final URI id;
+    private final IRI id;
 
     private final boolean fixpoint;
 
@@ -159,7 +157,7 @@ public final class Rule implements Comparable<Rule> {
      *            the optional WHERE expression (absent in case of rules asserting axiomatic
      *            quads)
      */
-    public Rule(final URI id, final boolean fixpoint, final int phase,
+    public Rule(final IRI id, final boolean fixpoint, final int phase,
             @Nullable final TupleExpr deleteExpr, @Nullable final TupleExpr insertExpr,
             @Nullable final TupleExpr whereExpr) {
 
@@ -188,7 +186,7 @@ public final class Rule implements Comparable<Rule> {
      *
      * @return the rule ID
      */
-    public URI getID() {
+    public IRI getID() {
         return this.id;
     }
 
@@ -248,9 +246,9 @@ public final class Rule implements Comparable<Rule> {
      */
     public Set<StatementPattern> getDeletePatterns() {
         if (this.deletePatterns == null) {
-            this.deletePatterns = this.deleteExpr == null ? ImmutableSet.of() : ImmutableSet
-                    .copyOf(Algebra.extractNodes(this.deleteExpr, StatementPattern.class, null,
-                            null));
+            this.deletePatterns = this.deleteExpr == null ? ImmutableSet.of()
+                    : ImmutableSet.copyOf(Algebra.extractNodes(this.deleteExpr,
+                            StatementPattern.class, null, null));
         }
         return this.deletePatterns;
     }
@@ -262,9 +260,9 @@ public final class Rule implements Comparable<Rule> {
      */
     public Set<StatementPattern> getInsertPatterns() {
         if (this.insertPatterns == null) {
-            this.insertPatterns = this.insertExpr == null ? ImmutableSet.of() : ImmutableSet
-                    .copyOf(Algebra.extractNodes(this.insertExpr, StatementPattern.class, null,
-                            null));
+            this.insertPatterns = this.insertExpr == null ? ImmutableSet.of()
+                    : ImmutableSet.copyOf(Algebra.extractNodes(this.insertExpr,
+                            StatementPattern.class, null, null));
         }
         return this.insertPatterns;
     }
@@ -276,9 +274,9 @@ public final class Rule implements Comparable<Rule> {
      */
     public Set<StatementPattern> getWherePatterns() {
         if (this.wherePatterns == null) {
-            this.wherePatterns = this.whereExpr == null ? ImmutableSet.of() : ImmutableSet
-                    .copyOf(Algebra.extractNodes(this.whereExpr, StatementPattern.class, null,
-                            null));
+            this.wherePatterns = this.whereExpr == null ? ImmutableSet.of()
+                    : ImmutableSet.copyOf(Algebra.extractNodes(this.whereExpr,
+                            StatementPattern.class, null, null));
         }
         return this.wherePatterns;
     }
@@ -350,15 +348,16 @@ public final class Rule implements Comparable<Rule> {
         if (this.simple == 0) {
             final AtomicBoolean simple = new AtomicBoolean(true);
             if (this.whereExpr != null) {
-                this.whereExpr.visit(new QueryModelVisitorBase<RuntimeException>() {
+                this.whereExpr.visit(new AbstractQueryModelVisitor<RuntimeException>() {
 
                     @Override
                     protected void meetNode(final QueryModelNode node) throws RuntimeException {
                         if (!simple.get()) {
                             return;
                         } else if (node instanceof StatementPattern || node instanceof Join
-                                || node instanceof Filter || node instanceof ValueExpr
-                                && !(node instanceof Exists) || node instanceof ExtensionElem) {
+                                || node instanceof Filter
+                                || node instanceof ValueExpr && !(node instanceof Exists)
+                                || node instanceof ExtensionElem) {
                             super.meetNode(node);
                         } else if (node instanceof Extension) {
                             for (QueryModelNode n = node.getParentNode(); n != null; n = n
@@ -391,18 +390,18 @@ public final class Rule implements Comparable<Rule> {
      * @return true, if the rule is streamable
      */
     public boolean isStreamable() {
-        if (!isSimple()) {
+        if (!this.isSimple()) {
             return false;
         }
         if (this.streamable == 0) {
             boolean streamable = false;
-            final Set<StatementPattern> wherePatterns = getWherePatterns();
+            final Set<StatementPattern> wherePatterns = this.getWherePatterns();
             if (wherePatterns.size() <= 1) {
                 if (this.deleteExpr == null) {
                     streamable = true;
                 } else if (wherePatterns.size() == 1) {
-                    final List<StatementPattern> deletePatterns = Algebra.extractNodes(
-                            this.deleteExpr, StatementPattern.class, null, null);
+                    final List<StatementPattern> deletePatterns = Algebra
+                            .extractNodes(this.deleteExpr, StatementPattern.class, null, null);
                     if (deletePatterns.size() == 1 && wherePatterns.containsAll(deletePatterns)) {
                         streamable = true;
                     }
@@ -424,11 +423,10 @@ public final class Rule implements Comparable<Rule> {
     public boolean isSpecific() {
         if (this.specific == 0) {
             boolean specific = true;
-            for (final StatementPattern pattern : getWherePatterns()) {
-                if (!pattern.getSubjectVar().hasValue()
-                        && !pattern.getPredicateVar().hasValue()
-                        && !pattern.getObjectVar().hasValue()
-                        && (pattern.getContextVar() == null || !pattern.getContextVar().hasValue())) {
+            for (final StatementPattern pattern : this.getWherePatterns()) {
+                if (!pattern.getSubjectVar().hasValue() && !pattern.getPredicateVar().hasValue()
+                        && !pattern.getObjectVar().hasValue() && (pattern.getContextVar() == null
+                                || !pattern.getContextVar().hasValue())) {
                     specific = false;
                     break;
                 }
@@ -450,8 +448,8 @@ public final class Rule implements Comparable<Rule> {
      * @return true, if the rule might fire given the supplied statistics
      */
     public boolean mightActivate(final EvaluationStatistics statistics) {
-        if (isSimple() && !getWherePatterns().isEmpty()) {
-            for (final StatementPattern pattern : getWherePatterns()) {
+        if (this.isSimple() && !this.getWherePatterns().isEmpty()) {
+            for (final StatementPattern pattern : this.getWherePatterns()) {
                 if (statistics.getCardinality(pattern) == 0.0) {
                     return false;
                 }
@@ -461,23 +459,23 @@ public final class Rule implements Comparable<Rule> {
     }
 
     /**
-     * Rewrites the rule according to the GLOBAL graph inference mode, using the global graph URI
+     * Rewrites the rule according to the GLOBAL graph inference mode, using the global graph IRI
      * specified. The returned rule: (i) has a new ID generated based on the ID of this rule; (ii)
      * matches quads in any graph in the WHERE part; (iii) insert quads in the specified global
      * graph; and (iv) deletes quads from any graph.
      *
      * @param globalGraph
-     *            the URI of the global graph where to insert new quads; if null, quads will be
+     *            the IRI of the global graph where to insert new quads; if null, quads will be
      *            inserted in the default graph {@code sesame:nil}
      * @return the rewritten rule
      */
-    public Rule rewriteGlobalGM(@Nullable final URI globalGraph) {
-        final Var graphVar = globalGraph != null ? newConstVar(globalGraph) : null;
+    public Rule rewriteGlobalGM(@Nullable final IRI globalGraph) {
+        final Var graphVar = globalGraph != null ? Rule.newConstVar(globalGraph) : null;
         final TupleExpr newDeleteExpr = Algebra.rewriteGraph(this.deleteExpr, null);
         final TupleExpr newInsertExpr = Algebra.rewriteGraph(this.insertExpr, graphVar);
         final TupleExpr newWhereExpr = Algebra.rewriteGraph(this.whereExpr, null);
-        return new Rule(newID(this.id.stringValue()), this.fixpoint, this.phase, newDeleteExpr,
-                newInsertExpr, newWhereExpr);
+        return new Rule(Rule.newID(this.id.stringValue()), this.fixpoint, this.phase,
+                newDeleteExpr, newInsertExpr, newWhereExpr);
     }
 
     /**
@@ -515,12 +513,12 @@ public final class Rule implements Comparable<Rule> {
         final TupleExpr newDeleteExpr = Algebra.rewriteGraph(this.deleteExpr, graphVar);
         final TupleExpr newInsertExpr = Algebra.rewriteGraph(this.insertExpr, graphVar);
         final TupleExpr newWhereExpr = Algebra.rewriteGraph(whereExpr, graphVar);
-        return new Rule(newID(this.id.stringValue()), this.fixpoint, this.phase, newDeleteExpr,
-                newInsertExpr, newWhereExpr);
+        return new Rule(Rule.newID(this.id.stringValue()), this.fixpoint, this.phase,
+                newDeleteExpr, newInsertExpr, newWhereExpr);
     }
 
     /**
-     * Rewrites the rule according to the STAR graph inference mode, using the global graph URI
+     * Rewrites the rule according to the STAR graph inference mode, using the global graph IRI
      * supplied. The returned rule: (i) has a new ID generated based on the ID of this rule; (ii)
      * operates on a per-graph basis similarly to {@link #rewriteSeparateGM()}, however
      * 'importing' (as far as matching in the WHERE clause is concerned) also quads in the global
@@ -529,11 +527,11 @@ public final class Rule implements Comparable<Rule> {
      * be useful to setup the global graph 'before' applying rules on the other graphs)
      *
      * @param globalGraph
-     *            the URI of the global graph whose quads are 'imported' in other graphs; if null,
+     *            the IRI of the global graph whose quads are 'imported' in other graphs; if null,
      *            the default graph {@code sesame:nil} will be used
      * @return the rewritten rule
      */
-    public Rule rewriteStarGM(@Nullable final URI globalGraph) {
+    public Rule rewriteStarGM(@Nullable final IRI globalGraph) {
 
         // Extract all the variables used in the rule
         final Set<String> vars = new HashSet<String>();
@@ -555,23 +553,23 @@ public final class Rule implements Comparable<Rule> {
         final String prefix = candidatePrefix;
 
         // Rewrite the rule
-        final URI global = globalGraph != null ? globalGraph : SESAME.NIL;
+        final IRI global = globalGraph != null ? globalGraph : SESAME.NIL;
         TupleExpr newDeleteExpr = this.deleteExpr;
         TupleExpr newInsertExpr = this.insertExpr;
         TupleExpr newWhereExpr = this.whereExpr;
         if (this.whereExpr == null) {
-            newDeleteExpr = Algebra.rewriteGraph(newDeleteExpr, newConstVar(global));
-            newInsertExpr = Algebra.rewriteGraph(newInsertExpr, newConstVar(global));
+            newDeleteExpr = Algebra.rewriteGraph(newDeleteExpr, Rule.newConstVar(global));
+            newInsertExpr = Algebra.rewriteGraph(newInsertExpr, Rule.newConstVar(global));
         } else {
             final AtomicInteger counter = new AtomicInteger(0);
             final List<ValueExpr> filterGraphVars = new ArrayList<>();
             final List<ValueExpr> bindGraphVars = new ArrayList<>();
-            filterGraphVars.add(newConstVar(global));
-            bindGraphVars.add(newConstVar(global));
+            filterGraphVars.add(Rule.newConstVar(global));
+            bindGraphVars.add(Rule.newConstVar(global));
             newDeleteExpr = Algebra.rewriteGraph(newDeleteExpr, new Var(prefix));
             newInsertExpr = Algebra.rewriteGraph(newInsertExpr, new Var(prefix));
             newWhereExpr = newWhereExpr.clone();
-            newWhereExpr.visit(new QueryModelVisitorBase<RuntimeException>() {
+            newWhereExpr.visit(new AbstractQueryModelVisitor<RuntimeException>() {
 
                 @Override
                 public void meet(final StatementPattern pattern) throws RuntimeException {
@@ -582,14 +580,15 @@ public final class Rule implements Comparable<Rule> {
                 }
 
             });
-            newWhereExpr = new Filter(newWhereExpr, new Compare(new FunctionCall(
-                    RR.STAR_SELECT_GRAPH.stringValue(), filterGraphVars), new Var("_const-"
-                    + UUID.randomUUID(), RDF.NIL), CompareOp.NE));
-            newWhereExpr = new Extension(newWhereExpr, new ExtensionElem(new FunctionCall(
-                    RR.STAR_SELECT_GRAPH.stringValue(), bindGraphVars), prefix));
+            newWhereExpr = new Filter(newWhereExpr,
+                    new Compare(
+                            new FunctionCall(RR.STAR_SELECT_GRAPH.stringValue(), filterGraphVars),
+                            new Var("_const-" + UUID.randomUUID(), RDF.NIL), CompareOp.NE));
+            newWhereExpr = new Extension(newWhereExpr, new ExtensionElem(
+                    new FunctionCall(RR.STAR_SELECT_GRAPH.stringValue(), bindGraphVars), prefix));
         }
-        return new Rule(newID(this.id.stringValue()), this.fixpoint, this.phase, newDeleteExpr,
-                newInsertExpr, newWhereExpr);
+        return new Rule(Rule.newID(this.id.stringValue()), this.fixpoint, this.phase,
+                newDeleteExpr, newInsertExpr, newWhereExpr);
     }
 
     /**
@@ -610,8 +609,8 @@ public final class Rule implements Comparable<Rule> {
         final TupleExpr newDeleteExpr = Algebra.rewrite(this.deleteExpr, bindings);
         final TupleExpr newInsertExpr = Algebra.rewrite(this.insertExpr, bindings);
         final TupleExpr newWhereExpr = Algebra.rewrite(this.whereExpr, bindings);
-        return new Rule(newID(this.id.stringValue()), this.fixpoint, this.phase, newDeleteExpr,
-                newInsertExpr, newWhereExpr);
+        return new Rule(Rule.newID(this.id.stringValue()), this.fixpoint, this.phase,
+                newDeleteExpr, newInsertExpr, newWhereExpr);
     }
 
     /**
@@ -656,9 +655,9 @@ public final class Rule implements Comparable<Rule> {
                 newInsertExpr = newInsertExpr == null ? rule.insertExpr //
                         : new Join(newInsertExpr, rule.insertExpr);
             }
-            final URI id = newID(namespace + String.join("_", names));
-            mergedRules.add(new Rule(id, first.fixpoint, first.phase, newDeleteExpr,
-                    newInsertExpr, first.whereExpr));
+            final IRI id = Rule.newID(namespace + String.join("_", names));
+            mergedRules.add(new Rule(id, first.fixpoint, first.phase, newDeleteExpr, newInsertExpr,
+                    first.whereExpr));
         }
         return mergedRules;
     }
@@ -696,8 +695,8 @@ public final class Rule implements Comparable<Rule> {
         }
         if (!tasks.isEmpty()) {
             Collections.sort(tasks);
-            final Tracker tracker = new Tracker(LOGGER, null, null, "%d/" + tasks.size()
-                    + " rule variants evaluated");
+            final Tracker tracker = new Tracker(Rule.LOGGER, null, null,
+                    "%d/" + tasks.size() + " rule variants evaluated");
             for (final Evaluation task : tasks) {
                 task.setTracker(tracker);
             }
@@ -765,8 +764,8 @@ public final class Rule implements Comparable<Rule> {
     public String toString() {
         try {
             final StringBuilder builder = new StringBuilder();
-            builder.append(this.id instanceof BNode ? ((BNode) this.id).getID() : this.id
-                    .getLocalName());
+            builder.append(
+                    this.id instanceof BNode ? ((BNode) this.id).getID() : this.id.getLocalName());
             builder.append(" (phase ").append(this.phase)
                     .append(this.fixpoint ? ", fixpoint):" : "):");
             if (this.deleteExpr != null) {
@@ -801,8 +800,8 @@ public final class Rule implements Comparable<Rule> {
 
         final ValueFactory vf = Statements.VALUE_FACTORY;
         output.add(vf.createStatement(this.id, RDF.TYPE, RR.RULE));
-        output.add(vf.createStatement(this.id, RDF.TYPE, this.fixpoint ? RR.FIXPOINT_RULE
-                : RR.NON_FIXPOINT_RULE));
+        output.add(vf.createStatement(this.id, RDF.TYPE,
+                this.fixpoint ? RR.FIXPOINT_RULE : RR.NON_FIXPOINT_RULE));
         if (this.phase != 0) {
             output.add(vf.createStatement(this.id, RR.PHASE, vf.createLiteral(this.phase)));
         }
@@ -850,7 +849,7 @@ public final class Rule implements Comparable<Rule> {
                         this.namespaces = null;
                         final String[] tokens = line.split("\\s+");
                         final String prefix = tokens[1].substring(0, tokens[1].length() - 1);
-                        final String namespace = ((URI) Statements.parseValue(tokens[2]))
+                        final String namespace = ((IRI) Statements.parseValue(tokens[2]))
                                 .toString();
                         this.namespaceMap.put(prefix, namespace);
                     } else {
@@ -858,11 +857,12 @@ public final class Rule implements Comparable<Rule> {
                         if (index >= 0) {
                             this.namespaces = this.namespaces != null ? this.namespaces
                                     : Namespaces.forURIMap(this.namespaceMap);
-                            final TupleExpr head = processAtoms(line.substring(0, index));
-                            final TupleExpr body = processAtoms(line.substring(index + 2));
-                            this.rules.add(new Rule(Statements.VALUE_FACTORY.createURI("rule:"
-                                    + DLOG_RULE_COUNTER.incrementAndGet()), true, 0, null, head,
-                                    body));
+                            final TupleExpr head = this.processAtoms(line.substring(0, index));
+                            final TupleExpr body = this.processAtoms(line.substring(index + 2));
+                            this.rules.add(new Rule(
+                                    Statements.VALUE_FACTORY.createIRI(
+                                            "rule:" + Rule.DLOG_RULE_COUNTER.incrementAndGet()),
+                                    true, 0, null, head, body));
                         }
                     }
                     return true;
@@ -876,19 +876,19 @@ public final class Rule implements Comparable<Rule> {
                 for (String atomToken : string.split("\\)\\s*[,.]?")) {
                     atomToken = atomToken.trim();
                     final int index1 = atomToken.indexOf('(');
-                    final Var rel = constant(atomToken.substring(0, index1).trim());
+                    final Var rel = this.constant(atomToken.substring(0, index1).trim());
                     final List<Var> vars = new ArrayList<>();
                     for (String termToken : atomToken.substring(index1 + 1).split("\\s*\\,\\s*")) {
                         termToken = termToken.trim();
                         if (termToken.startsWith("?")) {
                             vars.add(new Var(termToken.substring(1)));
                         } else {
-                            vars.add(constant(termToken));
+                            vars.add(this.constant(termToken));
                         }
                     }
-                    final StatementPattern pattern = vars.size() == 1 ? new StatementPattern(vars
-                            .get(0), constant(RDF.TYPE), rel) : new StatementPattern(vars.get(0),
-                            rel, vars.get(1));
+                    final StatementPattern pattern = vars.size() == 1
+                            ? new StatementPattern(vars.get(0), this.constant(RDF.TYPE), rel)
+                            : new StatementPattern(vars.get(0), rel, vars.get(1));
                     expr = expr == null ? pattern : new Join(expr, pattern);
                 }
                 return expr;
@@ -896,9 +896,9 @@ public final class Rule implements Comparable<Rule> {
 
             private Var constant(final String string) {
                 if ("<int$false>".equals(string)) {
-                    return constant(Statements.VALUE_FACTORY.createURI("sesame:false"));
+                    return this.constant(Statements.VALUE_FACTORY.createIRI("sesame:false"));
                 }
-                return constant(Statements.parseValue(string, this.namespaces));
+                return this.constant(Statements.parseValue(string, this.namespaces));
             }
 
             private Var constant(final Value value) {
@@ -925,7 +925,7 @@ public final class Rule implements Comparable<Rule> {
             }
         }
         for (final Statement stmt : model) {
-            if (stmt.getSubject() instanceof URI && stmt.getObject() instanceof Literal
+            if (stmt.getSubject() instanceof IRI && stmt.getObject() instanceof Literal
                     && stmt.getPredicate().equals(RR.PREFIX_PROPERTY)) {
                 namespaces.put(stmt.getObject().stringValue(), stmt.getSubject().stringValue());
             }
@@ -933,16 +933,16 @@ public final class Rule implements Comparable<Rule> {
 
         // Use a 5-fields Object[] record to collect the attributes of each rule.
         // fields: 0 = fixpoint, 1 = phase, 2 = delete expr, 3 = insert expr, 4 = where expr
-        final Map<URI, Object[]> records = new HashMap<>();
+        final Map<IRI, Object[]> records = new HashMap<>();
 
         // Scan the statements, extracting rule properties and populating the records map
         for (final Statement stmt : model) {
             try {
-                if (stmt.getSubject() instanceof URI) {
+                if (stmt.getSubject() instanceof IRI) {
 
                     // Extract relevant statement components
-                    final URI subj = (URI) stmt.getSubject();
-                    final URI pred = stmt.getPredicate();
+                    final IRI subj = (IRI) stmt.getSubject();
+                    final IRI pred = stmt.getPredicate();
                     final Value obj = stmt.getObject();
 
                     // Identify field and value (if any) of corresponding Object[] record
@@ -988,19 +988,19 @@ public final class Rule implements Comparable<Rule> {
 
         // Generate the rules from parsed heads and bodies
         final List<Rule> rules = new ArrayList<>();
-        for (final Map.Entry<URI, Object[]> entry : records.entrySet()) {
-            final URI id = entry.getKey();
+        for (final Map.Entry<IRI, Object[]> entry : records.entrySet()) {
+            final IRI id = entry.getKey();
             final Object[] record = entry.getValue();
-            rules.add(new Rule(id, (Boolean) record[0], (Integer) record[1],
-                    (TupleExpr) record[2], (TupleExpr) record[3], (TupleExpr) record[4]));
+            rules.add(new Rule(id, (Boolean) record[0], (Integer) record[1], (TupleExpr) record[2],
+                    (TupleExpr) record[3], (TupleExpr) record[4]));
         }
         return rules;
     }
 
-    static URI newID(final String baseID) {
+    static IRI newID(final String baseID) {
         final int index = baseID.indexOf("__");
         final String base = index < 0 ? baseID : baseID.substring(0, index);
-        return Statements.VALUE_FACTORY.createURI(base + "__" + ID_COUNTER.incrementAndGet());
+        return Statements.VALUE_FACTORY.createIRI(base + "__" + Rule.ID_COUNTER.incrementAndGet());
     }
 
     static Var newConstVar(final Value value) {
@@ -1051,9 +1051,9 @@ public final class Rule implements Comparable<Rule> {
             this.deltaModel = deltaModel;
             this.deltaPattern = deltaPattern;
             this.statistics = deltaModel == null ? model.getEvaluationStatistics()
-                    : newSemiNaiveEvaluationStatistics();
-            this.cardinality = rule.whereExpr == null ? 1.0 : this.statistics
-                    .getCardinality(rule.whereExpr);
+                    : this.newSemiNaiveEvaluationStatistics();
+            this.cardinality = rule.whereExpr == null ? 1.0
+                    : this.statistics.getCardinality(rule.whereExpr);
         }
 
         boolean isActivable() {
@@ -1096,7 +1096,7 @@ public final class Rule implements Comparable<Rule> {
                     iterator = this.model.evaluate(this.rule.getWhereExpr(), null, null);
                 } else {
                     iterator = Algebra.evaluateTupleExpr(this.rule.getWhereExpr(), null, null,
-                            newSemiNaiveEvaluationStrategy(), this.statistics,
+                            this.newSemiNaiveEvaluationStrategy(), this.statistics,
                             this.model.getValueNormalizer());
                 }
 
@@ -1106,8 +1106,8 @@ public final class Rule implements Comparable<Rule> {
 
                         // Acquire a collector, normalizing its constants so to use the same Value
                         // objects in the model
-                        final Collector collector = this.rule.getCollector().normalize(
-                                this.model.getValueNormalizer());
+                        final Collector collector = this.rule.getCollector()
+                                .normalize(this.model.getValueNormalizer());
 
                         // Allocate the delete handler, if possible
                         RDFHandler deleteHandler = null;
@@ -1152,12 +1152,12 @@ public final class Rule implements Comparable<Rule> {
                 }
 
                 // Log relevant rule evaluation statistics
-                if (LOGGER.isTraceEnabled()) {
+                if (Rule.LOGGER.isTraceEnabled()) {
                     final String patternString = this.deltaPattern == null ? ""
                             : " (delta pattern " + Algebra.format(this.deltaPattern) + ")";
-                    LOGGER.trace("Rule {}{} evaluated in {} ms with {} activations", this.rule
-                            .getID().getLocalName(), patternString, System.currentTimeMillis()
-                            - ts, numActivations);
+                    Rule.LOGGER.trace("Rule {}{} evaluated in {} ms with {} activations",
+                            this.rule.getID().getLocalName(), patternString,
+                            System.currentTimeMillis() - ts, numActivations);
                 }
 
             } finally {
@@ -1179,7 +1179,7 @@ public final class Rule implements Comparable<Rule> {
 
                 @Override
                 public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
-                        final Resource subj, final URI pred, final Value obj,
+                        final Resource subj, final IRI pred, final Value obj,
                         final Resource... contexts) throws QueryEvaluationException {
                     return selectedSource.get().getStatements(subj, pred, obj, contexts);
                 }
@@ -1191,7 +1191,7 @@ public final class Rule implements Comparable<Rule> {
 
             };
 
-            return new EvaluationStrategyImpl(semiNaiveSource, null,
+            return new StrictEvaluationStrategy(semiNaiveSource, null,
                     Algebra.getFederatedServiceResolver()) {
 
                 @Nullable
@@ -1265,27 +1265,31 @@ public final class Rule implements Comparable<Rule> {
 
             // Retrieve the list of variables common to the WHERE and DELETE/INSERT expressions
             final List<String> commonVars = rule.getCommonVariables();
-            final String[] commonVarsArray = commonVars.isEmpty() ? EMPTY_VARS : commonVars
-                    .toArray(new String[commonVars.size()]);
+            final String[] commonVarsArray = commonVars.isEmpty() ? Collector.EMPTY_VARS
+                    : commonVars.toArray(new String[commonVars.size()]);
 
             // Compute the mappings (indexes+constants) required for translating bindings to quads
             final List<Value> constants = new ArrayList<>();
-            final int[] deleteIndexes = createHelper(rule.getDeleteExpr(), commonVars, constants);
-            final int[] insertIndexes = createHelper(rule.getInsertExpr(), commonVars, constants);
-            final Value[] constantsArray = constants.isEmpty() ? EMPTY_CONSTANTS : constants
-                    .toArray(new Value[constants.size()]);
+            final int[] deleteIndexes = Collector.createHelper(rule.getDeleteExpr(), commonVars,
+                    constants);
+            final int[] insertIndexes = Collector.createHelper(rule.getInsertExpr(), commonVars,
+                    constants);
+            final Value[] constantsArray = constants.isEmpty() ? Collector.EMPTY_CONSTANTS
+                    : constants.toArray(new Value[constants.size()]);
 
             // Log results
-            if (LOGGER.isTraceEnabled()) {
+            if (Rule.LOGGER.isTraceEnabled()) {
                 final StringBuilder builder = new StringBuilder();
                 for (final Value constant : constants) {
                     builder.append(builder.length() == 0 ? "[" : ", ");
                     builder.append(Statements.formatValue(constant, Namespaces.DEFAULT));
                 }
                 builder.append("]");
-                LOGGER.trace("Collector for rule {}: vars={}, constants={}, delete indexes={}, "
-                        + "insert indexes={}", rule.getID().getLocalName(), commonVars, builder,
-                        deleteIndexes, insertIndexes);
+                Rule.LOGGER.trace(
+                        "Collector for rule {}: vars={}, constants={}, delete indexes={}, "
+                                + "insert indexes={}",
+                        rule.getID().getLocalName(), commonVars, builder, deleteIndexes,
+                        insertIndexes);
             }
 
             // Instantiate a collector with the data structures computed above
@@ -1297,7 +1301,7 @@ public final class Rule implements Comparable<Rule> {
 
             // Return an empty index array if there is no expression (-> no mapping necessary)
             if (expr == null) {
-                return EMPTY_INDEXES;
+                return Collector.EMPTY_INDEXES;
             }
 
             // Otherwise, extracts all the statement patterns in the expression
@@ -1344,12 +1348,13 @@ public final class Rule implements Comparable<Rule> {
         }
 
         private Value resolve(final int index, final Value[] commonValues) {
-            return index > 0 ? commonValues[index - 1] : index == 0 ? null
-                    : this.constants[-index - 1];
+            return index > 0 ? commonValues[index - 1]
+                    : index == 0 ? null : this.constants[-index - 1];
         }
 
         void collect(final BindingSet bindings, @Nullable final QuadModel model,
-                @Nullable final RDFHandler deleteHandler, @Nullable final RDFHandler insertHandler) {
+                @Nullable final RDFHandler deleteHandler,
+                @Nullable final RDFHandler insertHandler) {
 
             // Transform the var=value bindings map to a value array, using the same variable
             // order of commonVars
@@ -1360,27 +1365,27 @@ public final class Rule implements Comparable<Rule> {
 
             try {
                 // Generate and send to the delete handler the quads that need to be removed. In
-                // case
-                // of quads in the default context, we need to explode them including all the
-                // quads
-                // with same SPO and different context (due to SESAME semantics 'default context =
-                // merge of all other contexts').
+                // case of quads in the default context, we need to explode them including all the
+                // quads with same SPO and different context (due to RDF4J semantics 'default
+                // context = merge of all other contexts').
                 if (deleteHandler != null) {
                     for (int i = 0; i < this.deleteIndexes.length; i += 4) {
-                        final Value subj = resolve(this.deleteIndexes[i], commonValues);
-                        final Value pred = resolve(this.deleteIndexes[i + 1], commonValues);
-                        final Value obj = resolve(this.deleteIndexes[i + 2], commonValues);
-                        final Value ctx = resolve(this.deleteIndexes[i + 3], commonValues);
-                        if (subj instanceof Resource && pred instanceof URI
+                        final Value subj = this.resolve(this.deleteIndexes[i], commonValues);
+                        final Value pred = this.resolve(this.deleteIndexes[i + 1], commonValues);
+                        final Value obj = this.resolve(this.deleteIndexes[i + 2], commonValues);
+                        final Value ctx = this.resolve(this.deleteIndexes[i + 3], commonValues);
+                        if (subj instanceof Resource && pred instanceof IRI
                                 && obj instanceof Value) {
                             if (ctx instanceof Resource || model == null) {
-                                deleteHandler.handleStatement(new ContextStatementImpl(
-                                        (Resource) subj, (URI) pred, obj, (Resource) ctx));
+                                deleteHandler.handleStatement(
+                                        Statements.VALUE_FACTORY.createStatement((Resource) subj,
+                                                (IRI) pred, obj, (Resource) ctx));
                             } else if (ctx == null) {
                                 for (final Statement stmt : model.filter((Resource) subj,
-                                        (URI) pred, obj)) {
-                                    deleteHandler.handleStatement(new ContextStatementImpl(
-                                            (Resource) subj, (URI) pred, obj, stmt.getContext()));
+                                        (IRI) pred, obj)) {
+                                    deleteHandler.handleStatement(Statements.VALUE_FACTORY
+                                            .createStatement((Resource) subj, (IRI) pred, obj,
+                                                    stmt.getContext()));
                                 }
                             }
                         }
@@ -1390,15 +1395,14 @@ public final class Rule implements Comparable<Rule> {
                 // Generate and send to the insert handler the quads that need to be inserted
                 if (insertHandler != null) {
                     for (int i = 0; i < this.insertIndexes.length; i += 4) {
-                        final Value subj = resolve(this.insertIndexes[i], commonValues);
-                        final Value pred = resolve(this.insertIndexes[i + 1], commonValues);
-                        final Value obj = resolve(this.insertIndexes[i + 2], commonValues);
-                        final Value ctx = resolve(this.insertIndexes[i + 3], commonValues);
-                        if (subj instanceof Resource && pred instanceof URI
-                                && obj instanceof Value
+                        final Value subj = this.resolve(this.insertIndexes[i], commonValues);
+                        final Value pred = this.resolve(this.insertIndexes[i + 1], commonValues);
+                        final Value obj = this.resolve(this.insertIndexes[i + 2], commonValues);
+                        final Value ctx = this.resolve(this.insertIndexes[i + 3], commonValues);
+                        if (subj instanceof Resource && pred instanceof IRI && obj instanceof Value
                                 && (ctx == null || ctx instanceof Resource)) {
-                            insertHandler.handleStatement(new ContextStatementImpl(
-                                    (Resource) subj, (URI) pred, obj, (Resource) ctx));
+                            insertHandler.handleStatement(Statements.VALUE_FACTORY.createStatement(
+                                    (Resource) subj, (IRI) pred, obj, (Resource) ctx));
                         }
                     }
                 }
@@ -1420,7 +1424,7 @@ public final class Rule implements Comparable<Rule> {
                 normalizedConstants[i] = normalizer.apply(this.constants[i]);
                 numReplacements += normalizedConstants[i] == this.constants[i] ? 0 : 1;
             }
-            LOGGER.trace("{} constant values replaced during collector normalization",
+            Rule.LOGGER.trace("{} constant values replaced during collector normalization",
                     numReplacements);
 
             // Return the collector with the same parameters except the normalized constant array

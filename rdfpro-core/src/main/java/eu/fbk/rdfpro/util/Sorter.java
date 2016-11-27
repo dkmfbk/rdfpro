@@ -29,14 +29,14 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +83,8 @@ public abstract class Sorter<T> implements AutoCloseable {
         return new StatementSorter(compress); // TODO: add configurable component order
     }
 
-    public static Sorter<Object[]> newTupleSorter(final boolean compress, final Class<?>... schema) {
+    public static Sorter<Object[]> newTupleSorter(final boolean compress,
+            final Class<?>... schema) {
         return new TupleSorter(compress, schema);
     }
 
@@ -122,8 +123,8 @@ public abstract class Sorter<T> implements AutoCloseable {
         };
 
         // Invoke sort
-        final List<String> command = new ArrayList<String>(Arrays.asList(Environment.getProperty(
-                "rdfpro.cmd.sort", "sort").split("\\s+")));
+        final List<String> command = new ArrayList<String>(
+                Arrays.asList(Environment.getProperty("rdfpro.cmd.sort", "sort").split("\\s+")));
         command.add("-z"); // zero-terminated lines
         if (deduplicate) {
             command.add("-u"); // remove duplicates
@@ -367,9 +368,9 @@ public abstract class Sorter<T> implements AutoCloseable {
                 writeStringHelper(((BNode) value).getID(), 0, 1);
             } else if (value instanceof Literal) {
                 final Literal lit = (Literal) value;
-                final String lang = lit.getLanguage();
+                final String lang = lit.getLanguage().orElse(null);
                 if (lang == null) {
-                    final URI dt = lit.getDatatype();
+                    final IRI dt = lit.getDatatype();
                     if (dt == null || XMLSchema.STRING.equals(dt)) {
                         writeStringHelper(lit.getLabel(), 0, 2);
                     } else {
@@ -392,11 +393,11 @@ public abstract class Sorter<T> implements AutoCloseable {
                         writeNumber(key);
                     }
                 }
-            } else if (value instanceof URI) {
-                final URI uri = (URI) value;
+            } else if (value instanceof IRI) {
+                final IRI iri = (IRI) value;
                 boolean done = false;
                 if (compress) {
-                    final int key = this.dictionary.encodeURI(uri, this.remaining);
+                    final int key = this.dictionary.encodeIRI(iri, this.remaining);
                     if (key >= 0) {
                         final int r = this.remaining[0];
                         if (r < 0) {
@@ -404,14 +405,14 @@ public abstract class Sorter<T> implements AutoCloseable {
                             writeNumber(key);
                             done = true;
                         } else {
-                            writeStringHelper(uri.stringValue(), r, 7);
+                            writeStringHelper(iri.stringValue(), r, 7);
                             writeNumber(key);
                             done = true;
                         }
                     }
                 }
                 if (!done) {
-                    writeStringHelper(uri.stringValue(), 0, 6);
+                    writeStringHelper(iri.stringValue(), 0, 6);
                 }
             }
         }
@@ -540,7 +541,7 @@ public abstract class Sorter<T> implements AutoCloseable {
                 return null;
             }
 
-            final URI p = (URI) readValue();
+            final IRI p = (IRI) readValue();
             final Value o = readValue();
             final Resource c = (Resource) readValue();
 
@@ -564,23 +565,23 @@ public abstract class Sorter<T> implements AutoCloseable {
                 final int delim2 = readStringHelper();
                 final String s2 = this.builder.toString();
                 if (delim2 == 1) {
-                    return vf.createLiteral(s, vf.createURI(s2));
+                    return vf.createLiteral(s, vf.createIRI(s2));
                 } else {
                     return vf.createLiteral(s, s2);
                 }
             } else if (delim == 4) {
                 final int key = (int) readNumber();
-                final URI dt = this.dictionary.decodeDatatype(key);
+                final IRI dt = this.dictionary.decodeDatatype(key);
                 return vf.createLiteral(s, dt);
             } else if (delim == 5) {
                 final int key = (int) readNumber();
                 final String lang = this.dictionary.decodeLanguage(key);
                 return vf.createLiteral(s, lang);
             } else if (delim == 6) {
-                return vf.createURI(s);
+                return vf.createIRI(s);
             } else if (delim == 7) {
                 final int key = (int) readNumber();
-                return this.dictionary.decodeURI(key, s.isEmpty() ? null : s);
+                return this.dictionary.decodeIRI(key, s.isEmpty() ? null : s);
             }
             throw new IllegalArgumentException("Invalid value delimiter: " + delim);
         }
@@ -781,11 +782,11 @@ public abstract class Sorter<T> implements AutoCloseable {
 
         private static final int OTHER_INDEX_SIZE = 4 * 1024;
 
-        private static final int URI_CACHE_SIZE = 8191;
+        private static final int IRI_CACHE_SIZE = 8191;
 
         private final GenericIndex<String> languageIndex;
 
-        private final GenericIndex<URI> datatypeIndex;
+        private final GenericIndex<IRI> datatypeIndex;
 
         private final StringIndex namespaceIndex;
 
@@ -795,15 +796,15 @@ public abstract class Sorter<T> implements AutoCloseable {
 
         private final int vocabNamespaces;
 
-        private final int[] uriCacheCodes;
+        private final int[] iriCacheCodes;
 
-        private final URI[] uriCacheURIs;
+        private final IRI[] iriCacheIRIs;
 
-        private final Object[] uriCacheLocks;
+        private final Object[] iriCacheLocks;
 
         public Dictionary() {
             this.languageIndex = new GenericIndex<String>(LANGUAGE_INDEX_SIZE);
-            this.datatypeIndex = new GenericIndex<URI>(DATATYPE_INDEX_SIZE);
+            this.datatypeIndex = new GenericIndex<IRI>(DATATYPE_INDEX_SIZE);
             this.namespaceIndex = new StringIndex(NAMESPACE_INDEX_SIZE);
             this.vocabNameIndex = new StringIndex(VOCAB_INDEX_SIZE);
             this.otherNameIndex = new StringIndex(OTHER_INDEX_SIZE);
@@ -821,11 +822,11 @@ public abstract class Sorter<T> implements AutoCloseable {
             this.vocabNameIndex.put("", 0, 0, 0, false);
             this.otherNameIndex.put("", 0, 0, 0, false);
 
-            this.uriCacheCodes = new int[URI_CACHE_SIZE];
-            this.uriCacheURIs = new URI[URI_CACHE_SIZE];
-            this.uriCacheLocks = new Object[32];
+            this.iriCacheCodes = new int[IRI_CACHE_SIZE];
+            this.iriCacheIRIs = new IRI[IRI_CACHE_SIZE];
+            this.iriCacheLocks = new Object[32];
             for (int i = 0; i < 32; ++i) {
-                this.uriCacheLocks[i] = new Object();
+                this.iriCacheLocks[i] = new Object();
             }
         }
 
@@ -837,17 +838,17 @@ public abstract class Sorter<T> implements AutoCloseable {
             return this.languageIndex.get(code);
         }
 
-        public int encodeDatatype(final URI datatype) {
+        public int encodeDatatype(final IRI datatype) {
             return this.datatypeIndex.put(datatype);
         }
 
-        public URI decodeDatatype(final int code) {
+        public IRI decodeDatatype(final int code) {
             return this.datatypeIndex.get(code);
         }
 
-        public int encodeURI(final URI uri, final int[] remaining) {
+        public int encodeIRI(final IRI iri, final int[] remaining) {
 
-            final String s = uri.stringValue();
+            final String s = iri.stringValue();
             final int len = s.length();
 
             int nameHash = 0;
@@ -896,46 +897,46 @@ public abstract class Sorter<T> implements AutoCloseable {
             }
         }
 
-        public URI decodeURI(final int code, final String remaining) {
+        public IRI decodeIRI(final int code, final String remaining) {
 
             if (remaining != null && !remaining.isEmpty()) {
                 final String ns = this.namespaceIndex.get(code);
-                return Statements.VALUE_FACTORY.createURI(ns, remaining);
+                return Statements.VALUE_FACTORY.createIRI(ns, remaining);
             }
 
-            final int offset = code % this.uriCacheURIs.length;
-            final Object lock = this.uriCacheLocks[offset % this.uriCacheLocks.length];
+            final int offset = code % this.iriCacheIRIs.length;
+            final Object lock = this.iriCacheLocks[offset % this.iriCacheLocks.length];
             synchronized (lock) {
-                final int cachedCode = this.uriCacheCodes[offset];
+                final int cachedCode = this.iriCacheCodes[offset];
                 if (cachedCode == code) {
-                    return this.uriCacheURIs[offset];
+                    return this.iriCacheIRIs[offset];
                 }
             }
 
             final boolean isVocab = (code & 0x01) == 0;
             final int c = code >>> 1;
 
-            URI uri;
+            IRI iri;
             if (isVocab) {
                 final int nsKey = c % this.vocabNamespaces;
                 final int nameKey = c / this.vocabNamespaces;
                 final String ns = this.namespaceIndex.get(nsKey);
                 final String name = this.vocabNameIndex.get(nameKey);
-                uri = Statements.VALUE_FACTORY.createURI(ns, name);
+                iri = Statements.VALUE_FACTORY.createIRI(ns, name);
             } else {
                 final int nsKey = c % NAMESPACE_INDEX_SIZE;
                 final int nameKey = c / NAMESPACE_INDEX_SIZE;
                 final String ns = this.namespaceIndex.get(nsKey);
                 final String name = this.otherNameIndex.get(nameKey);
-                uri = Statements.VALUE_FACTORY.createURI(ns, name);
+                iri = Statements.VALUE_FACTORY.createIRI(ns, name);
             }
 
             synchronized (lock) {
-                this.uriCacheURIs[offset] = uri;
-                this.uriCacheCodes[offset] = code;
+                this.iriCacheIRIs[offset] = iri;
+                this.iriCacheCodes[offset] = code;
             }
 
-            return uri;
+            return iri;
         }
 
         @Override

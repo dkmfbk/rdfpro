@@ -30,16 +30,16 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.query.MalformedQueryException;
-import org.openrdf.rio.ParserConfig;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.WriterConfig;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.query.MalformedQueryException;
+import org.eclipse.rdf4j.rio.ParserConfig;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.WriterConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,13 +129,13 @@ public final class RDFProcessors {
     }
 
     @Nullable
-    private static URI parseURI(@Nullable final String string) {
+    private static IRI parseIRI(@Nullable final String string) {
         if (string == null) {
             return null;
         } else if (!string.contains(":")) {
-            return (URI) Statements.parseValue(string + ":", Namespaces.DEFAULT);
+            return (IRI) Statements.parseValue(string + ":", Namespaces.DEFAULT);
         } else {
-            return (URI) Statements.parseValue(string, Namespaces.DEFAULT);
+            return (IRI) Statements.parseValue(string, Namespaces.DEFAULT);
         }
     }
 
@@ -148,9 +148,9 @@ public final class RDFProcessors {
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
-            final URI base = parseURI(options.getOptionArg("b", String.class));
-            return read(true, preserveBNodes, base == null ? null : base.stringValue(), null,
-                    fileSpecs);
+            final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
+            return RDFProcessors.read(true, preserveBNodes,
+                    base == null ? null : base.stringValue(), null, fileSpecs);
         }
 
         case "w":
@@ -159,7 +159,7 @@ public final class RDFProcessors {
             final int chunkSize = options.getOptionArg("c", Integer.class, 1);
             final String[] locations = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
-            return write(null, chunkSize, locations);
+            return RDFProcessors.write(null, chunkSize, locations);
         }
 
         case "tsv": {
@@ -168,7 +168,7 @@ public final class RDFProcessors {
             final String query = options.getOptionArg("q", String.class,
                     "SELECT ?s ?p ?o ?c { GRAPH ?c { ?s ?p ?o } }");
             final String location = options.getPositionalArg(0, String.class);
-            return tsv(mapper, query, location);
+            return RDFProcessors.tsv(mapper, query, location);
         }
 
         case "t":
@@ -178,13 +178,13 @@ public final class RDFProcessors {
             final Transformer transformer = Scripting.isScript(spec)
                     ? Scripting.compile(Transformer.class, spec, "q", "h")
                     : Transformer.rules(spec);
-            return transform(transformer);
+            return RDFProcessors.transform(transformer);
         }
 
         case "u":
         case "unique": {
             final Options options = Options.parse("m", args);
-            return unique(options.hasOption("m"));
+            return RDFProcessors.unique(options.hasOption("m"));
         }
 
         case "p":
@@ -209,7 +209,7 @@ public final class RDFProcessors {
                             ex);
                 }
             }
-            return prefix(namespaces.prefixMap());
+            return RDFProcessors.prefix(namespaces.prefixMap());
         }
 
         case "smush": {
@@ -265,24 +265,25 @@ public final class RDFProcessors {
             }
 
             for (int i = 0; i < namespaces.length; ++i) {
-                namespaces[i] = parseURI(namespaces[i]).stringValue();
+                namespaces[i] = RDFProcessors.parseIRI(namespaces[i]).stringValue();
             }
-            return smush(namespaces);
+            return RDFProcessors.smush(namespaces);
         }
 
         case "tbox": {
             Options.parse("", args);
-            return tbox();
+            return RDFProcessors.tbox();
         }
 
         case "rdfs": {
             final Options options = Options.parse("d|e!|C|c!|b!|t|w|+", args);
-            final URI base = parseURI(options.getOptionArg("b", String.class));
+            final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
             final boolean preserveBNodes = !options.hasOption("w");
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final RDFSource tbox = RDFProcessors
-                    .track(new Tracker(LOGGER, null, "%d TBox triples read (%d tr/s avg)", //
+                    .track(new Tracker(RDFProcessors.LOGGER, null,
+                            "%d TBox triples read (%d tr/s avg)", //
                             "%d TBox triples read (%d tr/s, %d tr/s avg)"))
                     .wrap(RDFSources.read(true, preserveBNodes,
                             base == null ? null : base.stringValue(), null, fileSpecs));
@@ -292,31 +293,32 @@ public final class RDFProcessors {
             if (options.hasOption("e")) {
                 excludedRules = options.getOptionArg("e", String.class).split(",");
             }
-            URI context = null;
+            IRI context = null;
             if (options.hasOption("C")) {
                 context = SESAME.NIL;
             } else if (options.hasOption("c")) {
-                context = parseURI(options.getOptionArg("c", String.class));
+                context = RDFProcessors.parseIRI(options.getOptionArg("c", String.class));
             }
-            return rdfs(tbox, context, decomposeOWLAxioms, dropBNodeTypes, excludedRules);
+            return RDFProcessors.rdfs(tbox, context, decomposeOWLAxioms, dropBNodeTypes,
+                    excludedRules);
         }
 
         case "stats": {
             final Options options = Options.parse("n!|p!|c!|t!|o", args);
-            final URI namespace = parseURI(options.getOptionArg("n", String.class));
-            final URI property = parseURI(options.getOptionArg("p", String.class));
-            final URI context = parseURI(options.getOptionArg("c", String.class));
+            final IRI namespace = RDFProcessors.parseIRI(options.getOptionArg("n", String.class));
+            final IRI property = RDFProcessors.parseIRI(options.getOptionArg("p", String.class));
+            final IRI context = RDFProcessors.parseIRI(options.getOptionArg("c", String.class));
             final Long threshold = options.getOptionArg("t", Long.class);
             final boolean processCooccurrences = options.hasOption("o");
-            return stats(namespace == null ? null : namespace.stringValue(), property, context,
-                    threshold, processCooccurrences);
+            return RDFProcessors.stats(namespace == null ? null : namespace.stringValue(),
+                    property, context, threshold, processCooccurrences);
         }
 
         case "download": {
             final Options options = Options.parse("w|q!|f!|!", args);
             final boolean preserveBNodes = !options.hasOption("w");
-            final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
-                    .stringValue();
+            final String endpointURL = RDFProcessors
+                    .parseIRI(options.getPositionalArg(0, String.class)).stringValue();
             String query = options.getOptionArg("q", String.class);
             if (query == null) {
                 final String source = options.getOptionArg("f", String.class);
@@ -346,14 +348,14 @@ public final class RDFProcessors {
                             ex);
                 }
             }
-            return download(true, preserveBNodes, endpointURL, query);
+            return RDFProcessors.download(true, preserveBNodes, endpointURL, query);
         }
 
         case "upload": {
             final Options options = Options.parse("!", args);
-            final String endpointURL = parseURI(options.getPositionalArg(0, String.class))
-                    .stringValue();
-            return upload(endpointURL);
+            final String endpointURL = RDFProcessors
+                    .parseIRI(options.getPositionalArg(0, String.class)).stringValue();
+            return RDFProcessors.upload(endpointURL);
         }
 
         case "mapreduce": {
@@ -377,7 +379,7 @@ public final class RDFProcessors {
             if (bypassPred != null) {
                 mapper = Mapper.bypass(mapper, bypassPred);
             }
-            return mapReduce(mapper, reducer, deduplicate);
+            return RDFProcessors.mapReduce(mapper, reducer, deduplicate);
         }
 
         default:
@@ -401,7 +403,7 @@ public final class RDFProcessors {
         if (tokenize) {
             list = new ArrayList<>();
             for (final String arg : args) {
-                list.addAll(Arrays.asList(tokenize(arg)));
+                list.addAll(Arrays.asList(RDFProcessors.tokenize(arg)));
             }
         } else {
             list = Arrays.asList(args);
@@ -582,12 +584,12 @@ public final class RDFProcessors {
 
     /**
      * Creates an {@code RDFProcessor} performing {@code owl:sameAs} smushing. A ranked list of
-     * namespaces controls the selection of the canonical URI for each coreferring URI cluster.
-     * {@code owl:sameAs} statements are emitted in output linking the selected canonical URI to
+     * namespaces controls the selection of the canonical IRI for each coreferring IRI cluster.
+     * {@code owl:sameAs} statements are emitted in output linking the selected canonical IRI to
      * the other entity aliases.
      *
      * @param rankedNamespaces
-     *            the ranked list of namespaces used to select canonical URIs
+     *            the ranked list of namespaces used to select canonical IRIs
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor smush(final String... rankedNamespaces) {
@@ -597,10 +599,10 @@ public final class RDFProcessors {
     /**
      * Creates an {@code RDFProcessor} extracting VOID structural statistics from the RDF stream.
      * A VOID dataset is associated to the whole input and to each set of graphs associated to the
-     * same 'source' URI with a configurable property, specified by {@code sourceProperty}; if
+     * same 'source' IRI with a configurable property, specified by {@code sourceProperty}; if
      * parameter {@code sourceContext} is not null, these association statements are searched only
-     * in the graph with the URI specified. Class and property partitions are then generated for
-     * each of these datasets, assigning them URIs in the namespace given by
+     * in the graph with the IRI specified. Class and property partitions are then generated for
+     * each of these datasets, assigning them IRIs in the namespace given by
      * {@code outputNamespace} (if null, a default namespace is used). In addition to standard
      * VOID terms, the processor emits additional statements based on the {@link VOIDX} extension
      * vocabulary to express the number of TBox, ABox, {@code rdf:type} and {@code owl:sameAs}
@@ -612,9 +614,9 @@ public final class RDFProcessors {
      * statistics. Therefore, computing VOID statistics is quite a slow operation.
      *
      * @param outputNamespace
-     *            the namespace for generated URIs (if null, a default is used)
+     *            the namespace for generated IRIs (if null, a default is used)
      * @param sourceProperty
-     *            the URI of property linking graphs to sources (if null, sources will not be
+     *            the IRI of property linking graphs to sources (if null, sources will not be
      *            considered)
      * @param sourceContext
      *            the graph where to look for graph-to-source links (if null, will be searched in
@@ -629,7 +631,7 @@ public final class RDFProcessors {
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor stats(@Nullable final String outputNamespace,
-            @Nullable final URI sourceProperty, @Nullable final URI sourceContext,
+            @Nullable final IRI sourceProperty, @Nullable final IRI sourceContext,
             @Nullable final Long threshold, final boolean processCooccurrences) {
         return new ProcessorStats(outputNamespace, sourceProperty, sourceContext, threshold,
                 processCooccurrences);
@@ -718,8 +720,8 @@ public final class RDFProcessors {
      * @param preserveBNodes
      *            true if BNodes in parsed files should be preserved, false if they should be
      *            rewritten on a per-file basis to avoid possible clashes
-     * @param baseURI
-     *            the base URI to be used for resolving relative URIs, possibly null
+     * @param baseIRI
+     *            the base IRI to be used for resolving relative IRIs, possibly null
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
@@ -728,14 +730,14 @@ public final class RDFProcessors {
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor read(final boolean parallelize, final boolean preserveBNodes,
-            @Nullable final String baseURI, @Nullable final ParserConfig config,
+            @Nullable final String baseIRI, @Nullable final ParserConfig config,
             final String... locations) {
-        final RDFProcessor tracker = track(
-                new Tracker(LOGGER, null, "%d triples read (%d tr/s avg)", //
+        final RDFProcessor tracker = RDFProcessors
+                .track(new Tracker(RDFProcessors.LOGGER, null, "%d triples read (%d tr/s avg)", //
                         "%d triples read (%d tr/s, %d tr/s avg)"));
-        final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseURI, config,
+        final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseIRI, config,
                 locations);
-        return inject(tracker.wrap(source));
+        return RDFProcessors.inject(tracker.wrap(source));
     }
 
     /**
@@ -760,11 +762,11 @@ public final class RDFProcessors {
      */
     public static RDFProcessor download(final boolean parallelize, final boolean preserveBNodes,
             final String endpointURL, final String query) {
-        final RDFProcessor tracker = track(
-                new Tracker(LOGGER, null, "%d triples queried (%d tr/s avg)", //
+        final RDFProcessor tracker = RDFProcessors
+                .track(new Tracker(RDFProcessors.LOGGER, null, "%d triples queried (%d tr/s avg)", //
                         "%d triples queried (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.query(parallelize, preserveBNodes, endpointURL, query);
-        return inject(tracker.wrap(source));
+        return RDFProcessors.inject(tracker.wrap(source));
     }
 
     /**
@@ -780,7 +782,7 @@ public final class RDFProcessors {
      */
     public static RDFProcessor tee(final RDFHandler... handlers) {
         if (handlers.length == 0) {
-            return IDENTITY;
+            return RDFProcessors.IDENTITY;
         }
         return new RDFProcessor() {
 
@@ -826,13 +828,13 @@ public final class RDFProcessors {
     public static RDFProcessor write(@Nullable final WriterConfig config, final int chunkSize,
             final String... locations) {
         if (locations.length == 0) {
-            return IDENTITY;
+            return RDFProcessors.IDENTITY;
         }
         final RDFHandler handler = RDFHandlers.write(config, chunkSize, locations);
-        final RDFProcessor tracker = track(new Tracker(LOGGER, null, //
+        final RDFProcessor tracker = RDFProcessors.track(new Tracker(RDFProcessors.LOGGER, null, //
                 "%d triples written (%d tr/s avg)", //
                 "%d triples written (%d tr/s, %d tr/s avg)"));
-        return tee(RDFHandlers.ignorePasses(tracker.wrap(handler), 1));
+        return RDFProcessors.tee(RDFHandlers.ignorePasses(tracker.wrap(handler), 1));
     }
 
     /**
@@ -847,11 +849,11 @@ public final class RDFProcessors {
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor upload(final String endpointURL) {
-        final RDFProcessor tracker = track(new Tracker(LOGGER, null, //
+        final RDFProcessor tracker = RDFProcessors.track(new Tracker(RDFProcessors.LOGGER, null, //
                 "%d triples uploaded (%d tr/s avg)", //
                 "%d triples uploaded (%d tr/s, %d tr/s avg)"));
         final RDFHandler handler = tracker.wrap(RDFHandlers.update(endpointURL));
-        return tee(handler);
+        return RDFProcessors.tee(handler);
     }
 
     /**
@@ -946,7 +948,7 @@ public final class RDFProcessors {
     public static RDFProcessor rules(final Ruleset ruleset, @Nullable final Mapper mapper,
             final boolean dropBNodeTypes, final boolean deduplicate,
             @Nullable final RDFSource tboxData, final boolean emitTBox,
-            @Nullable final URI tboxContext) {
+            @Nullable final IRI tboxContext) {
         return new ProcessorRules(ruleset, mapper, dropBNodeTypes, deduplicate, tboxData, emitTBox,
                 tboxContext);
     }
@@ -987,7 +989,7 @@ public final class RDFProcessors {
 
                 @Override
                 public void run() {
-                    inject();
+                    InjectSourceHandler.this.inject();
                 }
 
             });
@@ -995,20 +997,20 @@ public final class RDFProcessors {
 
         @Override
         public void handleComment(final String comment) throws RDFHandlerException {
-            checkNotFailed();
+            this.checkNotFailed();
             this.handler.handleComment(comment);
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            checkNotFailed();
-            this.handler.handleNamespace(prefix, uri);
+            this.checkNotFailed();
+            this.handler.handleNamespace(prefix, iri);
         }
 
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            checkNotFailed();
+            this.checkNotFailed();
             this.handler.handleStatement(statement);
         }
 
@@ -1021,7 +1023,7 @@ public final class RDFProcessors {
             } catch (final InterruptedException ex) {
                 this.exception = ex;
             }
-            checkNotFailed();
+            this.checkNotFailed();
             this.handler.endRDF();
         }
 
@@ -1041,9 +1043,9 @@ public final class RDFProcessors {
                     }
 
                     @Override
-                    public void handleNamespace(final String prefix, final String uri)
+                    public void handleNamespace(final String prefix, final String iri)
                             throws RDFHandlerException {
-                        InjectSourceHandler.this.sourceHandler.handleNamespace(prefix, uri);
+                        InjectSourceHandler.this.sourceHandler.handleNamespace(prefix, iri);
                     }
 
                     @Override
@@ -1109,13 +1111,13 @@ public final class RDFProcessors {
             this.type = 0;
             this.pos = 0;
 
-            next();
+            this.next();
         }
 
         RDFProcessor parse() {
-            final RDFProcessor processor = parseSequence();
-            if (this.type != EOF) {
-                syntaxError("<EOF>");
+            final RDFProcessor processor = this.parseSequence();
+            if (this.type != Parser.EOF) {
+                this.syntaxError("<EOF>");
             }
             return processor;
         }
@@ -1123,36 +1125,37 @@ public final class RDFProcessors {
         private RDFProcessor parseSequence() {
             final List<RDFProcessor> processors = new ArrayList<RDFProcessor>();
             do {
-                if (this.type == COMMAND) {
-                    processors.add(parseCommand());
-                } else if (this.type == OPEN_BRACE) {
-                    processors.add(parseParallel());
+                if (this.type == Parser.COMMAND) {
+                    processors.add(this.parseCommand());
+                } else if (this.type == Parser.OPEN_BRACE) {
+                    processors.add(this.parseParallel());
                 } else {
-                    syntaxError("'@command' or '{'");
+                    this.syntaxError("'@command' or '{'");
                 }
-            } while (this.type == COMMAND || this.type == OPEN_BRACE);
-            return sequence(processors.toArray(new RDFProcessor[processors.size()]));
+            } while (this.type == Parser.COMMAND || this.type == Parser.OPEN_BRACE);
+            return RDFProcessors.sequence(processors.toArray(new RDFProcessor[processors.size()]));
         }
 
         private RDFProcessor parseParallel() {
             final List<RDFProcessor> processors = new ArrayList<RDFProcessor>();
             do {
-                next();
-                processors.add(parseSequence());
-            } while (this.type == COMMA);
-            if (this.type != CLOSE_BRACE) {
-                syntaxError("'}x'");
+                this.next();
+                processors.add(this.parseSequence());
+            } while (this.type == Parser.COMMA);
+            if (this.type != Parser.CLOSE_BRACE) {
+                this.syntaxError("'}x'");
             }
             final String mod = this.token.length() == 1 ? "a" : this.token.substring(1);
             final SetOperator merging = SetOperator.valueOf(mod);
-            next();
-            return parallel(merging, processors.toArray(new RDFProcessor[processors.size()]));
+            this.next();
+            return RDFProcessors.parallel(merging,
+                    processors.toArray(new RDFProcessor[processors.size()]));
         }
 
         private RDFProcessor parseCommand() {
             final String command = this.token.substring(1).toLowerCase();
             final List<String> args = new ArrayList<String>();
-            while (next() == OPTION) {
+            while (this.next() == Parser.OPTION) {
                 args.add(this.token);
             }
             return Environment.newPlugin(RDFProcessor.class, command,
@@ -1167,20 +1170,20 @@ public final class RDFProcessors {
         private int next() {
             if (this.pos == this.tokens.size()) {
                 this.token = "<EOF>";
-                this.type = EOF;
+                this.type = Parser.EOF;
             } else {
                 this.token = this.tokens.get(this.pos++);
                 final char ch = this.token.charAt(0);
                 if (ch == '@') {
-                    this.type = COMMAND;
+                    this.type = Parser.COMMAND;
                 } else if (ch == '}') {
-                    this.type = CLOSE_BRACE;
+                    this.type = Parser.CLOSE_BRACE;
                 } else if ("{".equals(this.token)) {
-                    this.type = OPEN_BRACE;
+                    this.type = Parser.OPEN_BRACE;
                 } else if (",".equals(this.token)) {
-                    this.type = COMMA;
+                    this.type = Parser.COMMA;
                 } else {
-                    this.type = OPTION;
+                    this.type = Parser.OPTION;
                 }
             }
             return this.type;

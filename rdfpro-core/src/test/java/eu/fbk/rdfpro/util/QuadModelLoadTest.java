@@ -1,12 +1,10 @@
 package eu.fbk.rdfpro.util;
 
-import org.openrdf.model.Statement;
+import org.eclipse.rdf4j.model.Statement;
 
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.util.IO;
-import eu.fbk.rdfpro.util.QuadModel;
 
 public class QuadModelLoadTest {
 

@@ -3,16 +3,15 @@ package eu.fbk.rdfpro.util;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.RDFProcessor;
-import eu.fbk.rdfpro.util.Dictionary;
 
 // TODO: delete this class
 
@@ -20,8 +19,8 @@ public class DictionaryProcessor implements RDFProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DictionaryProcessor.class);
 
-    static RDFProcessor create(final String name, final String... args) throws IOException,
-            RDFHandlerException {
+    static RDFProcessor create(final String name, final String... args)
+            throws IOException, RDFHandlerException {
         return new DictionaryProcessor();
     }
 

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -89,72 +89,75 @@ public final class Environment {
                 }
             }
             for (final URL url : urls) {
-                final Reader in = new InputStreamReader(url.openStream(), Charset.forName("UTF-8"));
+                final Reader in = new InputStreamReader(url.openStream(),
+                        Charset.forName("UTF-8"));
                 try {
                     properties.load(in);
-                    LOGGER.debug("Loaded configuration from '" + url + "'");
+                    Environment.LOGGER.debug("Loaded configuration from '" + url + "'");
                 } catch (final Throwable ex) {
-                    LOGGER.warn("Could not load configuration from '" + url + "' - ignoring", ex);
+                    Environment.LOGGER.warn(
+                            "Could not load configuration from '" + url + "' - ignoring", ex);
                 } finally {
                     in.close();
                 }
             }
         } catch (final IOException ex) {
-            LOGGER.warn("Could not complete loading of configuration from classpath resources", ex);
+            Environment.LOGGER.warn(
+                    "Could not complete loading of configuration from classpath resources", ex);
         }
         for (final Map.Entry<?, ?> entry : properties.entrySet()) {
-            loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
+            Environment.loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
         }
         for (final Map.Entry<?, ?> entry : System.getProperties().entrySet()) {
-            loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
+            Environment.loadedProperties.put((String) entry.getKey(), (String) entry.getValue());
         }
         for (final Map.Entry<String, String> entry : System.getenv().entrySet()) {
             final String key = entry.getKey().toString().toLowerCase().replace('_', '.');
-            loadedProperties.put(key, entry.getValue());
+            Environment.loadedProperties.put(key, entry.getValue());
         }
     }
 
     public static void configurePool(@Nullable final ExecutorService pool) {
         synchronized (Environment.class) {
-            if (frozenPool != null) {
+            if (Environment.frozenPool != null) {
                 throw new IllegalStateException("Thread pool already in use");
             }
-            configuredPool = pool; // to be frozen later
+            Environment.configuredPool = pool; // to be frozen later
         }
     }
 
     public static void configureProperty(final String name, @Nullable final String value) {
         Objects.requireNonNull(name);
         synchronized (Environment.class) {
-            if (frozenPlugins != null && name.startsWith("plugin,")) {
+            if (Environment.frozenPlugins != null && name.startsWith("plugin,")) {
                 throw new IllegalStateException("Plugin configuration already loaded");
             }
-            if (frozenProperties.containsKey(name)) {
+            if (Environment.frozenProperties.containsKey(name)) {
                 throw new IllegalStateException("Property " + name + " already in use (value "
-                        + frozenProperties.get(name) + ")");
+                        + Environment.frozenProperties.get(name) + ")");
             }
-            propertyNames = null; // invalidate
+            Environment.propertyNames = null; // invalidate
             if (value == null) {
-                configuredProperties.remove(name);
+                Environment.configuredProperties.remove(name);
             } else {
-                configuredProperties.put(name, value);
+                Environment.configuredProperties.put(name, value);
             }
         }
     }
 
     public static int getCores() {
-        if (frozenCores <= 0) {
-            frozenCores = Integer.parseInt(getProperty("rdfpro.cores"));
+        if (Environment.frozenCores <= 0) {
+            Environment.frozenCores = Integer.parseInt(Environment.getProperty("rdfpro.cores"));
         }
-        return frozenCores;
+        return Environment.frozenCores;
     }
 
     public static ExecutorService getPool() {
-        if (frozenPool == null) {
+        if (Environment.frozenPool == null) {
             synchronized (Environment.class) {
-                if (frozenPool == null) {
-                    frozenPool = configuredPool;
-                    if (frozenPool == null) {
+                if (Environment.frozenPool == null) {
+                    Environment.frozenPool = Environment.configuredPool;
+                    if (Environment.frozenPool == null) {
                         final ThreadFactory factory = new ThreadFactory() {
 
                             private final AtomicInteger counter = new AtomicInteger(0);
@@ -170,13 +173,13 @@ public final class Environment {
                             }
 
                         };
-                        frozenPool = Executors.newCachedThreadPool(factory);
+                        Environment.frozenPool = Executors.newCachedThreadPool(factory);
                     }
-                    LOGGER.debug("Using pool {}", frozenPool);
+                    Environment.LOGGER.debug("Using pool {}", Environment.frozenPool);
                 }
             }
         }
-        return frozenPool;
+        return Environment.frozenPool;
     }
 
     public static void run(final Iterable<? extends Runnable> runnables) {
@@ -224,28 +227,29 @@ public final class Environment {
                 throw exception.get();
             }
         } catch (final Throwable ex) {
-            Throwables.propagate(ex);
+            Throwables.throwIfUnchecked(ex);
+            throw new RuntimeException(ex);
         }
     }
 
     @Nullable
     public static String getProperty(final String name) {
         Objects.requireNonNull(name);
-        Optional<String> holder = frozenProperties.get(name);
+        Optional<String> holder = Environment.frozenProperties.get(name);
         if (holder == null) {
             synchronized (Environment.class) {
-                holder = frozenProperties.get(name);
+                holder = Environment.frozenProperties.get(name);
                 if (holder == null) {
                     String value;
-                    if (configuredProperties.containsKey(name)) {
-                        value = configuredProperties.get(name);
+                    if (Environment.configuredProperties.containsKey(name)) {
+                        value = Environment.configuredProperties.get(name);
                     } else {
-                        value = loadedProperties.get(name);
+                        value = Environment.loadedProperties.get(name);
                     }
                     holder = Optional.ofNullable(value);
-                    frozenProperties.put(name, holder);
+                    Environment.frozenProperties.put(name, holder);
                     if (value != null) {
-                        LOGGER.debug("Using {} = {}", name, value);
+                        Environment.LOGGER.debug("Using {} = {}", name, value);
                     }
                 }
             }
@@ -255,36 +259,36 @@ public final class Environment {
 
     @Nullable
     public static String getProperty(final String name, @Nullable final String valueIfNull) {
-        final String value = getProperty(name);
+        final String value = Environment.getProperty(name);
         return value != null ? value : valueIfNull;
     }
 
     public static List<String> getPropertyNames() {
         synchronized (Environment.class) {
-            if (propertyNames == null) {
-                propertyNames = new ArrayList<>();
-                propertyNames.addAll(loadedProperties.keySet());
-                for (final String property : configuredProperties.keySet()) {
-                    if (!loadedProperties.containsKey(property)) {
-                        propertyNames.add(property);
+            if (Environment.propertyNames == null) {
+                Environment.propertyNames = new ArrayList<>();
+                Environment.propertyNames.addAll(Environment.loadedProperties.keySet());
+                for (final String property : Environment.configuredProperties.keySet()) {
+                    if (!Environment.loadedProperties.containsKey(property)) {
+                        Environment.propertyNames.add(property);
                     }
                 }
-                Collections.sort(propertyNames);
+                Collections.sort(Environment.propertyNames);
             }
         }
-        return propertyNames;
+        return Environment.propertyNames;
     }
 
     public static Map<String, String> getPlugins(final Class<?> baseClass) {
 
         Objects.requireNonNull(baseClass);
 
-        if (frozenPlugins == null) {
-            loadPlugins();
+        if (Environment.frozenPlugins == null) {
+            Environment.loadPlugins();
         }
 
         final Map<String, String> map = new HashMap<>();
-        for (final Plugin plugin : frozenPlugins) {
+        for (final Plugin plugin : Environment.frozenPlugins) {
             if (baseClass.isAssignableFrom(plugin.factory.getReturnType())) {
                 map.put(plugin.names.get(0), plugin.description);
             }
@@ -301,11 +305,11 @@ public final class Environment {
             throw new NullPointerException();
         }
 
-        if (frozenPlugins == null) {
-            loadPlugins();
+        if (Environment.frozenPlugins == null) {
+            Environment.loadPlugins();
         }
 
-        for (final Plugin plugin : frozenPlugins) {
+        for (final Plugin plugin : Environment.frozenPlugins) {
             if (baseClass.isAssignableFrom(plugin.factory.getReturnType())
                     && plugin.names.contains(name)) {
                 try {
@@ -320,26 +324,26 @@ public final class Environment {
             }
         }
 
-        throw new IllegalArgumentException("Unknown " + baseClass.getSimpleName() + " plugin '"
-                + name + "'");
+        throw new IllegalArgumentException(
+                "Unknown " + baseClass.getSimpleName() + " plugin '" + name + "'");
     }
 
     @SuppressWarnings("unchecked")
     private static void loadPlugins() {
         synchronized (Environment.class) {
-            if (frozenPlugins != null) {
+            if (Environment.frozenPlugins != null) {
                 return;
             }
             final Set<String> disabledNames = new HashSet<>();
             final List<Plugin> plugins = new ArrayList<>();
-            for (final Map<String, String> map : new Map[] { loadedProperties,
-                    configuredProperties }) {
+            for (final Map<String, String> map : new Map[] { Environment.loadedProperties,
+                    Environment.configuredProperties }) {
                 for (final Map.Entry<String, String> entry : map.entrySet()) {
                     final String name = entry.getKey();
                     final String value = entry.getValue();
                     if (name.startsWith("plugin.enable.") || name.startsWith("plugin,enable,")) {
-                        final List<String> names = Arrays.asList(name.substring(
-                                "plugin.enable.".length()).split("[.,]"));
+                        final List<String> names = Arrays
+                                .asList(name.substring("plugin.enable.".length()).split("[.,]"));
                         if (value.equalsIgnoreCase("true")) {
                             disabledNames.removeAll(names);
                         } else {
@@ -363,15 +367,16 @@ public final class Environment {
                             }
                             final String className = tokens[0];
                             final String methodName = tokens[1];
-                            final List<String> pluginNames = Arrays.asList(Arrays.copyOfRange(
-                                    tokens, 2, tokens.length));
+                            final List<String> pluginNames = Arrays
+                                    .asList(Arrays.copyOfRange(tokens, 2, tokens.length));
                             final Class<?> clazz = Class.forName(className);
-                            final Method method = clazz.getDeclaredMethod(methodName,
-                                    String.class, String[].class);
+                            final Method method = clazz.getDeclaredMethod(methodName, String.class,
+                                    String[].class);
                             method.setAccessible(true);
                             plugins.add(new Plugin(pluginNames, value, method));
                         } catch (final Throwable ex) {
-                            LOGGER.warn("Invalid plugin definition " + name + " - ignoring", ex);
+                            Environment.LOGGER
+                                    .warn("Invalid plugin definition " + name + " - ignoring", ex);
                         }
                     }
                 }
@@ -385,7 +390,7 @@ public final class Environment {
                     }
                 }
             }
-            frozenPlugins = plugins;
+            Environment.frozenPlugins = plugins;
         }
     }
 

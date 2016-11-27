@@ -15,10 +15,10 @@ package eu.fbk.rdfpro;
 
 import java.util.Objects;
 
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.helpers.RDFHandlerWrapper;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.helpers.RDFHandlerWrapper;
 
 import eu.fbk.rdfpro.util.IO;
 
@@ -28,8 +28,8 @@ import eu.fbk.rdfpro.util.IO;
  * This class wraps a {@code RDFHandler} and delegates all the methods to that instance. If the
  * wrapped {@code RDFHandler} is {@code AutoCloseable}, then also calls to
  * {@link AutoCloseable#close()} are delegated, with errors logged but ignored. Differently from
- * Sesame {@link RDFHandlerWrapper}, this class wraps a unique {@code RDFHandler} and thus does
- * not need array traversal (and its overhead) to notify a pool of {@code RDFHandlers}.
+ * RDF4J {@link RDFHandlerWrapper}, this class wraps a unique {@code RDFHandler} and thus does not
+ * need array traversal (and its overhead) to notify a pool of {@code RDFHandlers}.
  * </p>
  */
 public abstract class AbstractRDFHandlerWrapper extends AbstractRDFHandler {

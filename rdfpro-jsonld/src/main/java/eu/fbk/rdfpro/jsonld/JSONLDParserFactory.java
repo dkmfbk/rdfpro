@@ -13,9 +13,9 @@
  */
 package eu.fbk.rdfpro.jsonld;
 
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFParser;
-import org.openrdf.rio.RDFParserFactory;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFParser;
+import org.eclipse.rdf4j.rio.RDFParserFactory;
 
 /**
  * An {@link RDFParserFactory} for JSONLD parsers.

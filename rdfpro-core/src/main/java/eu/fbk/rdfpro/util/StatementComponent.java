@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -20,11 +20,11 @@ import java.util.function.Function;
 
 import com.google.common.collect.Lists;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
 
 public enum StatementComponent implements Function<Statement, Value>, Comparator<Statement> {
 
@@ -54,7 +54,7 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
     PREDICATE('p', (byte) 1) {
 
         @Override
-        public URI apply(final Statement statement) {
+        public Value apply(final Statement statement) {
             return statement.getPredicate();
         }
 
@@ -64,10 +64,10 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
             if (Objects.equals(statement.getPredicate(), value)) {
                 return statement;
             } else if (statement.getContext() == null) {
-                return factory.createStatement(statement.getSubject(), (URI) value,
+                return factory.createStatement(statement.getSubject(), (IRI) value,
                         statement.getObject());
             } else {
-                return factory.createStatement(statement.getSubject(), (URI) value,
+                return factory.createStatement(statement.getSubject(), (IRI) value,
                         statement.getObject(), statement.getContext());
             }
         }
@@ -149,19 +149,20 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
         } else if (first == null && second != null) {
             return -1;
         } else {
-            return Statements.valueComparator().compare(apply(first), apply(second));
+            return Statements.valueComparator().compare(this.apply(first), this.apply(second));
         }
     }
 
     public final Statement replace(final Statement statement, final Value value) {
-        return replace(statement, value, Statements.VALUE_FACTORY);
+        return this.replace(statement, value, Statements.VALUE_FACTORY);
     }
 
-    public abstract Statement replace(Statement statement, final Value value, ValueFactory factory);
+    public abstract Statement replace(Statement statement, final Value value,
+            ValueFactory factory);
 
     public static StatementComponent forLetter(char letter) {
         letter = Character.toLowerCase(letter);
-        for (final StatementComponent component : values()) {
+        for (final StatementComponent component : StatementComponent.values()) {
             if (component.getLetter() == letter) {
                 return component;
             }
@@ -170,14 +171,14 @@ public enum StatementComponent implements Function<Statement, Value>, Comparator
     }
 
     public static List<StatementComponent> forLetters(final CharSequence letters) {
-        return forLetters(letters, false);
+        return StatementComponent.forLetters(letters, false);
     }
 
     public static List<StatementComponent> forLetters(final CharSequence letters,
             final boolean acceptDuplicates) {
         final List<StatementComponent> result = Lists.newArrayList();
         for (int i = 0; i < letters.length(); ++i) {
-            final StatementComponent component = forLetter(letters.charAt(i));
+            final StatementComponent component = StatementComponent.forLetter(letters.charAt(i));
             if (!acceptDuplicates && result.contains(component)) {
                 throw new IllegalArgumentException("Duplicate statement component " + component);
             }

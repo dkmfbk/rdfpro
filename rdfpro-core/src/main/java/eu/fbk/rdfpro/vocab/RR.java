@@ -13,10 +13,10 @@
  */
 package eu.fbk.rdfpro.vocab;
 
-import org.openrdf.model.Namespace;
-import org.openrdf.model.URI;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 
 /**
  * Constants for the RDFpro Rules (RR) vocabulary.
@@ -32,60 +32,60 @@ public final class RR {
     public static final String NAMESPACE = "http://rdfpro.fbk.eu/ontologies/rules#";
 
     /** Immutable {@link Namespace} constant for the vocabulary namespace. */
-    public static final Namespace NS = new NamespaceImpl(PREFIX, NAMESPACE);
+    public static final Namespace NS = new SimpleNamespace(PREFIX, NAMESPACE);
 
     // CLASSES
 
     /** Class rr:Rule. */
-    public static final URI RULE = createURI("Rule");
+    public static final IRI RULE = createIRI("Rule");
 
     /** Class rr:FixpointRule. */
-    public static final URI FIXPOINT_RULE = createURI("FixpointRule");
+    public static final IRI FIXPOINT_RULE = createIRI("FixpointRule");
 
     /** Class rr:NonFixpointRule. */
-    public static final URI NON_FIXPOINT_RULE = createURI("NonFixpointRule");
+    public static final IRI NON_FIXPOINT_RULE = createIRI("NonFixpointRule");
 
     /** Class rr:StaticTerm. */
-    public static final URI META_VOCABULARY_TERM = createURI("MetaVocabularyTerm");
+    public static final IRI META_VOCABULARY_TERM = createIRI("MetaVocabularyTerm");
 
     // PROPERTIES
 
     /** Property rr:delete. */
-    public static final URI DELETE = createURI("delete");
+    public static final IRI DELETE = createIRI("delete");
 
     /** Property rr:insert. */
-    public static final URI INSERT = createURI("insert");
+    public static final IRI INSERT = createIRI("insert");
 
     /** Property rr:where. */
-    public static final URI WHERE = createURI("where");
+    public static final IRI WHERE = createIRI("where");
 
     /** Property rr:where. */
-    public static final URI PHASE = createURI("phase");
+    public static final IRI PHASE = createIRI("phase");
 
     /** Property rr:head. */
-    public static final URI HEAD = createURI("head"); // alias for rr:insert
+    public static final IRI HEAD = createIRI("head"); // alias for rr:insert
 
     /** Property rr:body. */
-    public static final URI BODY = createURI("body"); // alias for rr:where
+    public static final IRI BODY = createIRI("body"); // alias for rr:where
 
     /** Property rr:prefix. */
-    public static final URI PREFIX_PROPERTY = createURI("prefix");
+    public static final IRI PREFIX_PROPERTY = createIRI("prefix");
 
     // FUNCTIONS
 
     /** Function rr:mint. */
-    public static final URI MINT = createURI("mint");
+    public static final IRI MINT = createIRI("mint");
 
     /** Function rr:compatibleDatatype. */
-    public static final URI COMPATIBLE_DATATYPE = createURI("compatibleDatatype");
+    public static final IRI COMPATIBLE_DATATYPE = createIRI("compatibleDatatype");
 
     /** Function rr:starSelectGraph. */
-    public static final URI STAR_SELECT_GRAPH = createURI("starSelectGraph");
+    public static final IRI STAR_SELECT_GRAPH = createIRI("starSelectGraph");
 
     // HELPER METHODS
 
-    private static URI createURI(final String localName) {
-        return ValueFactoryImpl.getInstance().createURI(NAMESPACE, localName);
+    private static IRI createIRI(final String localName) {
+        return SimpleValueFactory.getInstance().createIRI(NAMESPACE, localName);
     }
 
     private RR() {

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -44,35 +44,34 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.datatypes.XMLDatatypeUtil;
-import org.openrdf.model.impl.BNodeImpl;
-import org.openrdf.model.impl.LiteralImpl;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.common.text.ASCIIUtil;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
+import org.eclipse.rdf4j.model.impl.SimpleBNode;
+import org.eclipse.rdf4j.model.impl.SimpleIRI;
+import org.eclipse.rdf4j.model.impl.SimpleLiteral;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.Hash;
+import eu.fbk.rdfpro.util.Namespaces;
+import eu.fbk.rdfpro.util.Statements;
 
 import groovy.lang.MissingMethodException;
 import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
 import groovy.util.ResourceConnector;
 import groovy.util.ResourceException;
-
-import info.aduna.text.ASCIIUtil;
-
-import eu.fbk.rdfpro.util.Environment;
-import eu.fbk.rdfpro.util.Hash;
-import eu.fbk.rdfpro.util.Namespaces;
-import eu.fbk.rdfpro.util.Statements;
 
 final class GroovyProcessor implements RDFProcessor {
 
@@ -81,8 +80,8 @@ final class GroovyProcessor implements RDFProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyProcessor.class);
 
-    private static final Logger SCRIPT_LOGGER = LoggerFactory.getLogger(GroovyProcessor.class
-            .getName() + ".script"); // can be improved
+    private static final Logger SCRIPT_LOGGER = LoggerFactory
+            .getLogger(GroovyProcessor.class.getName() + ".script"); // can be improved
 
     private static final GroovyScriptEngine ENGINE;
 
@@ -100,8 +99,8 @@ final class GroovyProcessor implements RDFProcessor {
             customizer.addStaticStars("eu.fbk.rdfpro.SparqlFunctions");
             final String classpath = Environment.getProperty("rdfpro.groovy.classpath", "");
             ENGINE = new GroovyScriptEngine(new Loader(classpath));
-            ENGINE.getConfig().setScriptBaseClass(HandlerScript.class.getName());
-            ENGINE.getConfig().addCompilationCustomizers(customizer);
+            GroovyProcessor.ENGINE.getConfig().setScriptBaseClass(HandlerScript.class.getName());
+            GroovyProcessor.ENGINE.getConfig().addCompilationCustomizers(customizer);
         } catch (final Throwable ex) {
             throw new Error("Could not initialize Groovy: " + ex.getMessage(), ex);
         }
@@ -136,11 +135,11 @@ final class GroovyProcessor implements RDFProcessor {
         Class<?> scriptClass = null;
         try {
             try {
-                scriptClass = ENGINE.loadScriptByName(scriptExprOrFile);
+                scriptClass = GroovyProcessor.ENGINE.loadScriptByName(scriptExprOrFile);
             } catch (final ResourceException ex) {
                 final Path path = Files.createTempFile("rdfpro-filter-", ".groovy");
                 Files.write(path, scriptExprOrFile.getBytes(Charset.forName("UTF-8")));
-                scriptClass = ENGINE.loadScriptByName(path.toUri().toString());
+                scriptClass = GroovyProcessor.ENGINE.loadScriptByName(path.toUri().toString());
             }
         } catch (final Throwable ex) {
             throw new Error("Could not compile Groovy script", ex);
@@ -171,7 +170,6 @@ final class GroovyProcessor implements RDFProcessor {
         return oldValue;
     }
 
-    @SuppressWarnings("resource")
     @Override
     public RDFHandler wrap(final RDFHandler handler) {
         final RDFHandler sink = Objects.requireNonNull(handler);
@@ -190,25 +188,25 @@ final class GroovyProcessor implements RDFProcessor {
     }
 
     private static boolean isPN_CHARS(final int c) {
-        return isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183 || c >= 768
-                && c <= 879 || c >= 8255 && c <= 8256;
+        return GroovyProcessor.isPN_CHARS_U(c) || ASCIIUtil.isNumber(c) || c == 45 || c == 183
+                || c >= 768 && c <= 879 || c >= 8255 && c <= 8256;
     }
 
     private static boolean isPN_CHARS_U(final int c) {
-        return isPN_CHARS_BASE(c) || c == 95;
+        return GroovyProcessor.isPN_CHARS_BASE(c) || c == 95;
     }
 
     private static boolean isPN_CHARS_BASE(final int c) {
-        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246 || c >= 248
-                && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191 || c >= 8204
-                && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271 || c >= 12289
-                && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
+        return ASCIIUtil.isLetter(c) || c >= 192 && c <= 214 || c >= 216 && c <= 246
+                || c >= 248 && c <= 767 || c >= 880 && c <= 893 || c >= 895 && c <= 8191
+                || c >= 8204 && c <= 8205 || c >= 8304 && c <= 8591 || c >= 11264 && c <= 12271
+                || c >= 12289 && c <= 55295 || c >= 63744 && c <= 64975 || c >= 65008 && c <= 65533
                 || c >= 65536 && c <= 983039;
     }
 
     private static String valueToHash(final Value v) {
         final StringBuilder sb = new StringBuilder();
-        if (v instanceof URI) {
+        if (v instanceof IRI) {
             sb.append('u');
             sb.append('#');
             sb.append(v.stringValue());
@@ -305,9 +303,9 @@ final class GroovyProcessor implements RDFProcessor {
                 while (i < length) {
                     char c = string.charAt(i);
                     if (c == '<') {
-                        final int end = parseURI(string, i);
+                        final int end = Loader.parseIRI(string, i);
                         if (end >= 0) {
-                            final URI u = (URI) Statements.parseValue(string.substring(i, end));
+                            final IRI u = (IRI) Statements.parseValue(string.substring(i, end));
                             builder.append("__iri(").append(counter.getAndIncrement())
                                     .append(", \"").append(u.stringValue()).append("\")");
                             i = end;
@@ -316,10 +314,10 @@ final class GroovyProcessor implements RDFProcessor {
                             ++i;
                         }
 
-                    } else if (isPN_CHARS_BASE(c)) {
-                        final int end = parseQName(string, i);
+                    } else if (GroovyProcessor.isPN_CHARS_BASE(c)) {
+                        final int end = Loader.parseQName(string, i);
                         if (end >= 0) {
-                            final URI u = (URI) Statements.parseValue(string.substring(i, end),
+                            final IRI u = (IRI) Statements.parseValue(string.substring(i, end),
                                     Namespaces.DEFAULT);
                             builder.append("__iri(").append(counter.getAndIncrement())
                                     .append(", \"").append(u.stringValue()).append("\")");
@@ -350,13 +348,13 @@ final class GroovyProcessor implements RDFProcessor {
                     }
                 }
             } catch (final Exception ex) {
-                throw new IllegalArgumentException("Illegal URI escaping near offset " + i, ex);
+                throw new IllegalArgumentException("Illegal IRI escaping near offset " + i, ex);
             }
 
             return builder.toString();
         }
 
-        private static int parseURI(final String string, int i) {
+        private static int parseIRI(final String string, int i) {
 
             final int len = string.length();
 
@@ -383,13 +381,13 @@ final class GroovyProcessor implements RDFProcessor {
             final int len = string.length();
             char c;
 
-            if (!isPN_CHARS_BASE(string.charAt(i))) {
+            if (!GroovyProcessor.isPN_CHARS_BASE(string.charAt(i))) {
                 return -1;
             }
 
             for (; i < len; ++i) {
                 c = string.charAt(i);
-                if (!isPN_CHARS(c) && c != '.') {
+                if (!GroovyProcessor.isPN_CHARS(c) && c != '.') {
                     break;
                 }
             }
@@ -399,13 +397,14 @@ final class GroovyProcessor implements RDFProcessor {
             }
 
             c = string.charAt(++i);
-            if (!isPN_CHARS_U(c) && c != ':' && c != '%' && !Character.isDigit(c)) {
+            if (!GroovyProcessor.isPN_CHARS_U(c) && c != ':' && c != '%'
+                    && !Character.isDigit(c)) {
                 return -1;
             }
 
             for (; i < len; ++i) {
                 c = string.charAt(i);
-                if (!isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
+                if (!GroovyProcessor.isPN_CHARS(c) && c != '.' && c != ':' && c != '%') {
                     break;
                 }
             }
@@ -435,15 +434,15 @@ final class GroovyProcessor implements RDFProcessor {
                 }
 
                 final URLConnection conn = this.url.openConnection();
-                conn.setAllowUserInteraction(getAllowUserInteraction());
-                conn.setConnectTimeout(getConnectTimeout());
-                conn.setDefaultUseCaches(getDefaultUseCaches());
-                conn.setDoInput(getDoInput());
-                conn.setDoOutput(getDoOutput());
-                conn.setIfModifiedSince(getIfModifiedSince());
-                conn.setReadTimeout(getReadTimeout());
-                conn.setUseCaches(getUseCaches());
-                for (final Map.Entry<String, List<String>> entry : getRequestProperties()
+                conn.setAllowUserInteraction(this.getAllowUserInteraction());
+                conn.setConnectTimeout(this.getConnectTimeout());
+                conn.setDefaultUseCaches(this.getDefaultUseCaches());
+                conn.setDoInput(this.getDoInput());
+                conn.setDoOutput(this.getDoOutput());
+                conn.setIfModifiedSince(this.getIfModifiedSince());
+                conn.setReadTimeout(this.getReadTimeout());
+                conn.setUseCaches(this.getUseCaches());
+                for (final Map.Entry<String, List<String>> entry : this.getRequestProperties()
                         .entrySet()) {
                     final String key = entry.getKey();
                     for (final String value : entry.getValue()) {
@@ -457,26 +456,26 @@ final class GroovyProcessor implements RDFProcessor {
 
                 final StringBuilder builder = new StringBuilder();
                 final InputStream stream = conn.getInputStream();
-                final BufferedReader reader = new BufferedReader(new InputStreamReader(stream,
-                        charset));
+                final BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(stream, charset));
                 try {
                     String line;
                     final AtomicInteger counter = new AtomicInteger();
                     while ((line = reader.readLine()) != null) {
-                        builder.append(filter(counter, line)).append("\n");
+                        builder.append(Loader.filter(counter, line)).append("\n");
                     }
                 } finally {
                     reader.close();
                 }
 
-                LOGGER.debug("Filtered script is:\n{}", builder);
+                GroovyProcessor.LOGGER.debug("Filtered script is:\n{}", builder);
 
                 this.bytes = builder.toString().getBytes(charset);
                 this.connected = true;
 
                 this.headers = new HashMap<String, List<String>>(conn.getHeaderFields());
 
-                LOGGER.debug("Loaded {}", getURL());
+                GroovyProcessor.LOGGER.debug("Loaded {}", this.getURL());
             }
 
             @Override
@@ -503,7 +502,7 @@ final class GroovyProcessor implements RDFProcessor {
 
             @Override
             public String getHeaderField(final int n) {
-                return getHeaderField(getHeaderFieldKey(n));
+                return this.getHeaderField(this.getHeaderFieldKey(n));
             }
 
             @Override
@@ -531,8 +530,8 @@ final class GroovyProcessor implements RDFProcessor {
                 @Override
                 protected HandlerScript initialValue() {
                     synchronized (PooledHandler.this) {
-                        final HandlerScript script = newHandlerScript("script"
-                                + PooledHandler.this.allScripts.size(), handler);
+                        final HandlerScript script = GroovyProcessor.this.newHandlerScript(
+                                "script" + PooledHandler.this.allScripts.size(), handler);
                         try {
                             script.doStart(PooledHandler.this.pass);
                         } catch (final RDFHandlerException ex) {
@@ -579,7 +578,7 @@ final class GroovyProcessor implements RDFProcessor {
 
         SingletonHandler(final RDFHandler handler) {
             super(handler);
-            this.script = newHandlerScript("script", handler);
+            this.script = GroovyProcessor.this.newHandlerScript("script", handler);
             this.pass = 0;
         }
 
@@ -623,13 +622,13 @@ final class GroovyProcessor implements RDFProcessor {
 
         private GroovyStatement statement;
 
-        private URI[] uriConsts;
+        private IRI[] iriConsts;
 
         protected HandlerScript() {
             this.startEnabled = true;
             this.handleEnabled = true;
             this.endEnabled = true;
-            this.uriConsts = new URI[0];
+            this.iriConsts = new IRI[0];
         }
 
         @Override
@@ -649,11 +648,11 @@ final class GroovyProcessor implements RDFProcessor {
                 } else if ("t".equals(property)) {
                     return this.statement.p.equals(RDF.TYPE) ? this.statement.o : null;
                 } else if ("l".equals(property)) {
-                    return this.statement.o instanceof Literal ? ((Literal) this.statement.o)
-                            .getLanguage() : null;
+                    return this.statement.o instanceof Literal
+                            ? ((Literal) this.statement.o).getLanguage().orElse(null) : null;
                 } else if ("d".equals(property)) {
-                    return this.statement.o instanceof Literal ? ((Literal) this.statement.o)
-                            .getDatatype() : null;
+                    return this.statement.o instanceof Literal
+                            ? ((Literal) this.statement.o).getDatatype() : null;
                 }
             }
             if ("__rdfpro__".equals(property)) {
@@ -667,22 +666,22 @@ final class GroovyProcessor implements RDFProcessor {
             // Directly matching variables this way is faster than storing them in binding object
             if (this.insideRun && property.length() == 1) {
                 if ("q".equals(property)) {
-                    this.statement = normalize((Statement) value);
+                    this.statement = GroovyProcessor.normalize((Statement) value);
                 } else if ("s".equals(property)) {
-                    this.statement.s = (Resource) toRDF(value, false);
+                    this.statement.s = (Resource) GroovyProcessor.toRDF(value, false);
                 } else if ("p".equals(property)) {
-                    this.statement.p = (URI) toRDF(value, false);
+                    this.statement.p = (IRI) GroovyProcessor.toRDF(value, false);
                 } else if ("c".equals(property)) {
-                    this.statement.c = (Resource) toRDF(value, false);
+                    this.statement.c = (Resource) GroovyProcessor.toRDF(value, false);
                 } else if ("t".equals(property)) {
-                    this.statement.o = toRDF(value, false);
+                    this.statement.o = GroovyProcessor.toRDF(value, false);
                     this.statement.p = RDF.TYPE;
                 } else {
                     // Following code serves to assemble literals starting from label, lang, dt
                     boolean setLiteral = false;
                     String newLabel = null;
                     String newLang = null;
-                    URI newDatatype = null;
+                    IRI newDatatype = null;
                     if ("o".equals(property)) {
                         if (value instanceof Value) {
                             this.statement.o = (Value) value;
@@ -694,21 +693,23 @@ final class GroovyProcessor implements RDFProcessor {
                         newLang = value == null ? null : value.toString();
                         setLiteral = true;
                     } else if ("d".equals(property)) {
-                        newDatatype = value == null ? null : (URI) toRDF(value, false);
+                        newDatatype = value == null ? null
+                                : (IRI) GroovyProcessor.toRDF(value, false);
                         setLiteral = true;
                     }
                     if (setLiteral) {
                         if (this.statement.o instanceof Literal) {
                             final Literal l = (Literal) this.statement.o;
                             newLabel = newLabel != null ? newLabel : l.getLabel();
-                            newLang = newLang != null ? newLang : l.getLanguage();
+                            newLang = newLang != null ? newLang : l.getLanguage().orElse(null);
                             newDatatype = newDatatype != null ? newDatatype : l.getDatatype();
                         }
-                        this.statement.o = newLang != null ? Statements.VALUE_FACTORY
-                                .createLiteral(newLabel, newLang)
-                                : newDatatype != null ? Statements.VALUE_FACTORY.createLiteral(
-                                        newLabel, newDatatype) : Statements.VALUE_FACTORY
-                                        .createLiteral(newLabel);
+                        this.statement.o = newLang != null
+                                ? Statements.VALUE_FACTORY.createLiteral(newLabel, newLang)
+                                : newDatatype != null
+                                        ? Statements.VALUE_FACTORY.createLiteral(newLabel,
+                                                newDatatype)
+                                        : Statements.VALUE_FACTORY.createLiteral(newLabel);
                     }
                 }
             }
@@ -719,31 +720,34 @@ final class GroovyProcessor implements RDFProcessor {
                 throws RDFHandlerException {
             this.name = name;
             this.handler = handler;
-            final boolean called = tryInvokeMethod("init", Arrays.asList(args));
-            if (called && LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Called " + name + ".init() with " + Arrays.asList(args));
+            final boolean called = this.tryInvokeMethod("init", Arrays.asList(args));
+            if (called && GroovyProcessor.LOGGER.isDebugEnabled()) {
+                GroovyProcessor.LOGGER
+                        .debug("Called " + name + ".init() with " + Arrays.asList(args));
             }
         }
 
         final void doStart(final int pass) throws RDFHandlerException {
             if (this.startEnabled) {
-                this.startEnabled = tryInvokeMethod("start", pass);
-                if (this.startEnabled && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Called " + this.name + ".start() for pass " + pass);
+                this.startEnabled = this.tryInvokeMethod("start", pass);
+                if (this.startEnabled && GroovyProcessor.LOGGER.isDebugEnabled()) {
+                    GroovyProcessor.LOGGER
+                            .debug("Called " + this.name + ".start() for pass " + pass);
                 }
             }
         }
 
         final void doHandle(final Statement statement) throws RDFHandlerException {
 
-            this.statement = normalize(statement);
+            this.statement = GroovyProcessor.normalize(statement);
 
             if (this.handleEnabled) {
-                if (tryInvokeMethod("handle", this.statement)) {
+                if (this.tryInvokeMethod("handle", this.statement)) {
                     return;
                 }
                 this.handleEnabled = false;
-                LOGGER.debug("Using script body for " + this.name + " (no handle() method)");
+                GroovyProcessor.LOGGER
+                        .debug("Using script body for " + this.name + " (no handle() method)");
             }
 
             this.insideRun = true;
@@ -756,36 +760,37 @@ final class GroovyProcessor implements RDFProcessor {
 
         final void doEnd(final int pass) throws RDFHandlerException {
             if (this.endEnabled) {
-                this.endEnabled = tryInvokeMethod("end", pass);
-                if (this.endEnabled && LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Called " + this.name + ".end() for pass " + pass);
+                this.endEnabled = this.tryInvokeMethod("end", pass);
+                if (this.endEnabled && GroovyProcessor.LOGGER.isDebugEnabled()) {
+                    GroovyProcessor.LOGGER
+                            .debug("Called " + this.name + ".end() for pass " + pass);
                 }
             }
         }
 
         // INTERNAL FUNCTIONS
 
-        protected final URI __iri(final int index, final Object arg) {
-            if (index >= this.uriConsts.length) {
-                this.uriConsts = Arrays.copyOf(this.uriConsts, index + 1);
+        protected final IRI __iri(final int index, final Object arg) {
+            if (index >= this.iriConsts.length) {
+                this.iriConsts = Arrays.copyOf(this.iriConsts, index + 1);
             }
-            URI uri = this.uriConsts[index];
-            if (uri == null) {
-                uri = arg instanceof URI ? (URI) arg : Statements.VALUE_FACTORY.createURI(arg
-                        .toString());
-                this.uriConsts[index] = uri;
+            IRI iri = this.iriConsts[index];
+            if (iri == null) {
+                iri = arg instanceof IRI ? (IRI) arg
+                        : Statements.VALUE_FACTORY.createIRI(arg.toString());
+                this.iriConsts[index] = iri;
             }
-            return uri;
+            return iri;
         }
 
         // QUAD CREATION AND EMISSION FUNCTIONS
 
         protected final Statement quad(final Object s, final Object p, final Object o,
                 final Object c) {
-            final Resource sv = (Resource) toRDF(s, false);
-            final URI pv = (URI) toRDF(p, false);
-            final Value ov = toRDF(o, true);
-            final Resource cv = (Resource) toRDF(c, false);
+            final Resource sv = (Resource) GroovyProcessor.toRDF(s, false);
+            final IRI pv = (IRI) GroovyProcessor.toRDF(p, false);
+            final Value ov = GroovyProcessor.toRDF(o, true);
+            final Resource cv = (Resource) GroovyProcessor.toRDF(c, false);
             return new GroovyStatement(sv, pv, ov, cv);
         }
 
@@ -796,7 +801,7 @@ final class GroovyProcessor implements RDFProcessor {
         protected final boolean emitIf(@Nullable final Object condition)
                 throws RDFHandlerException {
             if (condition == Boolean.TRUE) {
-                emit();
+                this.emit();
                 return true;
             }
             return false;
@@ -805,7 +810,7 @@ final class GroovyProcessor implements RDFProcessor {
         protected final boolean emitIfNot(@Nullable final Object condition)
                 throws RDFHandlerException {
             if (condition == Boolean.FALSE) {
-                emit();
+                this.emit();
                 return true;
             }
             return false;
@@ -813,7 +818,8 @@ final class GroovyProcessor implements RDFProcessor {
 
         protected final boolean emit(@Nullable final Statement statement)
                 throws RDFHandlerException {
-            if (!(statement instanceof GroovyStatement) || ((GroovyStatement) statement).isValid()) {
+            if (!(statement instanceof GroovyStatement)
+                    || ((GroovyStatement) statement).isValid()) {
                 this.handler.handleStatement(statement);
                 return true;
             }
@@ -823,19 +829,19 @@ final class GroovyProcessor implements RDFProcessor {
         protected final boolean emit(@Nullable final Object s, @Nullable final Object p,
                 @Nullable final Object o, @Nullable final Object c) throws RDFHandlerException {
 
-            final Value sv = toRDF(s, false);
-            final Value pv = toRDF(p, false);
-            final Value ov = toRDF(o, true);
-            final Value cv = toRDF(c, false);
+            final Value sv = GroovyProcessor.toRDF(s, false);
+            final Value pv = GroovyProcessor.toRDF(p, false);
+            final Value ov = GroovyProcessor.toRDF(o, true);
+            final Value cv = GroovyProcessor.toRDF(c, false);
 
-            if (sv instanceof Resource && pv instanceof URI && ov != null) {
+            if (sv instanceof Resource && pv instanceof IRI && ov != null) {
                 if (cv == null) {
-                    this.handler.handleStatement(Statements.VALUE_FACTORY.createStatement(
-                            (Resource) sv, (URI) pv, ov));
+                    this.handler.handleStatement(
+                            Statements.VALUE_FACTORY.createStatement((Resource) sv, (IRI) pv, ov));
                     return true;
                 } else if (cv instanceof Resource) {
-                    this.handler.handleStatement(Statements.VALUE_FACTORY.createStatement(
-                            (Resource) sv, (URI) pv, ov, (Resource) cv));
+                    this.handler.handleStatement(Statements.VALUE_FACTORY
+                            .createStatement((Resource) sv, (IRI) pv, ov, (Resource) cv));
                     return true;
                 }
             }
@@ -847,7 +853,7 @@ final class GroovyProcessor implements RDFProcessor {
 
         protected final void error(@Nullable final Object message) throws RDFHandlerException {
             final String string = message == null ? "ERROR" : message.toString();
-            SCRIPT_LOGGER.error(string);
+            GroovyProcessor.SCRIPT_LOGGER.error(string);
             throw new RDFHandlerException(string);
         }
 
@@ -855,17 +861,17 @@ final class GroovyProcessor implements RDFProcessor {
                 throws RDFHandlerException {
             final String string = message == null ? "ERROR" : message.toString();
             if (ex != null) {
-                SCRIPT_LOGGER.error(string, ex);
+                GroovyProcessor.SCRIPT_LOGGER.error(string, ex);
                 throw new RDFHandlerException(string, ex);
             } else {
-                SCRIPT_LOGGER.error(string);
+                GroovyProcessor.SCRIPT_LOGGER.error(string);
                 throw new RDFHandlerException(string);
             }
         }
 
         protected final void log(final Object message) {
             if (message != null) {
-                SCRIPT_LOGGER.info(message.toString());
+                GroovyProcessor.SCRIPT_LOGGER.info(message.toString());
             }
         }
 
@@ -878,7 +884,7 @@ final class GroovyProcessor implements RDFProcessor {
                 inputFile = new File(file.toString());
             }
             final String pattern = components.toString();
-            return new ValueSet(createHashSet(pattern, inputFile));
+            return new ValueSet(HandlerScript.createHashSet(pattern, inputFile));
         }
 
         // UTILITY FUNCTIONS
@@ -886,7 +892,7 @@ final class GroovyProcessor implements RDFProcessor {
         private boolean tryInvokeMethod(final String method, final Object arg)
                 throws RDFHandlerException {
             try {
-                invokeMethod(method, arg);
+                this.invokeMethod(method, arg);
                 return true;
             } catch (final MissingMethodException ex) {
                 return false;
@@ -899,42 +905,43 @@ final class GroovyProcessor implements RDFProcessor {
             final boolean matchObj = pattern.contains("o");
             final boolean matchCtx = pattern.contains("c");
             final Set<String> hashes = new TreeSet<>();
-            final RDFHandler handler = RDFProcessors.read(true, false, null, null,
-                    file.getAbsolutePath()).wrap(new RDFHandler() {
+            final RDFHandler handler = RDFProcessors
+                    .read(true, false, null, null, file.getAbsolutePath()).wrap(new RDFHandler() {
 
-                @Override
-                public void startRDF() throws RDFHandlerException {
-                }
+                        @Override
+                        public void startRDF() throws RDFHandlerException {
+                        }
 
-                @Override
-                public void endRDF() throws RDFHandlerException {
-                }
+                        @Override
+                        public void endRDF() throws RDFHandlerException {
+                        }
 
-                @Override
-                public void handleNamespace(final String s, final String s2)
-                        throws RDFHandlerException {
-                }
+                        @Override
+                        public void handleNamespace(final String s, final String s2)
+                                throws RDFHandlerException {
+                        }
 
-                @Override
-                public void handleStatement(final Statement statement) throws RDFHandlerException {
-                    if (matchSub) {
-                        hashes.add(valueToHash(statement.getSubject()));
-                    }
-                    if (matchPre) {
-                        hashes.add(valueToHash(statement.getPredicate()));
-                    }
-                    if (matchObj) {
-                        hashes.add(valueToHash(statement.getObject()));
-                    }
-                    if (matchCtx) {
-                        hashes.add(valueToHash(statement.getContext()));
-                    }
-                }
+                        @Override
+                        public void handleStatement(final Statement statement)
+                                throws RDFHandlerException {
+                            if (matchSub) {
+                                hashes.add(GroovyProcessor.valueToHash(statement.getSubject()));
+                            }
+                            if (matchPre) {
+                                hashes.add(GroovyProcessor.valueToHash(statement.getPredicate()));
+                            }
+                            if (matchObj) {
+                                hashes.add(GroovyProcessor.valueToHash(statement.getObject()));
+                            }
+                            if (matchCtx) {
+                                hashes.add(GroovyProcessor.valueToHash(statement.getContext()));
+                            }
+                        }
 
-                @Override
-                public void handleComment(final String s) throws RDFHandlerException {
-                }
-            });
+                        @Override
+                        public void handleComment(final String s) throws RDFHandlerException {
+                        }
+                    });
 
             try {
                 handler.startRDF();
@@ -950,7 +957,7 @@ final class GroovyProcessor implements RDFProcessor {
     @Nullable
     private static Value toRDF(final Object object, final boolean mayBeLiteral) {
         if (object instanceof Value) {
-            return normalize((Value) object);
+            return GroovyProcessor.normalize((Value) object);
         }
         if (object == null) {
             return null;
@@ -972,21 +979,22 @@ final class GroovyProcessor implements RDFProcessor {
                 return new GroovyLiteral(object.toString(), XMLSchema.BOOLEAN);
             } else if (object instanceof XMLGregorianCalendar) {
                 final XMLGregorianCalendar c = (XMLGregorianCalendar) object;
-                return new GroovyLiteral(c.toXMLFormat(), XMLDatatypeUtil.qnameToURI(c
-                        .getXMLSchemaType()));
+                return new GroovyLiteral(c.toXMLFormat(),
+                        XMLDatatypeUtil.qnameToURI(c.getXMLSchemaType()));
             } else if (object instanceof Date) {
                 final GregorianCalendar c = new GregorianCalendar();
                 c.setTime((Date) object);
-                final XMLGregorianCalendar xc = DATATYPE_FACTORY.newXMLGregorianCalendar(c);
-                return new GroovyLiteral(xc.toXMLFormat(), XMLDatatypeUtil.qnameToURI(xc
-                        .getXMLSchemaType()));
+                final XMLGregorianCalendar xc = GroovyProcessor.DATATYPE_FACTORY
+                        .newXMLGregorianCalendar(c);
+                return new GroovyLiteral(xc.toXMLFormat(),
+                        XMLDatatypeUtil.qnameToURI(xc.getXMLSchemaType()));
             } else if (object instanceof CharSequence) {
                 return new GroovyLiteral(object.toString(), XMLSchema.STRING);
             } else {
                 return new GroovyLiteral(object.toString());
             }
         }
-        return new GroovyURI(object.toString());
+        return new GroovyIRI(object.toString());
     }
 
     @Nullable
@@ -997,16 +1005,16 @@ final class GroovyProcessor implements RDFProcessor {
         }
 
         String lang = null;
-        URI dt = null;
+        IRI dt = null;
 
         if (old instanceof Literal) {
             final Literal l = (Literal) old;
-            lang = l.getLanguage();
+            lang = l.getLanguage().orElse(null);
             dt = l.getDatatype();
         }
 
-        return lang != null ? new GroovyLiteral(label, lang) : dt != null ? new GroovyLiteral(
-                label, dt) : new GroovyLiteral(label);
+        return lang != null ? new GroovyLiteral(label, lang)
+                : dt != null ? new GroovyLiteral(label, dt) : new GroovyLiteral(label);
     }
 
     @Nullable
@@ -1014,17 +1022,18 @@ final class GroovyProcessor implements RDFProcessor {
         if (s instanceof GroovyStatement) {
             return (GroovyStatement) s;
         } else if (s != null) {
-            return new GroovyStatement((Resource) normalize(s.getSubject()),
-                    (URI) normalize(s.getPredicate()), normalize(s.getObject()),
-                    (Resource) normalize(s.getContext()));
+            return new GroovyStatement((Resource) GroovyProcessor.normalize(s.getSubject()),
+                    (IRI) GroovyProcessor.normalize(s.getPredicate()),
+                    GroovyProcessor.normalize(s.getObject()),
+                    (Resource) GroovyProcessor.normalize(s.getContext()));
         }
         return null;
     }
 
     @Nullable
     private static Value normalize(@Nullable final Value v) {
-        if (v instanceof URI) {
-            return v instanceof GroovyURI ? v : new GroovyURI(v.stringValue());
+        if (v instanceof IRI) {
+            return v instanceof GroovyIRI ? v : new GroovyIRI(v.stringValue());
         } else if (v instanceof BNode) {
             return v instanceof GroovyBNode ? v : new GroovyBNode(v.stringValue());
         } else if (v instanceof Literal) {
@@ -1032,8 +1041,8 @@ final class GroovyProcessor implements RDFProcessor {
                 return v;
             }
             final Literal l = (Literal) v;
-            if (l.getLanguage() != null) {
-                return new GroovyLiteral(l.getLabel(), l.getLanguage());
+            if (l.getLanguage().isPresent()) {
+                return new GroovyLiteral(l.getLabel(), l.getLanguage().get());
             } else if (l.getDatatype() != null) {
                 return new GroovyLiteral(l.getLabel(), l.getDatatype());
             } else {
@@ -1051,7 +1060,7 @@ final class GroovyProcessor implements RDFProcessor {
         public Resource s;
 
         @Nullable
-        public URI p;
+        public IRI p;
 
         @Nullable
         public Value o;
@@ -1059,7 +1068,7 @@ final class GroovyProcessor implements RDFProcessor {
         @Nullable
         public Resource c;
 
-        public GroovyStatement(final Resource s, final URI p, final Value o,
+        public GroovyStatement(final Resource s, final IRI p, final Value o,
                 @Nullable final Resource c) {
             this.s = s;
             this.p = p;
@@ -1077,7 +1086,7 @@ final class GroovyProcessor implements RDFProcessor {
         }
 
         @Override
-        public URI getPredicate() {
+        public IRI getPredicate() {
             return this.p;
         }
 
@@ -1128,25 +1137,25 @@ final class GroovyProcessor implements RDFProcessor {
 
     }
 
-    static final class GroovyURI extends URIImpl implements Comparable<Value> {
+    static final class GroovyIRI extends SimpleIRI implements Comparable<Value> {
 
         private static final long serialVersionUID = 1L;
 
-        public GroovyURI(final String uriString) {
-            super(uriString);
+        public GroovyIRI(final String iriString) {
+            super(iriString);
         }
 
         @Override
         public int compareTo(final Value other) {
-            if (other instanceof URI) {
-                return stringValue().compareTo(other.stringValue());
+            if (other instanceof IRI) {
+                return this.stringValue().compareTo(other.stringValue());
             }
             return -1;
         }
 
     }
 
-    static final class GroovyBNode extends BNodeImpl implements Comparable<Value> {
+    static final class GroovyBNode extends SimpleBNode implements Comparable<Value> {
 
         private static final long serialVersionUID = 1L;
 
@@ -1157,8 +1166,8 @@ final class GroovyProcessor implements RDFProcessor {
         @Override
         public int compareTo(final Value other) {
             if (other instanceof BNode) {
-                return stringValue().compareTo(other.stringValue());
-            } else if (other instanceof URI) {
+                return this.stringValue().compareTo(other.stringValue());
+            } else if (other instanceof IRI) {
                 return 1;
             } else {
                 return -1;
@@ -1167,11 +1176,11 @@ final class GroovyProcessor implements RDFProcessor {
 
     }
 
-    static final class GroovyLiteral extends LiteralImpl implements Comparable<Value> {
+    static final class GroovyLiteral extends SimpleLiteral implements Comparable<Value> {
 
         private static final long serialVersionUID = 1L;
 
-        GroovyLiteral(final String label, @Nullable final URI datatype) {
+        GroovyLiteral(final String label, @Nullable final IRI datatype) {
             super(label, datatype);
         }
 
@@ -1189,17 +1198,18 @@ final class GroovyProcessor implements RDFProcessor {
                 int result = 0;
                 if (other != this) {
                     final Literal l = (Literal) other;
-                    result = getLabel().compareTo(l.getLabel());
+                    result = this.getLabel().compareTo(l.getLabel());
                     if (result == 0) {
-                        final String lang1 = getLanguage();
-                        final String lang2 = l.getLanguage();
+                        final String lang1 = this.getLanguage().orElse(null);
+                        final String lang2 = l.getLanguage().orElse(null);
                         result = lang1 != null ? lang2 != null ? lang1.compareTo(lang2) : 1
                                 : lang2 != null ? -1 : 0;
                         if (result == 0) {
-                            final URI dt1 = getDatatype();
-                            final URI dt2 = l.getDatatype();
-                            result = dt1 != null ? dt2 != null ? dt1.stringValue().compareTo(
-                                    dt2.stringValue()) : 1 : dt2 != null ? -1 : 0;
+                            final IRI dt1 = this.getDatatype();
+                            final IRI dt2 = l.getDatatype();
+                            result = dt1 != null ? dt2 != null
+                                    ? dt1.stringValue().compareTo(dt2.stringValue()) : 1
+                                    : dt2 != null ? -1 : 0;
                         }
                     }
                 }
@@ -1222,30 +1232,32 @@ final class GroovyProcessor implements RDFProcessor {
             if (value == null) {
                 throw new IllegalArgumentException("value cannot be null.");
             }
-            final Value target = value instanceof Value ? (Value) value : toRDF(value, true);
-            return this.hashSet.contains(valueToHash(target));
+            final Value target = value instanceof Value ? (Value) value
+                    : GroovyProcessor.toRDF(value, true);
+            return this.hashSet.contains(GroovyProcessor.valueToHash(target));
         }
 
         public boolean match(final Statement statement, final Object components) {
             final String parts = components.toString();
             if (parts.contains("s")) {
-                if (this.hashSet.contains(valueToHash(statement.getSubject()))) {
+                if (this.hashSet.contains(GroovyProcessor.valueToHash(statement.getSubject()))) {
                     return true;
                 }
             }
             if (parts.contains("p")) {
-                if (this.hashSet.contains(valueToHash(statement.getPredicate()))) {
+                if (this.hashSet.contains(GroovyProcessor.valueToHash(statement.getPredicate()))) {
                     return true;
                 }
             }
             if (parts.contains("o")) {
-                if (this.hashSet.contains(valueToHash(statement.getObject()))) {
+                if (this.hashSet.contains(GroovyProcessor.valueToHash(statement.getObject()))) {
                     return true;
                 }
             }
             if (parts.contains("c")) {
                 final Value context = statement.getContext();
-                if (context != null && this.hashSet.contains(valueToHash(context))) {
+                if (context != null
+                        && this.hashSet.contains(GroovyProcessor.valueToHash(context))) {
                     return true;
                 }
             }

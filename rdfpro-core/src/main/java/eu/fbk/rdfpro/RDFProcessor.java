@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -16,9 +16,9 @@ package eu.fbk.rdfpro;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Environment;
 
@@ -97,9 +97,9 @@ public interface RDFProcessor {
             public void emit(final RDFHandler handler, final int passes)
                     throws RDFSourceException, RDFHandlerException {
                 Objects.requireNonNull(handler);
-                final int totalPasses = passes + getExtraPasses();
+                final int totalPasses = passes + RDFProcessor.this.getExtraPasses();
                 if (passes > 0 && totalPasses > 0) {
-                    final RDFHandler wrappedHandler = wrap(handler);
+                    final RDFHandler wrappedHandler = RDFProcessor.this.wrap(handler);
                     source.emit(wrappedHandler, totalPasses);
                 }
             }
@@ -138,7 +138,7 @@ public interface RDFProcessor {
     default void apply(final RDFSource input, final RDFHandler output, final int passes)
             throws RDFSourceException, RDFHandlerException {
         if (passes > 0) {
-            input.emit(wrap(output), passes + getExtraPasses());
+            input.emit(this.wrap(output), passes + this.getExtraPasses());
         } else if (passes < 0) {
             throw new IllegalArgumentException("Invalid number of passes " + passes);
         } else {
@@ -176,7 +176,7 @@ public interface RDFProcessor {
             public void run() {
                 if (!future.isDone()) {
                     try {
-                        apply(input, output, passes);
+                        RDFProcessor.this.apply(input, output, passes);
                         future.complete(null);
                     } catch (final Throwable ex) {
                         future.completeExceptionally(ex);

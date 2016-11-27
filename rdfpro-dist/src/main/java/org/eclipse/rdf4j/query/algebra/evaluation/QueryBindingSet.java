@@ -1,17 +1,17 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-package org.openrdf.query.algebra.evaluation;
+package org.eclipse.rdf4j.query.algebra.evaluation;
 
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -21,16 +21,16 @@ import java.util.Set;
 
 import com.google.common.base.Objects;
 
-import org.openrdf.model.Value;
-import org.openrdf.query.Binding;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.impl.BindingImpl;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.Binding;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.impl.SimpleBinding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
  * Alternative implementation of QueryBindingSet, supposedly more efficient (actually proved to
- * improve execution times in rdfpro-rules). As QueryBindingSet is hard-coded into Sesame query
+ * improve execution times in rdfpro-rules). As QueryBindingSet is hard-coded into RDF4J query
  * algebra operators, there is no way to cleanly change implementation unless we reuse the same
  * name and force the classloader to load this class instead of the default one (which is done by
  * listing rdfpro-dist jar file first in the classpath). An INFO message is printed in case this
@@ -53,11 +53,11 @@ public final class QueryBindingSet implements BindingSet {
     private int slots;
 
     public QueryBindingSet() {
-        this(DEFAULT_CAPACITY);
+        this(QueryBindingSet.DEFAULT_CAPACITY);
     }
 
     public QueryBindingSet(final int capacity) {
-        int power = DEFAULT_CAPACITY;
+        int power = QueryBindingSet.DEFAULT_CAPACITY;
         while (power < capacity) {
             power *= 2;
         }
@@ -68,7 +68,7 @@ public final class QueryBindingSet implements BindingSet {
 
     public QueryBindingSet(final BindingSet bindings) {
         this(bindings.size());
-        addAll(bindings);
+        this.addAll(bindings);
     }
 
     public void addAll(final BindingSet bindings) {
@@ -77,7 +77,7 @@ public final class QueryBindingSet implements BindingSet {
             for (int i = 0; i < other.data.length; i += 2) {
                 final Object key = other.data[i];
                 if (key instanceof String) {
-                    addBinding((String) key, (Value) other.data[i + 1]);
+                    this.addBinding((String) key, (Value) other.data[i + 1]);
                 }
             }
         } else {
@@ -88,19 +88,19 @@ public final class QueryBindingSet implements BindingSet {
     }
 
     public void addBinding(final Binding binding) {
-        addBinding(binding.getName(), binding.getValue());
+        this.addBinding(binding.getName(), binding.getValue());
     }
 
     public void addBinding(final String name, final Value value) {
-        setBinding(name, value);
+        this.setBinding(name, value);
     }
 
     public void setBinding(final Binding binding) {
-        setBinding(binding.getName(), binding.getValue());
+        this.setBinding(binding.getName(), binding.getValue());
     }
 
     public void setBinding(final String name, final Value value) {
-        for (int i = getSlot(name);; i = nextSlot(i)) {
+        for (int i = this.getSlot(name);; i = this.nextSlot(i)) {
             final Object key = this.data[i];
             if (!(key instanceof String)) {
                 this.data[i] = name;
@@ -109,7 +109,7 @@ public final class QueryBindingSet implements BindingSet {
                 if (key == null) {
                     ++this.slots;
                     if (this.slots * 4 > this.data.length) {
-                        rehashSlots();
+                        this.rehashSlots();
                     }
                 }
                 return;
@@ -122,13 +122,13 @@ public final class QueryBindingSet implements BindingSet {
     }
 
     public void removeBinding(final String name) {
-        for (int i = getSlot(name);; i = nextSlot(i)) {
+        for (int i = this.getSlot(name);; i = this.nextSlot(i)) {
             final Object key = this.data[i];
             if (key == null) {
                 return;
             } else if (key instanceof String && key.hashCode() == name.hashCode()
                     && key.equals(name)) {
-                this.data[i] = DELETED;
+                this.data[i] = QueryBindingSet.DELETED;
                 this.data[i + 1] = null;
                 return;
             }
@@ -140,13 +140,13 @@ public final class QueryBindingSet implements BindingSet {
             for (int i = 0; i < this.data.length; i += 2) {
                 final Object key = this.data[i];
                 if (key instanceof String && names.contains(key)) {
-                    this.data[i] = DELETED;
+                    this.data[i] = QueryBindingSet.DELETED;
                     this.data[i + 1] = null;
                 }
             }
         } else {
             for (final String name : names) {
-                removeBinding(name);
+                this.removeBinding(name);
             }
         }
     }
@@ -155,7 +155,7 @@ public final class QueryBindingSet implements BindingSet {
         for (int i = 0; i < this.data.length; i += 2) {
             final Object key = this.data[i];
             if (key instanceof String && !names.contains(key)) {
-                this.data[i] = DELETED;
+                this.data[i] = QueryBindingSet.DELETED;
                 this.data[i + 1] = null;
             }
         }
@@ -186,7 +186,7 @@ public final class QueryBindingSet implements BindingSet {
 
     @Override
     public Value getValue(final String name) {
-        for (int i = getSlot(name);; i = nextSlot(i)) {
+        for (int i = this.getSlot(name);; i = this.nextSlot(i)) {
             final Object key = this.data[i];
             if (key == null) {
                 return null;
@@ -199,13 +199,13 @@ public final class QueryBindingSet implements BindingSet {
 
     @Override
     public Binding getBinding(final String name) {
-        final Value value = getValue(name);
-        return value == null ? null : new BindingImpl(name, value);
+        final Value value = this.getValue(name);
+        return value == null ? null : new SimpleBinding(name, value);
     }
 
     @Override
     public boolean hasBinding(final String name) {
-        for (int i = getSlot(name);; i = nextSlot(i)) {
+        for (int i = this.getSlot(name);; i = this.nextSlot(i)) {
             final Object key = this.data[i];
             if (key == null) {
                 return false;
@@ -245,14 +245,14 @@ public final class QueryBindingSet implements BindingSet {
                 }
                 return true;
             }
-            if (size() != other.size()) {
+            if (this.size() != other.size()) {
                 return false;
             }
             for (int i = 0; i < other.data.length; i += 2) {
                 if (other.data[i] instanceof String) {
                     final String name = (String) other.data[i];
                     final Value otherValue = (Value) other.data[i + 1];
-                    final Value thisValue = getValue(name);
+                    final Value thisValue = this.getValue(name);
                     if (!otherValue.equals(thisValue)) {
                         return false;
                     }
@@ -262,11 +262,11 @@ public final class QueryBindingSet implements BindingSet {
 
         } else if (object instanceof BindingSet) {
             final BindingSet other = (BindingSet) object;
-            if (size() != other.size()) {
+            if (this.size() != other.size()) {
                 return false;
             }
             for (final Binding binding : other) {
-                final Value thisValue = getValue(binding.getName());
+                final Value thisValue = this.getValue(binding.getName());
                 if (!binding.getValue().equals(thisValue)) {
                     return false;
                 }
@@ -315,7 +315,7 @@ public final class QueryBindingSet implements BindingSet {
             if (oldData[j] instanceof String) {
                 final String name = (String) oldData[j];
                 final Value value = (Value) oldData[j + 1];
-                for (int i = getSlot(name);; i = nextSlot(i)) {
+                for (int i = this.getSlot(name);; i = this.nextSlot(i)) {
                     if (this.data[i] == null) {
                         this.data[i] = name;
                         this.data[i + 1] = value;
@@ -337,7 +337,7 @@ public final class QueryBindingSet implements BindingSet {
     }
 
     static {
-        LOGGER.debug("Using patched QueryBindingSet class");
+        QueryBindingSet.LOGGER.debug("Using patched QueryBindingSet class");
     }
 
     private static abstract class AbstractIterator<T> implements Iterator<T> {
@@ -367,12 +367,12 @@ public final class QueryBindingSet implements BindingSet {
 
         @Override
         public T next() {
-            if (!hasNext()) {
+            if (!this.hasNext()) {
                 throw new NoSuchElementException();
             }
             this.removeOffset = this.nextOffset;
             this.nextOffset += 2;
-            return elementAt(this.data, this.removeOffset);
+            return this.elementAt(this.data, this.removeOffset);
         }
 
         @Override
@@ -380,7 +380,7 @@ public final class QueryBindingSet implements BindingSet {
             if (this.removeOffset < 0) {
                 throw new NoSuchElementException();
             }
-            this.data[this.removeOffset] = DELETED;
+            this.data[this.removeOffset] = QueryBindingSet.DELETED;
             this.data[this.removeOffset + 1] = null;
             this.removeOffset = -1;
         }
@@ -408,7 +408,7 @@ public final class QueryBindingSet implements BindingSet {
 
         @Override
         Binding elementAt(final Object[] data, final int offset) {
-            return new BindingImpl((String) data[offset], (Value) data[offset + 1]);
+            return new SimpleBinding((String) data[offset], (Value) data[offset + 1]);
         }
 
     }

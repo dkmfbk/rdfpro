@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -18,35 +18,35 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 import javax.xml.datatype.XMLGregorianCalendar;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.datatypes.XMLDatatypeUtil;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.impl.ValueFactoryBase;
-import org.openrdf.model.util.URIUtil;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
+import org.eclipse.rdf4j.model.impl.AbstractValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 
-final class HashValueFactory extends ValueFactoryBase {
+final class HashValueFactory extends AbstractValueFactory {
 
     public static final HashValueFactory INSTANCE = new HashValueFactory();
 
-    private final Map<String, URI> w3cURIs;
+    private final Map<String, IRI> w3cIRIs;
 
     private HashValueFactory() {
-        this.w3cURIs = new HashMap<>(1024);
-        for (final URI uri : new URI[] { XMLSchema.DECIMAL, XMLSchema.INTEGER,
+        this.w3cIRIs = new HashMap<>(1024);
+        for (final IRI iri : new IRI[] { XMLSchema.DECIMAL, XMLSchema.INTEGER,
                 XMLSchema.NON_POSITIVE_INTEGER, XMLSchema.NEGATIVE_INTEGER,
                 XMLSchema.NON_NEGATIVE_INTEGER, XMLSchema.POSITIVE_INTEGER, XMLSchema.LONG,
                 XMLSchema.INT, XMLSchema.SHORT, XMLSchema.BYTE, XMLSchema.UNSIGNED_LONG,
@@ -56,16 +56,16 @@ final class HashValueFactory extends ValueFactoryBase {
                 XMLSchema.GYEAR, XMLSchema.GMONTH, XMLSchema.GDAY, XMLSchema.DURATION,
                 XMLSchema.DAYTIMEDURATION, XMLSchema.STRING, XMLSchema.BASE64BINARY,
                 XMLSchema.HEXBINARY, XMLSchema.ANYURI, XMLSchema.QNAME, XMLSchema.NOTATION,
-                XMLSchema.NORMALIZEDSTRING, XMLSchema.TOKEN, XMLSchema.LANGUAGE,
-                XMLSchema.NMTOKEN, XMLSchema.NMTOKENS, XMLSchema.NAME, XMLSchema.NCNAME,
-                XMLSchema.ID, XMLSchema.IDREF, XMLSchema.IDREFS, XMLSchema.ENTITY,
-                XMLSchema.ENTITIES, RDF.TYPE, RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT,
-                RDF.PREDICATE, RDF.OBJECT, RDF.STATEMENT, RDF.BAG, RDF.ALT, RDF.SEQ, RDF.VALUE,
-                RDF.LI, RDF.LIST, RDF.FIRST, RDF.REST, RDF.NIL, RDF.LANGSTRING, RDF.HTML,
-                RDFS.RESOURCE, RDFS.LITERAL, RDFS.CLASS, RDFS.SUBCLASSOF, RDFS.SUBPROPERTYOF,
-                RDFS.DOMAIN, RDFS.RANGE, RDFS.COMMENT, RDFS.LABEL, RDFS.DATATYPE, RDFS.CONTAINER,
-                RDFS.MEMBER, RDFS.ISDEFINEDBY, RDFS.SEEALSO, RDFS.CONTAINERMEMBERSHIPPROPERTY,
-                OWL.CLASS, OWL.INDIVIDUAL, OWL.THING, OWL.NOTHING, OWL.EQUIVALENTCLASS,
+                XMLSchema.NORMALIZEDSTRING, XMLSchema.TOKEN, XMLSchema.LANGUAGE, XMLSchema.NMTOKEN,
+                XMLSchema.NMTOKENS, XMLSchema.NAME, XMLSchema.NCNAME, XMLSchema.ID,
+                XMLSchema.IDREF, XMLSchema.IDREFS, XMLSchema.ENTITY, XMLSchema.ENTITIES, RDF.TYPE,
+                RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT, RDF.PREDICATE, RDF.OBJECT,
+                RDF.STATEMENT, RDF.BAG, RDF.ALT, RDF.SEQ, RDF.VALUE, RDF.LI, RDF.LIST, RDF.FIRST,
+                RDF.REST, RDF.NIL, RDF.LANGSTRING, RDF.HTML, RDFS.RESOURCE, RDFS.LITERAL,
+                RDFS.CLASS, RDFS.SUBCLASSOF, RDFS.SUBPROPERTYOF, RDFS.DOMAIN, RDFS.RANGE,
+                RDFS.COMMENT, RDFS.LABEL, RDFS.DATATYPE, RDFS.CONTAINER, RDFS.MEMBER,
+                RDFS.ISDEFINEDBY, RDFS.SEEALSO, RDFS.CONTAINERMEMBERSHIPPROPERTY, OWL.CLASS,
+                OWL.INDIVIDUAL, OWL.THING, OWL.NOTHING, OWL.EQUIVALENTCLASS,
                 OWL.EQUIVALENTPROPERTY, OWL.SAMEAS, OWL.DIFFERENTFROM, OWL.ALLDIFFERENT,
                 OWL.DISTINCTMEMBERS, OWL.OBJECTPROPERTY, OWL.DATATYPEPROPERTY, OWL.INVERSEOF,
                 OWL.TRANSITIVEPROPERTY, OWL.SYMMETRICPROPERTY, OWL.FUNCTIONALPROPERTY,
@@ -76,40 +76,40 @@ final class HashValueFactory extends ValueFactoryBase {
                 OWL.DEPRECATEDCLASS, OWL.DEPRECATEDPROPERTY, OWL.ANNOTATIONPROPERTY,
                 OWL.ONTOLOGYPROPERTY, OWL.ONEOF, OWL.HASVALUE, OWL.DISJOINTWITH, OWL.UNIONOF,
                 OWL.COMPLEMENTOF }) {
-            final HashURI h = new HashURI(uri.stringValue());
+            final HashIRI h = new HashIRI(iri.stringValue());
             h.initHash();
-            this.w3cURIs.put(uri.stringValue(), h);
+            this.w3cIRIs.put(iri.stringValue(), h);
         }
     }
 
-    private boolean isPossibleW3CURI(final String uri) {
-        return uri.length() > 33 && uri.charAt(12) == '3';
+    private boolean isPossibleW3CIRI(final String iri) {
+        return iri.length() > 33 && iri.charAt(12) == '3';
     }
 
     @Override
-    public URI createURI(final String uri) {
-        if (isPossibleW3CURI(uri)) {
-            final URI u = this.w3cURIs.get(uri);
-            if (u != null) {
-                return u;
+    public IRI createIRI(final String iri) {
+        if (this.isPossibleW3CIRI(iri)) {
+            final IRI i = this.w3cIRIs.get(iri);
+            if (i != null) {
+                return i;
             }
         }
-        return new HashURI(uri);
+        return new HashIRI(iri);
     }
 
     @Override
-    public URI createURI(final String namespace, final String localName) {
-        final String uri = namespace + localName;
-        if (isPossibleW3CURI(uri)) {
-            final URI u = this.w3cURIs.get(uri);
-            if (u != null) {
-                return u;
+    public IRI createIRI(final String namespace, final String localName) {
+        final String iri = namespace + localName;
+        if (this.isPossibleW3CIRI(iri)) {
+            final IRI i = this.w3cIRIs.get(iri);
+            if (i != null) {
+                return i;
             }
         }
         if (URIUtil.isCorrectURISplit(namespace, localName)) {
-            return new HashURI(uri, namespace, localName);
+            return new HashIRI(iri, namespace, localName);
         } else {
-            return new HashURI(uri);
+            return new HashIRI(iri);
         }
     }
 
@@ -129,20 +129,20 @@ final class HashValueFactory extends ValueFactoryBase {
     }
 
     @Override
-    public Literal createLiteral(final String label, final URI datatype) {
+    public Literal createLiteral(final String label, final IRI datatype) {
         return new HashLiteral(label, null, datatype);
     }
 
     @Override
-    public Statement createStatement(final Resource subj, final URI pred, final Value obj) {
-        return new StatementImpl(subj, pred, obj);
+    public Statement createStatement(final Resource subj, final IRI pred, final Value obj) {
+        return SimpleValueFactory.getInstance().createStatement(subj, pred, obj);
     }
 
     @Override
-    public Statement createStatement(final Resource subj, final URI pred, final Value obj,
+    public Statement createStatement(final Resource subj, final IRI pred, final Value obj,
             final Resource ctx) {
-        return ctx == null ? new StatementImpl(subj, pred, obj) //
-                : new ContextStatementImpl(subj, pred, obj, ctx);
+        return ctx == null ? SimpleValueFactory.getInstance().createStatement(subj, pred, obj)
+                : SimpleValueFactory.getInstance().createStatement(subj, pred, obj, ctx);
     }
 
     @SuppressWarnings("unchecked")
@@ -150,13 +150,13 @@ final class HashValueFactory extends ValueFactoryBase {
     public static <T extends Value> T normalize(@Nullable final T value) {
         if (value instanceof HashValue) {
             return value;
-        } else if (value instanceof URI) {
-            return (T) new HashURI(value.stringValue());
+        } else if (value instanceof IRI) {
+            return (T) new HashIRI(value.stringValue());
         } else if (value instanceof BNode) {
             return (T) new HashBNode(((BNode) value).getID());
         } else if (value instanceof Literal) {
             final Literal literal = (Literal) value;
-            return (T) new HashLiteral(literal.getLabel(), literal.getLanguage(),
+            return (T) new HashLiteral(literal.getLabel(), literal.getLanguage().orElse(null),
                     literal.getDatatype());
         } else {
             return null;
@@ -199,7 +199,7 @@ final class HashValueFactory extends ValueFactoryBase {
         }
 
         final boolean sameHash(final HashValue other) {
-            initHash();
+            this.initHash();
             other.initHash();
             return this.hashLo == other.hashLo && this.hashHi == other.hashHi;
         }
@@ -221,9 +221,10 @@ final class HashValueFactory extends ValueFactoryBase {
         @Nullable
         private final Object languageOrDatatype;
 
-        HashLiteral(final String label, final String language, final URI datatype) {
+        HashLiteral(final String label, final String language, final IRI datatype) {
             this.label = label;
-            this.languageOrDatatype = language != null ? language : datatype;
+            this.languageOrDatatype = language != null ? language
+                    : XMLSchema.STRING.equals(datatype) ? null : datatype;
         }
 
         @Override
@@ -232,15 +233,15 @@ final class HashValueFactory extends ValueFactoryBase {
         }
 
         @Override
-        public String getLanguage() {
-            return this.languageOrDatatype instanceof String ? (String) this.languageOrDatatype
-                    : null;
+        public Optional<String> getLanguage() {
+            return this.languageOrDatatype instanceof String
+                    ? Optional.of((String) this.languageOrDatatype) : Optional.empty();
         }
 
         @Override
-        public URI getDatatype() {
-            if (this.languageOrDatatype instanceof URI) {
-                return (URI) this.languageOrDatatype;
+        public IRI getDatatype() {
+            if (this.languageOrDatatype instanceof IRI) {
+                return (IRI) this.languageOrDatatype;
             } else if (this.languageOrDatatype instanceof String) {
                 return RDF.LANGSTRING;
             } else {
@@ -307,13 +308,19 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashLiteral && hasHash() && ((HashURI) object).hasHash()) {
-                return sameHash((HashLiteral) object);
+            } else if (object instanceof HashLiteral) {
+                final HashLiteral other = (HashLiteral) object;
+                return this.hasHash() && other.hasHash() ? this.sameHash(other)
+                        : this.label.equals(other.label) && Objects.equals(this.languageOrDatatype,
+                                other.languageOrDatatype);
             } else if (object instanceof Literal) {
                 final Literal other = (Literal) object;
                 return this.label.equals(other.getLabel())
-                        && Objects.equals(getDatatype(), other.getDatatype())
-                        && Objects.equals(getLanguage(), other.getLanguage());
+                        && (this.languageOrDatatype instanceof String
+                                && this.languageOrDatatype.equals(other.getLanguage().orElse(null))
+                                || this.languageOrDatatype instanceof IRI
+                                        && this.languageOrDatatype.equals(other.getDatatype())
+                                || other.getDatatype().equals(XMLSchema.STRING));
             } else {
                 return false;
             }
@@ -323,11 +330,11 @@ final class HashValueFactory extends ValueFactoryBase {
         public int hashCode() {
             if (this.hashCode == 0) {
                 int hashCode = this.label.hashCode();
-                final String language = getLanguage();
-                if (language != null) {
-                    hashCode = 31 * hashCode + language.hashCode();
+                if (this.languageOrDatatype instanceof String) {
+                    hashCode = 31 * hashCode + this.languageOrDatatype.hashCode();
                 }
-                hashCode = 31 * hashCode + getDatatype().hashCode();
+                hashCode = 31 * hashCode + (this.languageOrDatatype instanceof IRI
+                        ? (IRI) this.languageOrDatatype : XMLSchema.STRING).hashCode();
                 this.hashCode = hashCode;
             }
             return this.hashCode;
@@ -339,17 +346,13 @@ final class HashValueFactory extends ValueFactoryBase {
             sb.append('"');
             sb.append(this.label);
             sb.append('"');
-            final String language = getLanguage();
-            if (language != null) {
+            if (this.languageOrDatatype instanceof String) {
                 sb.append('@');
-                sb.append(language);
-            } else {
-                final URI datatype = getDatatype();
-                if (datatype != null && !datatype.equals(XMLSchema.STRING)) {
-                    sb.append("^^<");
-                    sb.append(datatype.stringValue());
-                    sb.append(">");
-                }
+                sb.append(this.languageOrDatatype);
+            } else if (this.languageOrDatatype instanceof IRI) {
+                sb.append("^^<");
+                sb.append(((IRI) this.languageOrDatatype).stringValue());
+                sb.append(">");
             }
             return sb.toString();
         }
@@ -380,8 +383,10 @@ final class HashValueFactory extends ValueFactoryBase {
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashBNode && hasHash() && ((HashURI) object).hasHash()) {
-                return sameHash((HashBNode) object);
+            } else if (object instanceof HashBNode) {
+                final HashBNode other = (HashBNode) object;
+                return this.hasHash() && other.hasHash() ? this.sameHash(other)
+                        : this.id.equals(other.id);
             } else if (object instanceof BNode) {
                 final BNode other = (BNode) object;
                 return this.id.equals(other.getID());
@@ -405,11 +410,11 @@ final class HashValueFactory extends ValueFactoryBase {
 
     }
 
-    private static final class HashURI extends HashResource implements URI {
+    private static final class HashIRI extends HashResource implements IRI {
 
         private static final long serialVersionUID = 1L;
 
-        private final String uri;
+        private final String iri;
 
         @Nullable
         private transient String namespace;
@@ -417,28 +422,28 @@ final class HashValueFactory extends ValueFactoryBase {
         @Nullable
         private transient String localName;
 
-        HashURI(final String uri) {
-            this.uri = uri;
+        HashIRI(final String iri) {
+            this.iri = iri;
             this.namespace = null;
             this.localName = null;
         }
 
-        HashURI(final String uri, final String namespace, final String localName) {
-            this.uri = uri;
+        HashIRI(final String iri, final String namespace, final String localName) {
+            this.iri = iri;
             this.namespace = namespace;
             this.localName = localName;
         }
 
-        private void splitURI() {
-            final int index = URIUtil.getLocalNameIndex(this.uri);
-            this.namespace = this.uri.substring(0, index);
-            this.localName = this.uri.substring(index);
+        private void splitIRI() {
+            final int index = URIUtil.getLocalNameIndex(this.iri);
+            this.namespace = this.iri.substring(0, index);
+            this.localName = this.iri.substring(index);
         }
 
         @Override
         public String getNamespace() {
             if (this.namespace == null) {
-                splitURI();
+                this.splitIRI();
             }
             return this.namespace;
         }
@@ -446,25 +451,26 @@ final class HashValueFactory extends ValueFactoryBase {
         @Override
         public String getLocalName() {
             if (this.localName == null) {
-                splitURI();
+                this.splitIRI();
             }
             return this.localName;
         }
 
         @Override
         public String stringValue() {
-            return this.uri;
+            return this.iri;
         }
 
         @Override
         public boolean equals(final Object object) {
             if (object == this) {
                 return true;
-            } else if (object instanceof HashURI && hasHash() && ((HashURI) object).hasHash()) {
-                final HashURI other = (HashURI) object;
-                return sameHash(other);
-            } else if (object instanceof URI) {
-                return this.uri.equals(((URI) object).stringValue());
+            } else if (object instanceof HashIRI) {
+                final HashIRI other = (HashIRI) object;
+                return this.hasHash() && other.hasHash() ? this.sameHash(other)
+                        : this.iri.equals(other.iri);
+            } else if (object instanceof IRI) {
+                return this.iri.equals(((IRI) object).stringValue());
             } else {
                 return false;
             }
@@ -473,14 +479,14 @@ final class HashValueFactory extends ValueFactoryBase {
         @Override
         public int hashCode() {
             if (this.hashCode == 0) {
-                this.hashCode = this.uri.hashCode();
+                this.hashCode = this.iri.hashCode();
             }
             return this.hashCode;
         }
 
         @Override
         public String toString() {
-            return this.uri;
+            return this.iri;
         }
 
     }

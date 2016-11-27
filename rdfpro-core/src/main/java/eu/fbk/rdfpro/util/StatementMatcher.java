@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -31,23 +31,23 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Table;
 
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.algebra.And;
-import org.openrdf.query.algebra.Compare;
-import org.openrdf.query.algebra.Compare.CompareOp;
-import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.ValueConstant;
-import org.openrdf.query.algebra.ValueExpr;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.impl.ListBindingSet;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.algebra.And;
+import org.eclipse.rdf4j.query.algebra.Compare;
+import org.eclipse.rdf4j.query.algebra.Compare.CompareOp;
+import org.eclipse.rdf4j.query.algebra.QueryModelNode;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.ValueConstant;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.impl.ListBindingSet;
 
 public final class StatementMatcher {
 
@@ -68,7 +68,7 @@ public final class StatementMatcher {
 
     private final Object[] normalizedValues; // modified during use
 
-    private final URI nil;
+    private final IRI nil;
 
     private final int numPatterns;
 
@@ -76,9 +76,9 @@ public final class StatementMatcher {
 
     private final boolean matchAll;
 
-    private StatementMatcher(@Nullable final Function<Value, Value> normalizer,
-            final byte[] masks, final int[][] tables, @Nullable final Object[] values,
-            final int numPatterns, final int numValues, final boolean matchAll) {
+    private StatementMatcher(@Nullable final Function<Value, Value> normalizer, final byte[] masks,
+            final int[][] tables, @Nullable final Object[] values, final int numPatterns,
+            final int numValues, final boolean matchAll) {
 
         // Initialize object state
         this.normalizer = normalizer;
@@ -86,15 +86,16 @@ public final class StatementMatcher {
         this.tables = tables;
         this.values = values;
         this.normalizedValues = normalizer == null ? values : values.clone();
-        this.nil = normalizer == null ? SESAME.NIL : (URI) normalizer.apply(SESAME.NIL);
+        this.nil = normalizer == null ? SESAME.NIL : (IRI) normalizer.apply(SESAME.NIL);
         this.numPatterns = numPatterns;
         this.numValues = numValues;
         this.matchAll = matchAll;
     }
 
     public StatementMatcher normalize(@Nullable final Function<Value, Value> normalizer) {
-        return normalizer == null ? this : new StatementMatcher(normalizer, this.masks,
-                this.tables, this.values, this.numPatterns, this.numValues, this.matchAll);
+        return normalizer == null ? this
+                : new StatementMatcher(normalizer, this.masks, this.tables, this.values,
+                        this.numPatterns, this.numValues, this.matchAll);
     }
 
     public boolean matchAll() {
@@ -102,10 +103,11 @@ public final class StatementMatcher {
     }
 
     public boolean match(final Statement stmt) {
-        return match(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), stmt.getContext());
+        return this.match(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+                stmt.getContext());
     }
 
-    public boolean match(final Resource subj, final URI pred, final Value obj,
+    public boolean match(final Resource subj, final IRI pred, final Value obj,
             @Nullable Resource ctx) {
 
         if (this.matchAll) {
@@ -121,18 +123,20 @@ public final class StatementMatcher {
         for (int i = 0; i < this.masks.length; ++i) {
             final byte mask = this.masks[i];
             final int[] table = this.tables[i];
-            final int hash = hash(subj, pred, obj, ctx, mask);
-            for (int slot = (hash & 0x7FFFFFFF) % table.length; table[slot] != 0; slot = next(
-                    slot, table.length)) {
+            final int hash = StatementMatcher.hash(subj, pred, obj, ctx, mask);
+            for (int slot = (hash & 0x7FFFFFFF)
+                    % table.length; table[slot] != 0; slot = StatementMatcher.next(slot,
+                            table.length)) {
                 final int token = table[slot];
-                int offset = match(subj, pred, obj, ctx, mask, hash, token);
+                int offset = this.match(subj, pred, obj, ctx, mask, hash, token);
                 if (offset != 0) {
-                    if (tokenToUnfiltered(token)) {
+                    if (StatementMatcher.tokenToUnfiltered(token)) {
                         return true;
                     }
                     while (true) {
                         final Object value = this.normalizedValues[offset++];
-                        if (value == NORMALIZED_MARKER || value == UNNORMALIZED_MARKER) {
+                        if (value == StatementMatcher.NORMALIZED_MARKER
+                                || value == StatementMatcher.UNNORMALIZED_MARKER) {
                             break;
                         } else if (value instanceof Filter) {
                             if (filters == null) {
@@ -157,13 +161,13 @@ public final class StatementMatcher {
         return false;
     }
 
-    public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
+    public <T> List<T> map(final Resource subj, final IRI pred, final Value obj,
             @Nullable final Resource ctx, final Class<T> clazz) {
-        return map(subj, pred, obj, ctx, clazz, null);
+        return this.map(subj, pred, obj, ctx, clazz, null);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> List<T> map(final Resource subj, final URI pred, final Value obj,
+    public <T> List<T> map(final Resource subj, final IRI pred, final Value obj,
             @Nullable Resource ctx, final Class<T> clazz, @Nullable final List<T> list) {
 
         if (ctx == null) {
@@ -178,18 +182,18 @@ public final class StatementMatcher {
 
             int offset = 0;
             if (mask == 0) {
-                normalizeIfNecessary(1);
+                this.normalizeIfNecessary(1);
                 offset = 1;
             } else {
                 final int[] table = this.tables[i];
-                final int hash = hash(subj, pred, obj, ctx, mask);
-                for (int slot = (hash & 0x7FFFFFFF) % table.length;; slot = next(slot,
-                        table.length)) {
+                final int hash = StatementMatcher.hash(subj, pred, obj, ctx, mask);
+                for (int slot = (hash & 0x7FFFFFFF) % table.length;; slot = StatementMatcher
+                        .next(slot, table.length)) {
                     final int token = table[slot];
                     if (token == 0) {
                         continue outer;
                     }
-                    offset = match(subj, pred, obj, ctx, mask, hash, token);
+                    offset = this.match(subj, pred, obj, ctx, mask, hash, token);
                     if (offset != 0) {
                         break;
                     }
@@ -199,7 +203,8 @@ public final class StatementMatcher {
             boolean add = true;
             while (true) {
                 final Object value = this.normalizedValues[offset++];
-                if (value == NORMALIZED_MARKER || value == UNNORMALIZED_MARKER) {
+                if (value == StatementMatcher.NORMALIZED_MARKER
+                        || value == StatementMatcher.UNNORMALIZED_MARKER) {
                     break;
                 } else if (value instanceof Filter) {
                     add = ((Filter) value).eval(subj, pred, obj, ctx);
@@ -218,19 +223,19 @@ public final class StatementMatcher {
         return this.numPatterns + " patterns, " + this.numValues + " values";
     }
 
-    private int match(final Resource subj, final URI pred, final Value obj, final Resource ctx,
+    private int match(final Resource subj, final IRI pred, final Value obj, final Resource ctx,
             final byte mask, final int hash, final int token) {
 
         // Check that lower 12 bits of the hash match with lower 12 bits of cell
-        if (!tokenMatchHash(hash, token)) {
+        if (!StatementMatcher.tokenMatchHash(hash, token)) {
             return 0;
         }
 
         // Use the higher 20 bits of the cell as an index in the value array
-        final int offset = tokenToOffset(token);
+        final int offset = StatementMatcher.tokenToOffset(token);
 
         // Normalize if necessary (the lack of synchronization is deliberate)
-        normalizeIfNecessary(offset);
+        this.normalizeIfNecessary(offset);
 
         // Check that the quad matches the constants in the value array
         int index = offset;
@@ -250,10 +255,12 @@ public final class StatementMatcher {
     }
 
     private void normalizeIfNecessary(final int offset) {
-        if (this.normalizer != null && this.normalizedValues[offset - 1] == UNNORMALIZED_MARKER) {
+        if (this.normalizer != null
+                && this.normalizedValues[offset - 1] == StatementMatcher.UNNORMALIZED_MARKER) {
             for (int i = offset;; ++i) {
                 Object value = this.normalizedValues[i];
-                if (value == UNNORMALIZED_MARKER || value == NORMALIZED_MARKER) {
+                if (value == StatementMatcher.UNNORMALIZED_MARKER
+                        || value == StatementMatcher.NORMALIZED_MARKER) {
                     break;
                 } else if (value instanceof Filter) {
                     value = ((Filter) value).normalize(this.normalizer);
@@ -266,7 +273,7 @@ public final class StatementMatcher {
                 }
                 this.normalizedValues[i] = value;
             }
-            this.normalizedValues[offset - 1] = NORMALIZED_MARKER;
+            this.normalizedValues[offset - 1] = StatementMatcher.NORMALIZED_MARKER;
         }
     }
 
@@ -275,7 +282,7 @@ public final class StatementMatcher {
         return result < numSlots ? result : 0;
     }
 
-    private static int hash(final Resource subj, final URI pred, final Value obj,
+    private static int hash(final Resource subj, final IRI pred, final Value obj,
             final Resource ctx, final byte mask) {
 
         int hash = 1;
@@ -294,7 +301,7 @@ public final class StatementMatcher {
         return hash;
     }
 
-    private static byte mask(@Nullable final Resource subj, @Nullable final URI pred,
+    private static byte mask(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, @Nullable final Resource ctx) {
 
         byte mask = 0;
@@ -378,8 +385,9 @@ public final class StatementMatcher {
             ValueExpr filter = null;
             for (QueryModelNode node = pattern.getParentNode(); node != null; node = node
                     .getParentNode()) {
-                if (node instanceof org.openrdf.query.algebra.Filter) {
-                    final ValueExpr f = ((org.openrdf.query.algebra.Filter) node).getCondition();
+                if (node instanceof org.eclipse.rdf4j.query.algebra.Filter) {
+                    final ValueExpr f = ((org.eclipse.rdf4j.query.algebra.Filter) node)
+                            .getCondition();
                     if (filter == null) {
                         filter = f;
                     } else {
@@ -391,41 +399,43 @@ public final class StatementMatcher {
             }
 
             // Delegate
-            return addPattern(pattern, filter, mappedValues);
+            return this.addPattern(pattern, filter, mappedValues);
         }
 
         public Builder addPattern(final StatementPattern pattern, @Nullable ValueExpr filter,
                 final Object... mappedValues) {
 
             // Extract components
-            final Resource subj = (Resource) variableValue(pattern.getSubjectVar());
-            final URI pred = (URI) variableValue(pattern.getPredicateVar());
-            final Value obj = variableValue(pattern.getObjectVar());
-            final Resource ctx = (Resource) variableValue(pattern.getContextVar());
+            final Resource subj = (Resource) StatementMatcher
+                    .variableValue(pattern.getSubjectVar());
+            final IRI pred = (IRI) StatementMatcher.variableValue(pattern.getPredicateVar());
+            final Value obj = StatementMatcher.variableValue(pattern.getObjectVar());
+            final Resource ctx = (Resource) StatementMatcher
+                    .variableValue(pattern.getContextVar());
 
             // Rewrite filter if necessary
             if (filter != null) {
                 final Map<String, Var> replacements = new HashMap<>();
-                variableReplacement(pattern.getSubjectVar(), "s", replacements);
-                variableReplacement(pattern.getPredicateVar(), "p", replacements);
-                variableReplacement(pattern.getObjectVar(), "o", replacements);
-                variableReplacement(pattern.getContextVar(), "c", replacements);
+                StatementMatcher.variableReplacement(pattern.getSubjectVar(), "s", replacements);
+                StatementMatcher.variableReplacement(pattern.getPredicateVar(), "p", replacements);
+                StatementMatcher.variableReplacement(pattern.getObjectVar(), "o", replacements);
+                StatementMatcher.variableReplacement(pattern.getContextVar(), "c", replacements);
                 filter = Algebra.rewrite(filter, replacements);
             }
 
             // Delegate
-            return addValues(subj, pred, obj, ctx, filter, mappedValues);
+            return this.addValues(subj, pred, obj, ctx, filter, mappedValues);
         }
 
-        public Builder addValues(@Nullable final Resource subj, @Nullable final URI pred,
+        public Builder addValues(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx,
                 @Nullable final ValueExpr filter, final Object... mappedValues) {
 
             // Map the filter to a non-null key
-            final Object filterKey = filter == null ? EMPTY_FILTER : filter;
+            final Object filterKey = filter == null ? Builder.EMPTY_FILTER : filter;
 
             // Compute mask and pattern list
-            final byte mask = mask(subj, pred, obj, ctx);
+            final byte mask = StatementMatcher.mask(subj, pred, obj, ctx);
             final List<Value> pattern = Arrays.asList(subj, pred, obj, ctx);
 
             // Retrieve the table for the mask. Create it if necessary
@@ -441,7 +451,7 @@ public final class StatementMatcher {
             if (set == null) {
                 set = new HashSet<>();
                 sets.put(pattern, filterKey, set);
-                if (filterKey != EMPTY_FILTER) {
+                if (filterKey != Builder.EMPTY_FILTER) {
                     this.numFilters++;
                 }
             }
@@ -479,7 +489,7 @@ public final class StatementMatcher {
             int valueIndex = 0;
 
             // Emit an initial marker
-            values[valueIndex++] = UNNORMALIZED_MARKER;
+            values[valueIndex++] = StatementMatcher.UNNORMALIZED_MARKER;
 
             // Consider the patterns for each mask, starting from least selective mask
             boolean matchAll = false;
@@ -501,12 +511,12 @@ public final class StatementMatcher {
                 for (final List<Value> pattern : sets.rowKeySet()) {
 
                     // Compute hash
-                    final int hash = hash((Resource) pattern.get(0), (URI) pattern.get(1),
-                            pattern.get(2), (Resource) pattern.get(3), mask);
+                    final int hash = StatementMatcher.hash((Resource) pattern.get(0),
+                            (IRI) pattern.get(1), pattern.get(2), (Resource) pattern.get(3), mask);
 
                     // Identify whether the pattern is used unfiltered
                     final Map<Object, Set<Object>> map = sets.rowMap().get(pattern);
-                    final boolean unfiltered = map.containsKey(EMPTY_FILTER);
+                    final boolean unfiltered = map.containsKey(Builder.EMPTY_FILTER);
                     if (unfiltered && mask == 0) {
                         matchAll = true;
                     }
@@ -514,9 +524,9 @@ public final class StatementMatcher {
                     // Update hash map
                     int slot = (hash & 0x7FFFFFFF) % table.length;
                     while (table[slot] != 0) {
-                        slot = next(slot, table.length);
+                        slot = StatementMatcher.next(slot, table.length);
                     }
-                    table[slot] = tokenEncode(hash, valueIndex, unfiltered);
+                    table[slot] = StatementMatcher.tokenEncode(hash, valueIndex, unfiltered);
 
                     // Append the constants used in the pattern
                     for (final Value component : pattern) {
@@ -527,7 +537,7 @@ public final class StatementMatcher {
 
                     // Append filters and mapped values
                     for (final Map.Entry<Object, Set<Object>> entry : map.entrySet()) {
-                        if (entry.getKey() != EMPTY_FILTER) {
+                        if (entry.getKey() != Builder.EMPTY_FILTER) {
                             values[valueIndex++] = Filter.create((ValueExpr) entry.getKey());
                         }
                         for (final Object value : entry.getValue()) {
@@ -536,7 +546,7 @@ public final class StatementMatcher {
                     }
 
                     // Append marker
-                    values[valueIndex++] = UNNORMALIZED_MARKER;
+                    values[valueIndex++] = StatementMatcher.UNNORMALIZED_MARKER;
                 }
 
                 // Update masks and tables structures
@@ -557,7 +567,8 @@ public final class StatementMatcher {
         static Filter create(final ValueExpr expr) {
             if (expr instanceof And) {
                 final And and = (And) expr;
-                return new AndFilter(create(and.getLeftArg()), create(and.getRightArg()));
+                return new AndFilter(Filter.create(and.getLeftArg()),
+                        Filter.create(and.getRightArg()));
             } else if (expr instanceof Compare) {
                 final Compare cmp = (Compare) expr;
                 if (cmp.getOperator() == CompareOp.EQ || cmp.getOperator() == CompareOp.NE) {
@@ -582,7 +593,7 @@ public final class StatementMatcher {
             return this;
         }
 
-        abstract boolean eval(final Resource subj, final URI pred, final Value obj,
+        abstract boolean eval(final Resource subj, final IRI pred, final Value obj,
                 final Resource ctx);
 
         private static final class ValueExprFilter extends Filter {
@@ -599,8 +610,10 @@ public final class StatementMatcher {
             }
 
             @Override
-            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
-                final BindingSet bindings = new ListBindingSet(VAR_NAMES, subj, pred, obj, ctx);
+            boolean eval(final Resource subj, final IRI pred, final Value obj,
+                    final Resource ctx) {
+                final BindingSet bindings = new ListBindingSet(StatementMatcher.VAR_NAMES, subj,
+                        pred, obj, ctx);
                 return ((Literal) Algebra.evaluateValueExpr(this.expr, bindings)).booleanValue();
             }
 
@@ -629,14 +642,15 @@ public final class StatementMatcher {
             }
 
             @Override
-            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
-                final Value left = select(subj, pred, obj, ctx, this.left);
-                final Value right = select(subj, pred, obj, ctx, this.right);
+            boolean eval(final Resource subj, final IRI pred, final Value obj,
+                    final Resource ctx) {
+                final Value left = this.select(subj, pred, obj, ctx, this.left);
+                final Value right = this.select(subj, pred, obj, ctx, this.right);
                 final boolean equals = Objects.equals(left, right);
                 return equals ^ this.negate;
             }
 
-            private Value select(final Resource subj, final URI pred, final Value obj,
+            private Value select(final Resource subj, final IRI pred, final Value obj,
                     final Resource ctx, final char c) {
                 switch (c) {
                 case 's':
@@ -678,7 +692,8 @@ public final class StatementMatcher {
             }
 
             @Override
-            boolean eval(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
+            boolean eval(final Resource subj, final IRI pred, final Value obj,
+                    final Resource ctx) {
                 return this.left.eval(subj, pred, obj, ctx)
                         && this.right.eval(subj, pred, obj, ctx);
             }

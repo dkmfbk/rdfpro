@@ -7,21 +7,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.Lists;
 
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.util.Dictionary;
-import eu.fbk.rdfpro.util.Statements;
 
 public class DictionaryTest {
 
@@ -57,8 +55,8 @@ public class DictionaryTest {
         final Set<Value> set = new HashSet<>();
         final Dictionary d = Dictionary.newMemoryDictionary();
         final long ts = System.currentTimeMillis();
-        RDFSources.read(true, true, null, null, "/mnt/data/pikes/data/abox10m.tql.gz").emit(
-                new AbstractRDFHandler() {
+        RDFSources.read(true, true, null, null, "/mnt/data/pikes/data/abox10m.tql.gz")
+                .emit(new AbstractRDFHandler() {
 
                     private final AtomicInteger counter = new AtomicInteger(0);
 
@@ -73,7 +71,7 @@ public class DictionaryTest {
                         final int oc = d.encode(stmt.getObject());
                         final int cc = d.encode(stmt.getContext());
                         final Resource sv = (Resource) d.decode(sc);
-                        final URI pv = (URI) d.decode(pc);
+                        final IRI pv = (IRI) d.decode(pc);
                         final Value ov = d.decode(oc);
                         final Resource cv = (Resource) d.decode(cc);
                         Assert.assertEquals(stmt.getSubject(), sv);
@@ -88,10 +86,10 @@ public class DictionaryTest {
 
                     private void add(final Value value) {
                         set.add(value);
-                        if (value instanceof URI) {
-                            final URI uri = (URI) value;
+                        if (value instanceof IRI) {
+                            final IRI uri = (IRI) value;
                             if (uri.getLocalName().length() > 0) {
-                                set.add(Statements.VALUE_FACTORY.createURI(uri.getNamespace()));
+                                set.add(Statements.VALUE_FACTORY.createIRI(uri.getNamespace()));
                             }
                         }
                     }

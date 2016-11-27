@@ -32,33 +32,31 @@ import javax.annotation.Nullable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import org.openrdf.model.Graph;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Model;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.model.util.ModelException;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.Dataset;
-import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.algebra.evaluation.TripleSource;
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStatistics;
-import org.openrdf.query.algebra.evaluation.impl.EvaluationStrategyImpl;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.model.Graph;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.util.ModelException;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.Dataset;
+import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
+import org.eclipse.rdf4j.query.algebra.evaluation.impl.EvaluationStatistics;
+import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 
-import info.aduna.iteration.CloseableIteration;
-
-public abstract class QuadModel extends AbstractCollection<Statement> implements Graph,
-        Serializable {
+@SuppressWarnings("deprecation")
+public abstract class QuadModel extends AbstractCollection<Statement>
+        implements Graph, Serializable {
 
     protected final static Resource[] CTX_ANY = new Resource[0];
 
@@ -91,12 +89,13 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *            skipped and all modification operations return true
      * @return the created {@code QuadModel} view
      */
-    public static QuadModel wrap(final org.openrdf.sail.SailConnection connection,
+    public static QuadModel wrap(final org.eclipse.rdf4j.sail.SailConnection connection,
             final boolean trackChanges) {
         return new QuadModelSailAdapter(connection, trackChanges);
     }
 
-    public static QuadModel wrap(final org.openrdf.repository.RepositoryConnection connection,
+    public static QuadModel wrap(
+            final org.eclipse.rdf4j.repository.RepositoryConnection connection,
             final boolean trackChanges) {
         return new QuadModelRepositoryAdapter(connection, trackChanges);
     }
@@ -113,28 +112,29 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     @Nullable
     protected abstract Namespace doSetNamespace(String prefix, String name);
 
-    protected abstract int doSize(@Nullable Resource subj, @Nullable URI pred,
-            @Nullable Value obj, Resource[] ctxs);
+    protected abstract int doSize(@Nullable Resource subj, @Nullable IRI pred, @Nullable Value obj,
+            Resource[] ctxs);
 
-    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, @Nullable final Resource ctx) {
         return -1;
     }
 
     protected abstract Iterator<Statement> doIterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs);
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs);
 
-    protected abstract boolean doAdd(@Nullable Resource subj, @Nullable URI pred,
+    protected abstract boolean doAdd(@Nullable Resource subj, @Nullable IRI pred,
             @Nullable Value obj, Resource[] ctxs);
 
-    protected abstract boolean doRemove(@Nullable Resource subj, @Nullable URI pred,
+    protected abstract boolean doRemove(@Nullable Resource subj, @Nullable IRI pred,
             @Nullable Value obj, Resource[] ctxs);
 
     protected Iterator<BindingSet> doEvaluate(final TupleExpr expr,
             @Nullable final Dataset dataset, @Nullable final BindingSet bindings) {
 
-        return Algebra.evaluateTupleExpr(expr, dataset, bindings, new EvaluationStrategyImpl(
-                getTripleSource(), dataset, Algebra.getFederatedServiceResolver()),
+        return Algebra.evaluateTupleExpr(expr, dataset, bindings,
+                new StrictEvaluationStrategy(getTripleSource(), dataset,
+                        Algebra.getFederatedServiceResolver()),
                 getEvaluationStatistics(), getValueNormalizer());
     }
 
@@ -178,7 +178,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      */
     public final Namespace setNamespace(final String prefix, final String name) {
         doSetNamespace(Objects.requireNonNull(prefix), Objects.requireNonNull(name));
-        return new NamespaceImpl(prefix, name);
+        return new SimpleNamespace(prefix, name);
     }
 
     /**
@@ -218,17 +218,17 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         return doSize(null, null, null, CTX_ANY);
     }
 
-    public final int size(@Nullable final Resource subj, @Nullable final URI pred,
+    public final int size(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
         return doSize(subj, pred, obj, CTX_ANY);
     }
 
-    public final int size(@Nullable final Resource subj, @Nullable final URI pred,
+    public final int size(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... contexts) {
         return doSize(subj, pred, obj, contexts);
     }
 
-    public final int sizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+    public final int sizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... contexts) {
         if (contexts.length == 0) {
             return doSizeEstimate(subj, pred, obj, null);
@@ -251,12 +251,12 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
     }
 
     public final Iterator<Statement> iterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj) {
+            @Nullable final IRI pred, @Nullable final Value obj) {
         return doIterator(subj, pred, obj, CTX_ANY);
     }
 
     public final Iterator<Statement> iterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource... contexts) {
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource... contexts) {
         return doIterator(subj, pred, obj, contexts);
     }
 
@@ -275,7 +275,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         return false;
     }
 
-    public final boolean contains(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean contains(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
         return contains(subj, pred, obj, CTX_ANY);
     }
@@ -299,7 +299,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *            the contexts to match; if empty, any statement context will be matched
      * @return true, if there are statements matching the specified pattern
      */
-    public final boolean contains(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean contains(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         final Iterator<Statement> iterator = doIterator(subj, pred, obj, ctxs);
         try {
@@ -315,7 +315,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
                 new Resource[] { stmt.getContext() });
     }
 
-    public final boolean add(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean add(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
         return doAdd(subj, pred, obj, CTX_ANY);
     }
@@ -343,7 +343,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *             empty set.
      */
     @Override
-    public final boolean add(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean add(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         return doAdd(subj, pred, obj, ctxs);
     }
@@ -374,7 +374,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         return false;
     }
 
-    public final boolean remove(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean remove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
         return doRemove(subj, pred, obj, CTX_ANY);
     }
@@ -398,7 +398,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *            the contexts to match; if empty, any statement context will be matched
      * @return true, if one or more statements have been removed.
      */
-    public final boolean remove(@Nullable final Resource subj, @Nullable final URI pred,
+    public final boolean remove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         return doRemove(subj, pred, obj, ctxs);
     }
@@ -449,7 +449,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *            the contexts to match; if empty, any statement context will be matched
      * @return a quad model view with the statements matching the pattern specified
      */
-    public QuadModel filter(@Nullable final Resource subj, @Nullable final URI pred,
+    public QuadModel filter(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
         return new FilteredModel(this, subj, pred, obj, ctxs);
     }
@@ -522,32 +522,32 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *
      * @return a set view of the predicates contained in this quad model
      */
-    public final Set<URI> predicates() {
-        return new ValueSet<URI>() {
+    public final Set<IRI> predicates() {
+        return new ValueSet<IRI>() {
 
             @Override
             public boolean contains(final Object object) {
-                if (object instanceof URI) {
-                    return QuadModel.this.contains(null, (URI) object, null);
+                if (object instanceof IRI) {
+                    return QuadModel.this.contains(null, (IRI) object, null);
                 }
                 return false;
             }
 
             @Override
             public boolean remove(final Object object) {
-                if (object instanceof URI) {
-                    return doRemove(null, (URI) object, null, null);
+                if (object instanceof IRI) {
+                    return doRemove(null, (IRI) object, null, null);
                 }
                 return false;
             }
 
             @Override
-            public boolean add(final URI pred) {
+            public boolean add(final IRI pred) {
                 return doAdd(null, pred, null, null);
             }
 
             @Override
-            URI term(final Statement stmt) {
+            IRI term(final Statement stmt) {
                 return stmt.getPredicate();
             }
 
@@ -711,13 +711,13 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
      *             if multiple objects are present, or if the unique object is not a URI
      */
     @Nullable
-    public final URI objectURI() throws ModelException {
+    public final IRI objectURI() throws ModelException {
         final Value obj = objectValue();
         if (obj == null) {
             return null;
         }
-        if (obj instanceof URI) {
-            return (URI) obj;
+        if (obj instanceof IRI) {
+            return (IRI) obj;
         }
         throw new ModelException(obj);
     }
@@ -741,15 +741,15 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     @Deprecated
     @Override
-    public final Iterator<Statement> match(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource... contexts) {
+    public final Iterator<Statement> match(@Nullable final Resource subj, @Nullable final IRI pred,
+            @Nullable final Value obj, final Resource... contexts) {
         return filter(subj, pred, obj, contexts).iterator();
     }
 
     @Deprecated
     @Override
     public final ValueFactory getValueFactory() {
-        return ValueFactoryImpl.getInstance();
+        return Statements.VALUE_FACTORY;
     }
 
     public final TripleSource getTripleSource() {
@@ -762,7 +762,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
             @Override
             public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
-                    final Resource subj, final URI pred, final Value obj,
+                    final Resource subj, final IRI pred, final Value obj,
                     final Resource... contexts) throws QueryEvaluationException {
                 return Iterators.toIteration(QuadModel.this.doIterator(subj, pred, obj, contexts));
             }
@@ -781,8 +781,8 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
             final Resource s = sv == null || !(sv.getValue() instanceof Resource) ? null
                     : (Resource) sv.getValue();
-            final URI p = pv == null || !(pv.getValue() instanceof URI) ? null : (URI) pv
-                    .getValue();
+            final IRI p = pv == null || !(pv.getValue() instanceof IRI) ? null
+                    : (IRI) pv.getValue();
             final Value o = ov == null ? null : ov.getValue();
             final Resource c = cv == null || !(cv.getValue() instanceof Resource) ? null
                     : (Resource) cv.getValue();
@@ -929,31 +929,31 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected int doSize(@Nullable final Resource subj, @Nullable final URI pred,
+        protected int doSize(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, @Nullable final Resource[] ctxs) {
             return this.model.doSize(subj, pred, obj, ctxs);
         }
 
         @Override
-        protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+        protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx) {
             return this.model.doSizeEstimate(subj, pred, obj, ctx);
         }
 
         @Override
         protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-                @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+                @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
             return Iterators.unmodifiable(doIterator(subj, pred, obj, ctxs));
         }
 
         @Override
-        protected boolean doAdd(@Nullable final Resource subj, @Nullable final URI pred,
+        protected boolean doAdd(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource[] ctxs) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+        protected boolean doRemove(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource[] ctxs) {
             throw new UnsupportedOperationException();
         }
@@ -992,31 +992,31 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected int doSize(@Nullable final Resource subj, @Nullable final URI pred,
+        protected int doSize(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource[] ctxs) {
             return 0;
         }
 
         @Override
-        protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+        protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, @Nullable final Resource ctx) {
             return 0;
         }
 
         @Override
         protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-                @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+                @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
             return Collections.emptyIterator();
         }
 
         @Override
-        protected boolean doAdd(@Nullable final Resource subj, @Nullable final URI pred,
+        protected boolean doAdd(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource[] ctxs) {
             throw new UnsupportedOperationException("All statements are filtered out of view");
         }
 
         @Override
-        protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+        protected boolean doRemove(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource[] ctxs) {
             return false;
         }
@@ -1028,7 +1028,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        public QuadModel filter(@Nullable final Resource subj, @Nullable final URI pred,
+        public QuadModel filter(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj, final Resource... ctxs) {
             return this;
         }
@@ -1037,7 +1037,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
 
     private final static class FilteredModel extends QuadModel {
 
-        private static final URI EMPTY = new URIImpl("sesame:empty");
+        private static final IRI EMPTY = Statements.VALUE_FACTORY.createIRI("sesame:empty");
 
         private static final long serialVersionUID = 1L;
 
@@ -1047,7 +1047,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         private final Resource subj;
 
         @Nullable
-        private final URI pred;
+        private final IRI pred;
 
         @Nullable
         private final Value obj;
@@ -1055,7 +1055,7 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         private final Resource[] contexts;
 
         FilteredModel(final QuadModel model, @Nullable final Resource subj,
-                @Nullable final URI pred, @Nullable final Value obj, final Resource[] contexts) {
+                @Nullable final IRI pred, @Nullable final Value obj, final Resource[] contexts) {
             this.model = model;
             this.subj = subj;
             this.pred = pred;
@@ -1079,11 +1079,11 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected int doSize(@Nullable Resource subj, @Nullable URI pred, @Nullable Value obj,
+        protected int doSize(@Nullable Resource subj, @Nullable IRI pred, @Nullable Value obj,
                 @Nullable Resource[] ctxs) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             ctxs = filter(ctxs, this.contexts);
 
@@ -1092,11 +1092,11 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected int doSizeEstimate(@Nullable Resource subj, @Nullable URI pred,
+        protected int doSizeEstimate(@Nullable Resource subj, @Nullable IRI pred,
                 @Nullable Value obj, @Nullable final Resource ctx) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             final Resource[] ctxs = filter(ctx == null ? CTX_ANY : new Resource[] { ctx },
                     this.contexts);
@@ -1117,24 +1117,24 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected Iterator<Statement> doIterator(@Nullable Resource subj, @Nullable URI pred,
+        protected Iterator<Statement> doIterator(@Nullable Resource subj, @Nullable IRI pred,
                 @Nullable Value obj, Resource[] ctxs) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             ctxs = filter(ctxs, this.contexts);
 
-            return subj == EMPTY || pred == EMPTY || obj == EMPTY || ctxs == null ? Collections
-                    .emptyIterator() : this.model.doIterator(subj, pred, obj, ctxs);
+            return subj == EMPTY || pred == EMPTY || obj == EMPTY || ctxs == null
+                    ? Collections.emptyIterator() : this.model.doIterator(subj, pred, obj, ctxs);
         }
 
         @Override
-        protected boolean doAdd(@Nullable Resource subj, @Nullable URI pred, @Nullable Value obj,
+        protected boolean doAdd(@Nullable Resource subj, @Nullable IRI pred, @Nullable Value obj,
                 Resource[] ctxs) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             ctxs = filter(ctxs, this.contexts);
 
@@ -1146,11 +1146,11 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        protected boolean doRemove(@Nullable Resource subj, @Nullable URI pred,
+        protected boolean doRemove(@Nullable Resource subj, @Nullable IRI pred,
                 @Nullable Value obj, Resource[] ctxs) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             ctxs = filter(ctxs, this.contexts);
 
@@ -1159,16 +1159,16 @@ public abstract class QuadModel extends AbstractCollection<Statement> implements
         }
 
         @Override
-        public QuadModel filter(@Nullable Resource subj, @Nullable URI pred, @Nullable Value obj,
+        public QuadModel filter(@Nullable Resource subj, @Nullable IRI pred, @Nullable Value obj,
                 Resource... ctxs) {
 
             subj = (Resource) filter(subj, this.subj);
-            pred = (URI) filter(pred, this.pred);
+            pred = (IRI) filter(pred, this.pred);
             obj = filter(obj, this.obj);
             ctxs = filter(ctxs, this.contexts);
 
-            return subj == EMPTY || pred == EMPTY || obj == EMPTY || ctxs == null ? new EmptyModel(
-                    this.model) : this.model.filter(subj, pred, obj, ctxs);
+            return subj == EMPTY || pred == EMPTY || obj == EMPTY || ctxs == null
+                    ? new EmptyModel(this.model) : this.model.filter(subj, pred, obj, ctxs);
         }
 
         private static Value filter(@Nullable final Value inputValue,

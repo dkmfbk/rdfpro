@@ -12,6 +12,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import org.drools.core.spi.KnowledgeHelper;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.algebra.And;
+import org.eclipse.rdf4j.query.algebra.EmptySet;
+import org.eclipse.rdf4j.query.algebra.Exists;
+import org.eclipse.rdf4j.query.algebra.Extension;
+import org.eclipse.rdf4j.query.algebra.ExtensionElem;
+import org.eclipse.rdf4j.query.algebra.Filter;
+import org.eclipse.rdf4j.query.algebra.Join;
+import org.eclipse.rdf4j.query.algebra.Not;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.Union;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.impl.ListBindingSet;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
@@ -25,35 +47,9 @@ import org.kie.api.conf.EqualityBehaviorOption;
 import org.kie.api.definition.type.Position;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.query.algebra.And;
-import org.openrdf.query.algebra.EmptySet;
-import org.openrdf.query.algebra.Exists;
-import org.openrdf.query.algebra.Extension;
-import org.openrdf.query.algebra.ExtensionElem;
-import org.openrdf.query.algebra.Filter;
-import org.openrdf.query.algebra.Join;
-import org.openrdf.query.algebra.Not;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.Union;
-import org.openrdf.query.algebra.ValueExpr;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.impl.ListBindingSet;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
-import eu.fbk.rdfpro.Rule;
-import eu.fbk.rdfpro.RuleEngine;
-import eu.fbk.rdfpro.Ruleset;
 import eu.fbk.rdfpro.util.Algebra;
 import eu.fbk.rdfpro.util.Statements;
 
@@ -71,7 +67,7 @@ public class RuleEngineDrools extends RuleEngine {
 
     private final List<Expression> expressions;
 
-    private final List<URI> ruleIDs;
+    private final List<IRI> ruleIDs;
 
     public RuleEngineDrools(final Ruleset ruleset) {
 
@@ -174,7 +170,7 @@ public class RuleEngineDrools extends RuleEngine {
                 final int predicateID, final int objectID, final int contextID)
                 throws RDFHandlerException {
 
-            if (!Dictionary.isResource(subjectID) || !Dictionary.isURI(predicateID)
+            if (!Dictionary.isResource(subjectID) || !Dictionary.isIRI(predicateID)
                     || !Dictionary.isResource(contextID)) {
                 return;
             }
@@ -188,14 +184,14 @@ public class RuleEngineDrools extends RuleEngine {
         }
 
         public int eval(final int expressionIndex, final int... argIDs) {
-            return RuleEngineDrools.this.expressions.get(expressionIndex).evaluate(
-                    this.dictionary, argIDs);
+            return RuleEngineDrools.this.expressions.get(expressionIndex).evaluate(this.dictionary,
+                    argIDs);
         }
 
         public boolean test(final int expressionIndex, final int... argIDs) {
             try {
-                return ((Literal) RuleEngineDrools.this.expressions.get(expressionIndex).evaluate(
-                        this.dictionary.decode(argIDs))).booleanValue();
+                return ((Literal) RuleEngineDrools.this.expressions.get(expressionIndex)
+                        .evaluate(this.dictionary.decode(argIDs))).booleanValue();
             } catch (final Throwable ex) {
                 return false;
             }
@@ -264,7 +260,7 @@ public class RuleEngineDrools extends RuleEngine {
                     throw new Error("Dictionary full (capacity " + SIZE + ")");
                 }
             }
-            if (value instanceof URI) {
+            if (value instanceof IRI) {
                 return id;
             } else if (value instanceof BNode) {
                 return id | 0x20000000;
@@ -277,7 +273,7 @@ public class RuleEngineDrools extends RuleEngine {
             return (id & 0x40000000) == 0;
         }
 
-        public static boolean isURI(final int id) {
+        public static boolean isIRI(final int id) {
             return (id & 0x60000000) == 0;
         }
 
@@ -366,7 +362,7 @@ public class RuleEngineDrools extends RuleEngine {
         public Statement decode(final Dictionary dictionary) {
             return Statements.VALUE_FACTORY.createStatement( //
                     (Resource) dictionary.decode(this.subjectID), //
-                    (URI) dictionary.decode(this.predicateID), //
+                    (IRI) dictionary.decode(this.predicateID), //
                     dictionary.decode(this.objectID), //
                     (Resource) dictionary.decode(this.contextID));
         }
@@ -380,7 +376,7 @@ public class RuleEngineDrools extends RuleEngine {
         }
 
         public static Quad encode(final Dictionary dictionary, final Resource subject,
-                final URI predicate, final Value object, final Resource context) {
+                final IRI predicate, final Value object, final Resource context) {
             return new Quad( //
                     dictionary.encode(subject), //
                     dictionary.encode(predicate), //
@@ -400,7 +396,7 @@ public class RuleEngineDrools extends RuleEngine {
 
         public final List<Expression> expressions;
 
-        public final List<URI> ruleIDs;
+        public final List<IRI> ruleIDs;
 
         public KieContainer container;
 
@@ -438,8 +434,8 @@ public class RuleEngineDrools extends RuleEngine {
                             extensionExprs, matchedVars);
                     for (final String extensionVar : extensionExprs.keySet()) {
                         if (matchedVars.contains(extensionVar)) {
-                            throw new IllegalArgumentException("Variable " + extensionVar
-                                    + " already used in body patterns");
+                            throw new IllegalArgumentException(
+                                    "Variable " + extensionVar + " already used in body patterns");
                         }
                     }
                 }
@@ -488,8 +484,8 @@ public class RuleEngineDrools extends RuleEngine {
             // Generate the module
             final String rulesetID = "ruleset" + COUNTER.getAndIncrement();
             final KieModuleModel module = services.newKieModuleModel();
-            final KieBaseModel base = module.newKieBaseModel("kbase_" + rulesetID)
-                    .setDefault(true).setEqualsBehavior(EqualityBehaviorOption.EQUALITY)
+            final KieBaseModel base = module.newKieBaseModel("kbase_" + rulesetID).setDefault(true)
+                    .setEqualsBehavior(EqualityBehaviorOption.EQUALITY)
                     .addPackage("eu.fbk.rdfpro.rules.drools");
             base.newKieSessionModel("session_" + rulesetID).setDefault(true)
                     .setType(KieSessionModel.KieSessionType.STATEFUL);
@@ -584,9 +580,10 @@ public class RuleEngineDrools extends RuleEngine {
                             && elem.getName().equals(((Var) elem.getExpr()).getName())) {
                         continue;
                     }
-                    if (extensionExprs.put(elem.getName(), new Expression(elem.getExpr())) != null) {
-                        throw new IllegalArgumentException("Multiple bindings for variable "
-                                + elem.getName());
+                    if (extensionExprs.put(elem.getName(),
+                            new Expression(elem.getExpr())) != null) {
+                        throw new IllegalArgumentException(
+                                "Multiple bindings for variable " + elem.getName());
                     }
                 }
 
@@ -596,8 +593,9 @@ public class RuleEngineDrools extends RuleEngine {
                 if (condition instanceof And) {
                     final ValueExpr leftCondition = ((And) condition).getLeftArg();
                     final ValueExpr rightCondition = ((And) condition).getRightArg();
-                    translate(new Filter(new Filter(filter.getArg(), leftCondition),
-                            rightCondition), conditionExprs, extensionExprs, matchedVars);
+                    translate(
+                            new Filter(new Filter(filter.getArg(), leftCondition), rightCondition),
+                            conditionExprs, extensionExprs, matchedVars);
                 } else {
                     String existsOperator = null;
                     TupleExpr existsArg = null;
@@ -617,10 +615,12 @@ public class RuleEngineDrools extends RuleEngine {
                         final boolean emptyArg = filter.getArg() instanceof EmptySet;
                         if (!emptyArg) {
                             this.builder.append('(');
-                            translate(filter.getArg(), conditionExprs, extensionExprs, matchedVars);
+                            translate(filter.getArg(), conditionExprs, extensionExprs,
+                                    matchedVars);
                             this.builder.append(" and ");
                         } else if (!conditionExprs.isEmpty()) {
-                            throw new IllegalArgumentException("Unsupported body pattern: " + expr);
+                            throw new IllegalArgumentException(
+                                    "Unsupported body pattern: " + expr);
                         }
                         this.builder.append(existsOperator).append('(');
                         translate(existsArg, Collections.emptySet(), extensionExprs,

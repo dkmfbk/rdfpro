@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -17,12 +17,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Preconditions;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.AbstractRDFHandlerWrapper;
 
@@ -76,32 +76,32 @@ public abstract class StatementDeduplicator {
             Preconditions.checkNotNull(deduplicator);
         }
 
-        return deduplicators.length == 1 ? deduplicators[0] : new ChainedDeduplicator(
-                deduplicators.clone());
+        return deduplicators.length == 1 ? deduplicators[0]
+                : new ChainedDeduplicator(deduplicators.clone());
     }
 
     public final boolean isTotal() {
-        return total();
+        return this.total();
     }
 
     public final boolean test(final Statement stmt) {
-        return process(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+        return this.process(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                 stmt.getContext(), false);
     }
 
-    public final boolean test(final Resource subj, final URI pred, final Value obj,
+    public final boolean test(final Resource subj, final IRI pred, final Value obj,
             @Nullable final Resource ctx) {
-        return process(subj, pred, obj, ctx, false);
+        return this.process(subj, pred, obj, ctx, false);
     }
 
     public final boolean add(final Statement stmt) {
-        return process(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+        return this.process(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                 stmt.getContext(), true);
     }
 
-    public final boolean add(final Resource subj, final URI pred, final Value obj,
+    public final boolean add(final Resource subj, final IRI pred, final Value obj,
             @Nullable final Resource ctx) {
-        return process(subj, pred, obj, ctx, true);
+        return this.process(subj, pred, obj, ctx, true);
     }
 
     public final RDFHandler deduplicate(final RDFHandler handler, final boolean add) {
@@ -109,8 +109,8 @@ public abstract class StatementDeduplicator {
 
             @Override
             public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                if (process(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
-                        stmt.getContext(), add)) {
+                if (StatementDeduplicator.this.process(stmt.getSubject(), stmt.getPredicate(),
+                        stmt.getObject(), stmt.getContext(), add)) {
                     super.handleStatement(stmt);
                 }
             }
@@ -120,10 +120,10 @@ public abstract class StatementDeduplicator {
 
     abstract boolean total();
 
-    abstract boolean process(Resource subj, URI pred, Value obj, @Nullable Resource ctx,
+    abstract boolean process(Resource subj, IRI pred, Value obj, @Nullable Resource ctx,
             boolean mark);
 
-    static Hash hash(final Resource subj, final URI pred, final Value obj, final Resource ctx) {
+    static Hash hash(final Resource subj, final IRI pred, final Value obj, final Resource ctx) {
         Hash hash = Hash.combine(Statements.getHash(subj), Statements.getHash(pred),
                 Statements.getHash(obj), Statements.getHash(ctx));
         if (hash.getLow() == 0) {
@@ -179,10 +179,10 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj, final Resource ctx,
+        boolean process(final Resource subj, final IRI pred, final Value obj, final Resource ctx,
                 final boolean add) {
 
-            final Hash hash = hash(subj, pred, obj, ctx);
+            final Hash hash = StatementDeduplicator.hash(subj, pred, obj, ctx);
 
             final long lo = hash.getLow();
             final long hi = hash.getHigh();
@@ -197,7 +197,7 @@ public abstract class StatementDeduplicator {
             private int size;
 
             Table() {
-                this.hashes = new long[2 * INITIAL_TABLE_SIZE];
+                this.hashes = new long[2 * StatementDeduplicator.INITIAL_TABLE_SIZE];
                 this.size = 0;
             }
 
@@ -213,7 +213,7 @@ public abstract class StatementDeduplicator {
                             this.hashes[slot + 1] = hi;
                             ++this.size;
                             if (this.size >= this.hashes.length / 3) { // fill factor 0.66
-                                rehash();
+                                this.rehash();
                             }
                         }
                         return true;
@@ -261,8 +261,8 @@ public abstract class StatementDeduplicator {
         private int size; // # statements
 
         TotalEqualsDeduplicator() {
-            this.hashes = new int[INITIAL_TABLE_SIZE];
-            this.values = new Value[INITIAL_TABLE_SIZE * 4];
+            this.hashes = new int[StatementDeduplicator.INITIAL_TABLE_SIZE];
+            this.values = new Value[StatementDeduplicator.INITIAL_TABLE_SIZE * 4];
         }
 
         @Override
@@ -271,7 +271,7 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj, final Resource ctx,
+        boolean process(final Resource subj, final IRI pred, final Value obj, final Resource ctx,
                 final boolean add) {
 
             int hash = 6661 * subj.hashCode() + 961 * pred.hashCode() + 31 * obj.hashCode()
@@ -291,7 +291,8 @@ public abstract class StatementDeduplicator {
                             this.values[valueIndex + 3] = ctx;
                             ++this.size;
                             if (this.size >= (this.hashes.length << 1) / 3) { // fill factor 0.66
-                                final Object[] pair = rehash(this.hashes, this.values);
+                                final Object[] pair = StatementDeduplicator.rehash(this.hashes,
+                                        this.values);
                                 this.hashes = (int[]) pair[0];
                                 this.values = (Value[]) pair[1];
                             }
@@ -303,8 +304,9 @@ public abstract class StatementDeduplicator {
                         if (subj.equals(this.values[valueIndex])
                                 && pred.equals(this.values[valueIndex + 1])
                                 && obj.equals(this.values[valueIndex + 2])
-                                && (ctx == null && this.values[valueIndex + 3] == null || ctx != null
-                                        && ctx.equals(this.values[valueIndex + 3]))) {
+                                && (ctx == null && this.values[valueIndex + 3] == null
+                                        || ctx != null
+                                                && ctx.equals(this.values[valueIndex + 3]))) {
                             return false;
                         }
                     }
@@ -328,8 +330,8 @@ public abstract class StatementDeduplicator {
         private int size; // # statements
 
         TotalIdentityDeduplicator() {
-            this.hashes = new int[INITIAL_TABLE_SIZE];
-            this.values = new Value[INITIAL_TABLE_SIZE * 4];
+            this.hashes = new int[StatementDeduplicator.INITIAL_TABLE_SIZE];
+            this.values = new Value[StatementDeduplicator.INITIAL_TABLE_SIZE * 4];
         }
 
         @Override
@@ -338,7 +340,7 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj, final Resource ctx,
+        boolean process(final Resource subj, final IRI pred, final Value obj, final Resource ctx,
                 final boolean add) {
 
             int hash = 6661 * System.identityHashCode(subj) + 961 * System.identityHashCode(pred)
@@ -359,7 +361,8 @@ public abstract class StatementDeduplicator {
                             this.values[valueIndex + 3] = ctx;
                             ++this.size;
                             if (this.size >= (this.hashes.length << 1) / 3) { // fill factor 0.66
-                                final Object[] pair = rehash(this.hashes, this.values);
+                                final Object[] pair = StatementDeduplicator.rehash(this.hashes,
+                                        this.values);
                                 this.hashes = (int[]) pair[0];
                                 this.values = (Value[]) pair[1];
                             }
@@ -395,8 +398,8 @@ public abstract class StatementDeduplicator {
 
         PartialHashDeduplicator(final int numCachedStatements) {
             this.hashes = new long[numCachedStatements * 2];
-            this.locks = new Object[LOCK_NUM];
-            for (int i = 0; i < LOCK_NUM; ++i) {
+            this.locks = new Object[StatementDeduplicator.LOCK_NUM];
+            for (int i = 0; i < StatementDeduplicator.LOCK_NUM; ++i) {
                 this.locks[i] = new Object();
             }
         }
@@ -407,17 +410,17 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj,
+        boolean process(final Resource subj, final IRI pred, final Value obj,
                 @Nullable final Resource ctx, final boolean add) {
 
-            final Hash hash = hash(subj, pred, obj, ctx);
+            final Hash hash = StatementDeduplicator.hash(subj, pred, obj, ctx);
 
             final long hi = hash.getHigh();
             final long lo = hash.getLow();
 
             final int index = ((int) lo & 0x7FFFFFFF) % (this.hashes.length >>> 1) << 1;
 
-            synchronized (this.locks[index & LOCK_MASK]) {
+            synchronized (this.locks[index & StatementDeduplicator.LOCK_MASK]) {
                 if (this.hashes[index] == hi && this.hashes[index + 1] == lo) {
                     return false;
                 }
@@ -444,8 +447,8 @@ public abstract class StatementDeduplicator {
         PartialIdentityDeduplicator(final int numCachedStatements) {
             this.hashes = new int[numCachedStatements];
             this.values = new Value[numCachedStatements * 4];
-            this.locks = new Object[LOCK_NUM];
-            for (int i = 0; i < LOCK_NUM; ++i) {
+            this.locks = new Object[StatementDeduplicator.LOCK_NUM];
+            for (int i = 0; i < StatementDeduplicator.LOCK_NUM; ++i) {
                 this.locks[i] = new Object();
             }
         }
@@ -456,7 +459,7 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj,
+        boolean process(final Resource subj, final IRI pred, final Value obj,
                 @Nullable final Resource ctx, final boolean add) {
 
             int hash = 6661 * System.identityHashCode(subj) + 961 * System.identityHashCode(pred)
@@ -467,10 +470,9 @@ public abstract class StatementDeduplicator {
             final int hashIndex = (hash & 0x7FFFFFFF) % this.hashes.length;
             final int valueIndex = hashIndex << 2;
 
-            synchronized (this.locks[hash & LOCK_MASK]) {
+            synchronized (this.locks[hash & StatementDeduplicator.LOCK_MASK]) {
                 if (this.hashes[hashIndex] == hash //
-                        && subj == this.values[valueIndex]
-                        && pred == this.values[valueIndex + 1]
+                        && subj == this.values[valueIndex] && pred == this.values[valueIndex + 1]
                         && obj == this.values[valueIndex + 2]
                         && ctx == this.values[valueIndex + 3]) {
                     return false;
@@ -501,8 +503,8 @@ public abstract class StatementDeduplicator {
         PartialEqualsDeduplicator(final int numCachedStatements) {
             this.hashes = new int[numCachedStatements];
             this.values = new Value[numCachedStatements * 4];
-            this.locks = new Object[LOCK_NUM];
-            for (int i = 0; i < LOCK_NUM; ++i) {
+            this.locks = new Object[StatementDeduplicator.LOCK_NUM];
+            for (int i = 0; i < StatementDeduplicator.LOCK_NUM; ++i) {
                 this.locks[i] = new Object();
             }
         }
@@ -513,7 +515,7 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj,
+        boolean process(final Resource subj, final IRI pred, final Value obj,
                 @Nullable final Resource ctx, final boolean add) {
 
             int hash = 6661 * subj.hashCode() + 961 * pred.hashCode() + 31 * obj.hashCode()
@@ -523,13 +525,12 @@ public abstract class StatementDeduplicator {
             final int hashIndex = (hash & 0x7FFFFFFF) % this.hashes.length;
             final int valueIndex = hashIndex << 2;
 
-            synchronized (this.locks[hash & LOCK_MASK]) {
-                if (this.hashes[hashIndex] == hash
-                        && subj.equals(this.values[valueIndex])
+            synchronized (this.locks[hash & StatementDeduplicator.LOCK_MASK]) {
+                if (this.hashes[hashIndex] == hash && subj.equals(this.values[valueIndex])
                         && pred.equals(this.values[valueIndex + 1])
                         && obj.equals(this.values[valueIndex + 2])
-                        && (ctx == null && this.values[valueIndex + 3] == null || ctx != null
-                                && ctx.equals(this.values[valueIndex + 3]))) {
+                        && (ctx == null && this.values[valueIndex + 3] == null
+                                || ctx != null && ctx.equals(this.values[valueIndex + 3]))) {
                     return false;
                 }
                 if (add) {
@@ -572,7 +573,7 @@ public abstract class StatementDeduplicator {
         }
 
         @Override
-        boolean process(final Resource subj, final URI pred, final Value obj, final Resource ctx,
+        boolean process(final Resource subj, final IRI pred, final Value obj, final Resource ctx,
                 final boolean add) {
 
             for (final StatementDeduplicator deduplicator : this.deduplicators) {

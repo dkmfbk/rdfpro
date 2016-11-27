@@ -8,4 +8,4 @@ target/
 .idea/
 **/*.versionsBackup
 sync-demo.sh
-
+workspace

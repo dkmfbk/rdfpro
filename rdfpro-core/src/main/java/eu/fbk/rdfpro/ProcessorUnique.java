@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -28,12 +28,12 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.IO;
@@ -48,7 +48,6 @@ final class ProcessorUnique implements RDFProcessor {
         this.mergeContexts = mergeContexts;
     }
 
-    @SuppressWarnings("resource")
     @Override
     public RDFHandler wrap(final RDFHandler handler) {
         Objects.requireNonNull(handler);
@@ -434,7 +433,7 @@ final class ProcessorUnique implements RDFProcessor {
                     @Override
                     public void accept(final Statement statement) {
                         try {
-                            handleStatementSorted(statement);
+                            Handler.this.handleStatementSorted(statement);
                         } catch (final RDFHandlerException ex) {
                             throw new RuntimeException(ex);
                         }
@@ -443,7 +442,7 @@ final class ProcessorUnique implements RDFProcessor {
                 });
                 this.sorter.close();
                 this.sorter = null;
-                handleEndRDF();
+                this.handleEndRDF();
             } catch (final IOException ex) {
                 throw new RDFHandlerException(ex);
             }
@@ -478,7 +477,7 @@ final class ProcessorUnique implements RDFProcessor {
         private Resource statementSubj;
 
         @Nullable
-        private URI statementPred;
+        private IRI statementPred;
 
         @Nullable
         private Value statementObj;
@@ -512,7 +511,7 @@ final class ProcessorUnique implements RDFProcessor {
         void handleStatementSorted(final Statement statement) throws RDFHandlerException {
 
             final Resource subj = statement.getSubject();
-            final URI pred = statement.getPredicate();
+            final IRI pred = statement.getPredicate();
             final Value obj = statement.getObject();
             final Resource ctx = statement.getContext();
 
@@ -541,7 +540,7 @@ final class ProcessorUnique implements RDFProcessor {
                 }
 
             } else {
-                flush();
+                this.flush();
                 this.statement = statement;
                 this.statementSubj = subj;
                 this.statementPred = pred;
@@ -553,7 +552,7 @@ final class ProcessorUnique implements RDFProcessor {
 
         @Override
         void handleEndRDF() throws RDFHandlerException {
-            flush();
+            this.flush();
             for (final List<Statement> statements : this.contextsStatements.values()) {
                 for (final Statement statement : statements) {
                     this.handler.handleStatement(statement);
@@ -582,7 +581,7 @@ final class ProcessorUnique implements RDFProcessor {
                 if (this.statementCtx == null || this.statementContexts.size() <= 1) {
                     statement = this.statement;
                 } else {
-                    final Resource mergedContext = mergeContexts(this.statementContexts);
+                    final Resource mergedContext = this.mergeContexts(this.statementContexts);
                     statement = mergedContext.equals(this.statement.getContext()) ? this.statement
                             : Statements.VALUE_FACTORY.createStatement(this.statementSubj,
                                     this.statementPred, this.statementObj, mergedContext);
@@ -603,8 +602,8 @@ final class ProcessorUnique implements RDFProcessor {
                 int index = 0;
                 for (final Resource source : contexts) {
                     args[index++] = source.stringValue();
-                    if (source instanceof URI) {
-                        final String ns = ((URI) source).getNamespace();
+                    if (source instanceof IRI) {
+                        final String ns = ((IRI) source).getNamespace();
                         if (namespace == null) {
                             namespace = ns;
                         } else {
@@ -626,7 +625,7 @@ final class ProcessorUnique implements RDFProcessor {
                     namespace = namespace + "/";
                 }
                 final String localName = Hash.murmur3(args).toString();
-                context = Statements.VALUE_FACTORY.createURI(namespace, localName);
+                context = Statements.VALUE_FACTORY.createIRI(namespace, localName);
                 this.mergedContexts.put(set, context);
             }
             return context;

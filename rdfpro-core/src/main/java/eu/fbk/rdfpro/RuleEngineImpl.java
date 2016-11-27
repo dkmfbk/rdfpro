@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -23,27 +23,26 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.QuadModel;
 import eu.fbk.rdfpro.util.StatementDeduplicator;
+import eu.fbk.rdfpro.util.StatementDeduplicator.ComparisonMethod;
 import eu.fbk.rdfpro.util.StatementMatcher;
 import eu.fbk.rdfpro.util.StatementTemplate;
-import eu.fbk.rdfpro.util.StatementDeduplicator.ComparisonMethod;
 import eu.fbk.rdfpro.util.Statements;
 
 final class RuleEngineImpl extends RuleEngine {
@@ -52,14 +51,14 @@ final class RuleEngineImpl extends RuleEngine {
 
     private static final int DEDUPLICATION_CACHE_SIZE = 16 * 1024;
 
-    private static final boolean FORCE_DEDUPLICATION = Boolean.parseBoolean(Environment
-            .getProperty("rdfpro.rules.deduplication", "false"));
+    private static final boolean FORCE_DEDUPLICATION = Boolean
+            .parseBoolean(Environment.getProperty("rdfpro.rules.deduplication", "false"));
 
-    private static final boolean ENABLE_STREAMING = Boolean.parseBoolean(Environment.getProperty(
-            "rdfpro.rules.streaming", "true"));
+    private static final boolean ENABLE_STREAMING = Boolean
+            .parseBoolean(Environment.getProperty("rdfpro.rules.streaming", "true"));
 
-    private static final boolean ENABLE_SEMINAIVE = Boolean.parseBoolean(Environment.getProperty(
-            "rdfpro.rules.seminaive", "true"));
+    private static final boolean ENABLE_SEMINAIVE = Boolean
+            .parseBoolean(Environment.getProperty("rdfpro.rules.seminaive", "true"));
 
     private final List<Phase> phases;
 
@@ -67,7 +66,7 @@ final class RuleEngineImpl extends RuleEngine {
 
     public RuleEngineImpl(final Ruleset ruleset) {
         super(ruleset);
-        this.phases = buildPhases(ruleset);
+        this.phases = RuleEngineImpl.buildPhases(ruleset);
 
         boolean unique = false;
         for (final Phase phase : this.phases) {
@@ -105,7 +104,7 @@ final class RuleEngineImpl extends RuleEngine {
             phase.normalize(quadModel.getValueNormalizer()).eval(quadModel);
         }
         if (model != quadModel) {
-            if (getRuleset().isDeletePossible() || !(model instanceof Set<?>)) {
+            if (this.getRuleset().isDeletePossible() || !(model instanceof Set<?>)) {
                 model.clear();
             }
             model.addAll(quadModel);
@@ -157,8 +156,8 @@ final class RuleEngineImpl extends RuleEngine {
 
                 @Override
                 public void endRDF() throws RDFHandlerException {
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Model populated in {} ms, {} statements",
+                    if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                        RuleEngineImpl.LOGGER.debug("Model populated in {} ms, {} statements",
                                 System.currentTimeMillis() - this.ts, this.model.size());
                     }
                     for (final Phase phase : modelPhases) {
@@ -198,9 +197,8 @@ final class RuleEngineImpl extends RuleEngine {
         }
 
         // Emit the supplied statements if authorized and if it does not match delete patterns
-        if (emitStmt
-                && (deleteMatcher == null || !deleteMatcher.match(stmt.getSubject(),
-                        stmt.getPredicate(), stmt.getObject(), stmt.getContext()))) {
+        if (emitStmt && (deleteMatcher == null || !deleteMatcher.match(stmt.getSubject(),
+                stmt.getPredicate(), stmt.getObject(), stmt.getContext()))) {
             sink.handleStatement(stmt);
         }
 
@@ -232,9 +230,8 @@ final class RuleEngineImpl extends RuleEngine {
             while (true) {
 
                 // Emit statement if it does not match delete patterns
-                if (stack != null
-                        && (deleteMatcher == null || !deleteMatcher.match(s.getSubject(),
-                                s.getPredicate(), s.getObject(), s.getContext()))) {
+                if (stack != null && (deleteMatcher == null || !deleteMatcher.match(s.getSubject(),
+                        s.getPredicate(), s.getObject(), s.getContext()))) {
                     sink.handleStatement(s);
                 }
 
@@ -290,7 +287,7 @@ final class RuleEngineImpl extends RuleEngine {
                 final Statement s = statements[i];
                 statements[i] = Statements.VALUE_FACTORY.createStatement(
                         (Resource) normalizer.apply(s.getSubject()),
-                        (URI) normalizer.apply(s.getPredicate()), //
+                        (IRI) normalizer.apply(s.getPredicate()), //
                         normalizer.apply(s.getObject()),
                         (Resource) normalizer.apply(s.getContext()));
             }
@@ -307,13 +304,13 @@ final class RuleEngineImpl extends RuleEngine {
         for (final Rule rule : ruleset.getRules()) {
             if (!rules.isEmpty() && (rule.isFixpoint() != rules.get(0).isFixpoint() //
                     || rule.getPhase() != rules.get(0).getPhase())) {
-                phases.add(buildPhase(rules));
+                phases.add(RuleEngineImpl.buildPhase(rules));
                 rules.clear();
             }
             rules.add(rule);
         }
         if (!rules.isEmpty()) {
-            phases.add(buildPhase(rules));
+            phases.add(RuleEngineImpl.buildPhase(rules));
         }
         return phases;
     }
@@ -332,9 +329,9 @@ final class RuleEngineImpl extends RuleEngine {
 
         // Select the type of phase based on rule properties
         Phase phase;
-        if (streamable && ENABLE_STREAMING) {
+        if (streamable && RuleEngineImpl.ENABLE_STREAMING) {
             phase = StreamPhase.create(rules);
-        } else if (simple && insertOnly && ENABLE_SEMINAIVE) {
+        } else if (simple && insertOnly && RuleEngineImpl.ENABLE_SEMINAIVE) {
             phase = SemiNaivePhase.create(rules);
         } else {
             phase = NaivePhase.create(rules);
@@ -436,12 +433,12 @@ final class RuleEngineImpl extends RuleEngine {
                         final Value subj = ip.getSubjectVar().getValue();
                         final Value pred = ip.getPredicateVar().getValue();
                         final Value obj = ip.getObjectVar().getValue();
-                        final Value ctx = ip.getContextVar() == null ? null : ip.getContextVar()
-                                .getValue();
-                        if (subj instanceof Resource && pred instanceof URI
+                        final Value ctx = ip.getContextVar() == null ? null
+                                : ip.getContextVar().getValue();
+                        if (subj instanceof Resource && pred instanceof IRI
                                 && (ctx == null || ctx instanceof Resource)) {
                             axioms.add(Statements.VALUE_FACTORY.createStatement((Resource) subj,
-                                    (URI) pred, obj, (Resource) ctx));
+                                    (IRI) pred, obj, (Resource) ctx));
                         }
                     }
                 }
@@ -453,11 +450,12 @@ final class RuleEngineImpl extends RuleEngine {
             final StatementMatcher im = ib == null ? null : ib.build(null);
 
             // Log result
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug(
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                RuleEngineImpl.LOGGER.debug(
                         "Configured StreamPhase: {} rules; {}; {} axioms; {} delete matcher; "
-                                + "{} insert matcher", Iterables.size(rules),
-                        containsFixpointRule ? "fixpoint" : "non fixpoint", axioms.size(), dm, im);
+                                + "{} insert matcher",
+                        Iterables.size(rules), containsFixpointRule ? "fixpoint" : "non fixpoint",
+                        axioms.size(), dm, im);
             }
 
             // Create a new StreamPhase object, using null when there are no deletions or
@@ -502,17 +500,17 @@ final class RuleEngineImpl extends RuleEngine {
                     super.startRDF();
 
                     // Initialize deduplicator
-                    if (deduplicate || FORCE_DEDUPLICATION) {
+                    if (deduplicate || RuleEngineImpl.FORCE_DEDUPLICATION) {
                         this.deduplicator = StatementDeduplicator
                                 .newTotalDeduplicator(ComparisonMethod.HASH);
                     } else {
                         this.deduplicator = StatementDeduplicator.newPartialDeduplicator(
-                                ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                                ComparisonMethod.EQUALS, RuleEngineImpl.DEDUPLICATION_CACHE_SIZE);
                     }
 
                     // Emit axioms
                     for (final Statement axiom : StreamPhase.this.axioms) {
-                        expand(axiom, this.handler, this.deduplicator,
+                        RuleEngineImpl.expand(axiom, this.handler, this.deduplicator,
                                 StreamPhase.this.fixpoint ? StreamPhase.this.deleteMatcher : null,
                                 StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
                     }
@@ -522,8 +520,9 @@ final class RuleEngineImpl extends RuleEngine {
                 public void handleStatement(final Statement stmt) throws RDFHandlerException {
 
                     // Delegate to recursive method expand(), marking the statement as explicit
-                    expand(stmt, this.handler, this.deduplicator, StreamPhase.this.deleteMatcher,
-                            StreamPhase.this.insertMatcher, StreamPhase.this.fixpoint, true);
+                    RuleEngineImpl.expand(stmt, this.handler, this.deduplicator,
+                            StreamPhase.this.deleteMatcher, StreamPhase.this.insertMatcher,
+                            StreamPhase.this.fixpoint, true);
                 }
 
             };
@@ -540,8 +539,8 @@ final class RuleEngineImpl extends RuleEngine {
 
         private final boolean canInsert;
 
-        private NaivePhase(final List<Rule> rules, final boolean fixpoint,
-                final boolean canDelete, final boolean canInsert) {
+        private NaivePhase(final List<Rule> rules, final boolean fixpoint, final boolean canDelete,
+                final boolean canInsert) {
             super(false, true);
             this.rules = rules;
             this.fixpoint = fixpoint;
@@ -556,8 +555,8 @@ final class RuleEngineImpl extends RuleEngine {
             final boolean fixpoint = ruleList.get(0).isFixpoint();
 
             // Log result
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Configured NaivePhase: {} rules; {}", ruleList.size(),
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                RuleEngineImpl.LOGGER.debug("Configured NaivePhase: {} rules; {}", ruleList.size(),
                         fixpoint ? "fixpoint" : "non fixpoint");
             }
 
@@ -574,32 +573,35 @@ final class RuleEngineImpl extends RuleEngine {
         }
 
         private StatementDeduplicator newDeduplicator() {
-            return FORCE_DEDUPLICATION ? StatementDeduplicator
-                    .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
-                    .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+            return RuleEngineImpl.FORCE_DEDUPLICATION
+                    ? StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH)
+                    : StatementDeduplicator.newPartialDeduplicator(ComparisonMethod.EQUALS,
+                            RuleEngineImpl.DEDUPLICATION_CACHE_SIZE);
         }
 
         @Override
         public void eval(final QuadModel model) {
 
-            StatementDeduplicator deleteDeduplicator = this.canDelete ? newDeduplicator() : null;
-            StatementDeduplicator insertDeduplicator = this.canInsert ? newDeduplicator() : null;
+            StatementDeduplicator deleteDeduplicator = this.canDelete ? this.newDeduplicator()
+                    : null;
+            StatementDeduplicator insertDeduplicator = this.canInsert ? this.newDeduplicator()
+                    : null;
 
             if (!this.fixpoint) {
                 // (1) One-shot evaluation
-                evalRules(deleteDeduplicator, insertDeduplicator, model);
+                this.evalRules(deleteDeduplicator, insertDeduplicator, model);
 
             } else {
                 // (2) Naive fixpoint evaluation
                 while (true) {
-                    final boolean modified = evalRules(deleteDeduplicator, insertDeduplicator,
+                    final boolean modified = this.evalRules(deleteDeduplicator, insertDeduplicator,
                             model);
                     if (!modified) {
                         break; // fixpoint reached
                     }
                     if (this.canInsert && this.canDelete) {
-                        deleteDeduplicator = newDeduplicator();
-                        insertDeduplicator = newDeduplicator();
+                        deleteDeduplicator = this.newDeduplicator();
+                        insertDeduplicator = this.newDeduplicator();
                     }
                 }
             }
@@ -656,12 +658,14 @@ final class RuleEngineImpl extends RuleEngine {
 
             // Take a final timestamp and log relevant statistics if enabled
             final long ts3 = System.currentTimeMillis();
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("{} rules (out of {}) rules evaluated in {} ms ({} ms query, "
-                        + "{} ms modify), {} deletions ({} buffered), {} insertions "
-                        + "({} buffered), {} quads in, {} quads out", numRules, this.rules.size(),
-                        ts3 - ts1, ts2 - ts1, ts3 - ts2, size1 - size0, deleteBufferSize, size2
-                                - size1, insertBufferSize, size0, size2);
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                RuleEngineImpl.LOGGER.debug(
+                        "{} rules (out of {}) rules evaluated in {} ms ({} ms query, "
+                                + "{} ms modify), {} deletions ({} buffered), {} insertions "
+                                + "({} buffered), {} quads in, {} quads out",
+                        numRules, this.rules.size(), ts3 - ts1, ts2 - ts1, ts3 - ts2,
+                        size1 - size0, deleteBufferSize, size2 - size1, insertBufferSize, size0,
+                        size2);
             }
 
             // Return true if the model has changed
@@ -727,12 +731,12 @@ final class RuleEngineImpl extends RuleEngine {
                         final Value subj = ip.getSubjectVar().getValue();
                         final Value pred = ip.getPredicateVar().getValue();
                         final Value obj = ip.getObjectVar().getValue();
-                        final Value ctx = ip.getContextVar() == null ? null : ip.getContextVar()
-                                .getValue();
-                        if (subj instanceof Resource && pred instanceof URI
+                        final Value ctx = ip.getContextVar() == null ? null
+                                : ip.getContextVar().getValue();
+                        if (subj instanceof Resource && pred instanceof IRI
                                 && (ctx == null || ctx instanceof Resource)) {
                             axioms.add(Statements.VALUE_FACTORY.createStatement((Resource) subj,
-                                    (URI) pred, obj, (Resource) ctx));
+                                    (IRI) pred, obj, (Resource) ctx));
                         }
                     }
                 }
@@ -741,12 +745,13 @@ final class RuleEngineImpl extends RuleEngine {
             final StatementMatcher streamMatcher = streamBuilder.build(null);
 
             // Log result
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Configured SemiNaivePhase: {} rules ({} join); {}; {} axioms; "
-                        + "{} join matcher ({}); {} stream matcher", allRules.size(),
-                        joinRules.size(), fixpoint ? "fixpoint" : "non fixpoint", axioms.size(),
-                        joinMatcher, joinMatcher.matchAll() ? "match all" : "no match all",
-                        streamMatcher);
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                RuleEngineImpl.LOGGER.debug(
+                        "Configured SemiNaivePhase: {} rules ({} join); {}; {} axioms; "
+                                + "{} join matcher ({}); {} stream matcher",
+                        allRules.size(), joinRules.size(), fixpoint ? "fixpoint" : "non fixpoint",
+                        axioms.size(), joinMatcher,
+                        joinMatcher.matchAll() ? "match all" : "no match all", streamMatcher);
             }
 
             // Create and return the SemiNaivePhase object for the rules specified
@@ -775,7 +780,6 @@ final class RuleEngineImpl extends RuleEngine {
             return result;
         }
 
-        @SuppressWarnings("resource")
         @Override
         public RDFHandler eval(final RDFHandler handler, final boolean deduplicate) {
 
@@ -789,27 +793,27 @@ final class RuleEngineImpl extends RuleEngine {
 
             // Allocate a partial deduplicator to use during all the phase evaluation
             final StatementDeduplicator deduplicator;
-            if (FORCE_DEDUPLICATION) {
+            if (RuleEngineImpl.FORCE_DEDUPLICATION) {
                 deduplicator = StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH);
             } else {
                 deduplicator = StatementDeduplicator.newPartialDeduplicator(
-                        ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                        ComparisonMethod.EQUALS, RuleEngineImpl.DEDUPLICATION_CACHE_SIZE);
             }
 
             // Handle three case
             if (!this.fixpoint) {
                 // (1) Single iteration of both join and stream rules
-                evalJoinStreamIteration(deduplicator, model);
+                this.evalJoinStreamIteration(deduplicator, model);
 
             } else {
                 // (2) Semi-naive fixpoint evaluation. Expand the model evaluating stream
                 // rules first, then evaluate join rules + stream rules in fixpoint
                 if (this.joinRules.size() < this.allRules.size()) {
-                    evalStreamFixpoint(deduplicator, model);
+                    this.evalStreamFixpoint(deduplicator, model);
                 }
                 QuadModel delta = null;
                 while (true) {
-                    delta = evalJoinIterationStreamFixpoint(deduplicator, model, delta, null);
+                    delta = this.evalJoinIterationStreamFixpoint(deduplicator, model, delta, null);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
@@ -828,11 +832,11 @@ final class RuleEngineImpl extends RuleEngine {
 
             // Evaluate stream rules, including axioms, single iteration (no fixpoint)
             buffer.addAll(Arrays.asList(this.axioms));
-            applyStreamRules(deduplicator, model, buffer, false);
+            this.applyStreamRules(deduplicator, model, buffer, false);
 
             // Evaluate join rules, single iteration (no fixpoint)
-            final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, null,
-                    null, () -> {
+            final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, null, null,
+                    () -> {
                         return deduplicator.deduplicate(buffer.get(), true);
                     });
 
@@ -848,19 +852,20 @@ final class RuleEngineImpl extends RuleEngine {
             final long ts2 = System.currentTimeMillis();
 
             // Log evaluation statistics
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Iteration of {} join rules ({} variants) and {} stream rules "
-                        + "performed in {} ms ({} ms evaluation, {} ms model update), "
-                        + "{} insertions ({} buffered), {} quads in, {} quads out",
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
+                RuleEngineImpl.LOGGER.debug(
+                        "Iteration of {} join rules ({} variants) and {} stream rules "
+                                + "performed in {} ms ({} ms evaluation, {} ms model update), "
+                                + "{} insertions ({} buffered), {} quads in, {} quads out",
                         this.joinRules.size(), numVariants,
-                        this.allRules.size() - this.joinRules.size(), ts2 - ts0, ts1 - ts0, ts2
-                                - ts1, size1 - size0, buffer.size(), size0, size1);
+                        this.allRules.size() - this.joinRules.size(), ts2 - ts0, ts1 - ts0,
+                        ts2 - ts1, size1 - size0, buffer.size(), size0, size1);
             }
         }
 
-        private QuadModel evalJoinIterationStreamFixpoint(
-                final StatementDeduplicator deduplicator, final QuadModel model,
-                @Nullable final QuadModel delta, @Nullable final RDFHandler unmatcheableSink) {
+        private QuadModel evalJoinIterationStreamFixpoint(final StatementDeduplicator deduplicator,
+                final QuadModel model, @Nullable final QuadModel delta,
+                @Nullable final RDFHandler unmatcheableSink) {
 
             // Take a timestamp
             final long ts0 = System.currentTimeMillis();
@@ -893,7 +898,7 @@ final class RuleEngineImpl extends RuleEngine {
 
                     @Override
                     public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                        expand(stmt, this.handler, deduplicator, null,
+                        RuleEngineImpl.expand(stmt, this.handler, deduplicator, null,
                                 SemiNaivePhase.this.streamMatcher, true, true);
                     }
 
@@ -920,14 +925,15 @@ final class RuleEngineImpl extends RuleEngine {
 
             // Take a final timestamp and log relevant statistics if enabled
             final long ts3 = System.currentTimeMillis();
-            if (LOGGER.isDebugEnabled()) {
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
                 final int numJoinRules = this.joinRules.size();
                 final int numStreamRules = this.allRules.size() - this.joinRules.size();
-                LOGGER.debug("Iteration of {} join rules ({} variants) and fixpoint of {} stream "
-                        + "rules evaluated in {} ms ({} ms evaluation, {} ms model update, {} ms "
-                        + "delta), {} insertions ({} buffered), {} quads in, {} quads out",
-                        numJoinRules, numVariants, numStreamRules, ts3 - ts0, ts1 - ts0,
-                        ts2 - ts1, ts3 - ts2, size1 - size0, joinBufferSize, size0, size1);
+                RuleEngineImpl.LOGGER.debug(
+                        "Iteration of {} join rules ({} variants) and fixpoint of {} stream "
+                                + "rules evaluated in {} ms ({} ms evaluation, {} ms model update, {} ms "
+                                + "delta), {} insertions ({} buffered), {} quads in, {} quads out",
+                        numJoinRules, numVariants, numStreamRules, ts3 - ts0, ts1 - ts0, ts2 - ts1,
+                        ts3 - ts2, size1 - size0, joinBufferSize, size0, size1);
             }
 
             // Return the new delta model
@@ -943,8 +949,8 @@ final class RuleEngineImpl extends RuleEngine {
             // Allocate a buffer where to accumulate the result of rule evaluation
             final StatementBuffer buffer = new StatementBuffer();
             buffer.addAll(Arrays.asList(this.axioms));
-            applyStreamRules(deduplicator, Iterables.concat(Arrays.asList(this.axioms), model),
-                    buffer, true);
+            this.applyStreamRules(deduplicator,
+                    Iterables.concat(Arrays.asList(this.axioms), model), buffer, true);
 
             // Take a timestamp before modifying the model
             final long ts1 = System.currentTimeMillis();
@@ -958,12 +964,14 @@ final class RuleEngineImpl extends RuleEngine {
             final long ts2 = System.currentTimeMillis();
 
             // Log statistics
-            if (LOGGER.isDebugEnabled()) {
+            if (RuleEngineImpl.LOGGER.isDebugEnabled()) {
                 final int numStreamRules = this.allRules.size() - this.joinRules.size();
-                LOGGER.debug("Fixpoint of {} stream rules evaluated in {} ms ({} ms evaluation, "
-                        + "{} ms model update), {} insertions ({} buffered), {} quads in, "
-                        + "{} quads out", numStreamRules, ts2 - ts0, ts1 - ts0, ts2 - ts1, size1
-                        - size0, buffer.size(), size0, size1);
+                RuleEngineImpl.LOGGER.debug(
+                        "Fixpoint of {} stream rules evaluated in {} ms ({} ms evaluation, "
+                                + "{} ms model update), {} insertions ({} buffered), {} quads in, "
+                                + "{} quads out",
+                        numStreamRules, ts2 - ts0, ts1 - ts0, ts2 - ts1, size1 - size0,
+                        buffer.size(), size0, size1);
             }
         }
 
@@ -980,7 +988,7 @@ final class RuleEngineImpl extends RuleEngine {
 
                     @Override
                     public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                        expand(stmt, this.handler, deduplicator, null,
+                        RuleEngineImpl.expand(stmt, this.handler, deduplicator, null,
                                 SemiNaivePhase.this.streamMatcher, fixpoint, false);
                     }
 
@@ -989,11 +997,7 @@ final class RuleEngineImpl extends RuleEngine {
             final RDFHandler handler = RDFHandlers.dispatchRoundRobin(64, sinks);
 
             // Evaluate rules
-            try {
-                RDFSources.wrap(statements).emit(handler, 1);
-            } catch (final RDFHandlerException ex) {
-                Throwables.propagate(ex);
-            }
+            RDFSources.wrap(statements).emit(handler, 1);
         }
 
         private final class FixpointHandler extends AbstractRDFHandlerWrapper {
@@ -1022,9 +1026,10 @@ final class RuleEngineImpl extends RuleEngine {
                 this.joinModel = QuadModel.create();
 
                 // Allocate a deduplicator
-                this.deduplicator = this.deduplicate || FORCE_DEDUPLICATION ? StatementDeduplicator
-                        .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
-                        .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                this.deduplicator = this.deduplicate || RuleEngineImpl.FORCE_DEDUPLICATION
+                        ? StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH)
+                        : StatementDeduplicator.newPartialDeduplicator(ComparisonMethod.EQUALS,
+                                RuleEngineImpl.DEDUPLICATION_CACHE_SIZE);
 
                 // Setup the sink where to emit output of stream rules
                 this.sink = new AbstractRDFHandlerWrapper(this.handler) {
@@ -1044,7 +1049,7 @@ final class RuleEngineImpl extends RuleEngine {
 
                 // Emit axioms
                 for (final Statement axiom : SemiNaivePhase.this.axioms) {
-                    handleStatement(axiom);
+                    this.handleStatement(axiom);
                 }
             }
 
@@ -1053,7 +1058,7 @@ final class RuleEngineImpl extends RuleEngine {
 
                 // Apply stream rules with output deduplication. Inferred statements are either
                 // emitted (if not further processable) or accumulated in a model
-                expand(stmt, this.sink, this.deduplicator, null,
+                RuleEngineImpl.expand(stmt, this.sink, this.deduplicator, null,
                         SemiNaivePhase.this.streamMatcher, true, true);
             }
 
@@ -1063,17 +1068,17 @@ final class RuleEngineImpl extends RuleEngine {
                 // Semi-naive fixpoint evaluation
                 QuadModel delta = null;
                 while (true) {
-                    delta = evalJoinIterationStreamFixpoint(this.deduplicator, this.joinModel,
-                            delta, this.handler);
+                    delta = SemiNaivePhase.this.evalJoinIterationStreamFixpoint(this.deduplicator,
+                            this.joinModel, delta, this.handler);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
                 }
 
                 // Emit closed statements in the join model
-                final RDFHandler sink = RDFHandlers.decouple(RDFHandlers.ignoreMethods(
-                        this.handler, RDFHandlers.METHOD_START_RDF | RDFHandlers.METHOD_END_RDF
-                                | RDFHandlers.METHOD_CLOSE));
+                final RDFHandler sink = RDFHandlers.decouple(
+                        RDFHandlers.ignoreMethods(this.handler, RDFHandlers.METHOD_START_RDF
+                                | RDFHandlers.METHOD_END_RDF | RDFHandlers.METHOD_CLOSE));
                 RDFSources.wrap(this.joinModel).emit(sink, 1);
 
                 // Release memory
@@ -1108,9 +1113,10 @@ final class RuleEngineImpl extends RuleEngine {
 
                 // Allocate model and deduplicator
                 this.joinModel = QuadModel.create();
-                this.deduplicator = this.deduplicate || FORCE_DEDUPLICATION ? StatementDeduplicator
-                        .newTotalDeduplicator(ComparisonMethod.HASH) : StatementDeduplicator
-                        .newPartialDeduplicator(ComparisonMethod.EQUALS, DEDUPLICATION_CACHE_SIZE);
+                this.deduplicator = this.deduplicate || RuleEngineImpl.FORCE_DEDUPLICATION
+                        ? StatementDeduplicator.newTotalDeduplicator(ComparisonMethod.HASH)
+                        : StatementDeduplicator.newPartialDeduplicator(ComparisonMethod.EQUALS,
+                                RuleEngineImpl.DEDUPLICATION_CACHE_SIZE);
 
                 // Emit axioms
                 for (final Statement axiom : SemiNaivePhase.this.axioms) {
@@ -1122,7 +1128,7 @@ final class RuleEngineImpl extends RuleEngine {
             public void handleStatement(final Statement stmt) throws RDFHandlerException {
 
                 // Apply stream rules to all incoming statements
-                expand(stmt, this.handler, this.deduplicator, null,
+                RuleEngineImpl.expand(stmt, this.handler, this.deduplicator, null,
                         SemiNaivePhase.this.streamMatcher, false, true);
 
                 // Statements matching WHERE part of join rules are accumulated in a model

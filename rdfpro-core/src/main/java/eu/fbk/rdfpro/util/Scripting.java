@@ -31,10 +31,9 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.eclipse.rdf4j.common.text.ASCIIUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import info.aduna.text.ASCIIUtil;
 
 public final class Scripting {
 
@@ -235,8 +234,9 @@ public final class Scripting {
                     final int end = parseURI(script, i);
                     if (end >= 0) {
                         final String uri = script.substring(i, end);
-                        builder.append("(new org.openrdf.model.impl.URIImpl(\"").append(uri)
-                                .append("\"))");
+                        builder.append(
+                                "(org.eclipse.rdf4j.model.impl.SimpleValueFactory.getInstance().createIRI(\"")
+                                .append(uri).append("\"))");
                         i = end;
                     } else {
                         builder.append(c);
@@ -249,8 +249,9 @@ public final class Scripting {
                         final String uri = Statements
                                 .parseValue(script.substring(i, end), Namespaces.DEFAULT)
                                 .stringValue();
-                        builder.append("(new org.openrdf.model.impl.URIImpl(\"").append(uri)
-                                .append("\"))");
+                        builder.append(
+                                "(org.eclipse.rdf4j.model.impl.SimpleValueFactory.getInstance().createIRI(\"")
+                                .append(uri).append("\"))");
                         i = end;
                     } else {
                         do {

@@ -3,13 +3,12 @@ package eu.fbk.rdfpro.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.junit.Test;
-import org.openrdf.model.Statement;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.Transformer;
@@ -22,8 +21,9 @@ public class ScriptingTest {
                 "js: emit(h, subj(q), rdf:type, 'john');", "q", "h");
         final List<Statement> stmts = new ArrayList<>();
         final RDFHandler handler = RDFHandlers.wrap(stmts);
-        final Statement stmt = new StatementImpl(new URIImpl("ex:s"), RDF.TYPE,
-                new URIImpl("ex:c"));
+        ValueFactory vf = Statements.VALUE_FACTORY;
+        final Statement stmt = vf.createStatement(vf.createIRI("ex:s"), RDF.TYPE,
+                vf.createIRI("ex:c"));
         transformer.transform(stmt, handler);
         System.out.println(stmts);
     }

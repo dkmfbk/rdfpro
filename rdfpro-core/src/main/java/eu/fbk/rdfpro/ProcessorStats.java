@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -29,17 +29,17 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,17 +60,17 @@ final class ProcessorStats implements RDFProcessor {
     private final String outputNamespace;
 
     @Nullable
-    private final URI sourceProperty;
+    private final IRI sourceProperty;
 
     @Nullable
-    private final URI sourceContext;
+    private final IRI sourceContext;
 
     private final boolean processCooccurrences;
 
     private final long threshold;
 
-    ProcessorStats(@Nullable final String outputNamespace, @Nullable final URI sourceProperty,
-            @Nullable final URI sourceContext, @Nullable final Long threshold,
+    ProcessorStats(@Nullable final String outputNamespace, @Nullable final IRI sourceProperty,
+            @Nullable final IRI sourceContext, @Nullable final Long threshold,
             final boolean processCooccurrences) {
         this.outputNamespace = outputNamespace;
         this.sourceProperty = sourceProperty;
@@ -90,25 +90,25 @@ final class ProcessorStats implements RDFProcessor {
 
         private final List<SourceStats> sourceList;
 
-        private final Map<URI, SourceStats> sourceMap;
+        private final Map<IRI, SourceStats> sourceMap;
 
-        private final ConcurrentHashMap<URI, URI> sourceInterner;
+        private final ConcurrentHashMap<IRI, IRI> sourceInterner;
 
         private final List<TypeStats> typeList;
 
-        private final Map<URI, TypeStats> typeMap;
+        private final Map<IRI, TypeStats> typeMap;
 
         private final List<PropertyStats> propertyList;
 
-        private final Map<URI, PropertyStats> propertyMap;
+        private final Map<IRI, PropertyStats> propertyMap;
 
         private final List<Context> contextList;
 
         private final Map<Hash, Context> contextMap;
 
-        private final Map<URI, TypeStats.Sampler> samplerMap;
+        private final Map<IRI, TypeStats.Sampler> samplerMap;
 
-        private final Set<String> mintedURIs;
+        private final Set<String> mintedIRIs;
 
         private Hash directBlockSubject;
 
@@ -126,26 +126,26 @@ final class ProcessorStats implements RDFProcessor {
 
         Handler(final RDFHandler handler) {
             this.handler = handler;
-            this.sourceList = new ArrayList<SourceStats>();
-            this.sourceMap = new HashMap<URI, SourceStats>();
-            this.sourceInterner = new ConcurrentHashMap<URI, URI>();
-            this.typeList = new ArrayList<TypeStats>();
-            this.typeMap = new HashMap<URI, TypeStats>();
-            this.propertyList = new ArrayList<PropertyStats>();
-            this.propertyMap = new HashMap<URI, PropertyStats>();
-            this.contextList = new ArrayList<Context>();
-            this.contextMap = new HashMap<Hash, Context>();
-            this.samplerMap = new HashMap<URI, TypeStats.Sampler>();
+            this.sourceList = new ArrayList<>();
+            this.sourceMap = new HashMap<>();
+            this.sourceInterner = new ConcurrentHashMap<>();
+            this.typeList = new ArrayList<>();
+            this.typeMap = new HashMap<>();
+            this.propertyList = new ArrayList<>();
+            this.propertyMap = new HashMap<>();
+            this.contextList = new ArrayList<>();
+            this.contextMap = new HashMap<>();
+            this.samplerMap = new HashMap<>();
             this.directBlockSubject = null;
-            this.directBlockStats = new HashMap<SourceStats, PartialStats>();
-            this.directBlockPartitions = new HashSet<PropertyStats.Partition>();
+            this.directBlockStats = new HashMap<>();
+            this.directBlockPartitions = new HashSet<>();
             this.inverseBlockObject = null;
             this.inverseBlockVersion = 0L;
-            this.mintedURIs = new HashSet<String>();
+            this.mintedIRIs = new HashSet<>();
             this.sorter = null;
             this.firstPass = true;
 
-            PropertyStats ps = new PropertyStats(RDF.TYPE, 0);
+            final PropertyStats ps = new PropertyStats(RDF.TYPE, 0);
             this.propertyMap.put(RDF.TYPE, ps);
             this.propertyList.add(ps);
         }
@@ -153,7 +153,7 @@ final class ProcessorStats implements RDFProcessor {
         @Override
         public void startRDF() throws RDFHandlerException {
             this.handler.startRDF();
-            this.mintedURIs.clear();
+            this.mintedIRIs.clear();
             if (this.firstPass) {
                 this.sorter = new Sorter<Record>() {
 
@@ -185,13 +185,13 @@ final class ProcessorStats implements RDFProcessor {
             }
 
             final Resource s = statement.getSubject();
-            final URI p = statement.getPredicate();
+            final IRI p = statement.getPredicate();
             final Value o = statement.getObject();
             final Resource c = statement.getContext();
 
-            final boolean isURIType = o instanceof URI && p.equals(RDF.TYPE);
+            final boolean isIRIType = o instanceof IRI && p.equals(RDF.TYPE);
             final Hash sh = Hash.create(s);
-            final Hash oh = isURIType ? null : Hash.create(o);
+            final Hash oh = isIRIType ? null : Hash.create(o);
 
             PropertyStats ps;
             synchronized (this.propertyList) {
@@ -204,12 +204,12 @@ final class ProcessorStats implements RDFProcessor {
             }
 
             TypeStats ts = null;
-            if (isURIType) {
+            if (isIRIType) {
                 synchronized (this.typeList) {
                     ts = this.typeMap.get(o);
                     if (ts == null) {
-                        ts = new TypeStats((URI) o, this.typeList.size());
-                        this.typeMap.put((URI) o, ts);
+                        ts = new TypeStats((IRI) o, this.typeList.size());
+                        this.typeMap.put((IRI) o, ts);
                         this.typeList.add(ts);
                     }
                 }
@@ -229,12 +229,11 @@ final class ProcessorStats implements RDFProcessor {
                 }
             }
 
-            if (o instanceof URI
-                    && p.equals(ProcessorStats.this.sourceProperty)
-                    && (ProcessorStats.this.sourceContext == null || Objects.equals(c,
-                            ProcessorStats.this.sourceContext))) {
-                URI source = this.sourceInterner.putIfAbsent((URI) o, (URI) o);
-                source = source != null ? source : (URI) o;
+            if (o instanceof IRI && p.equals(ProcessorStats.this.sourceProperty)
+                    && (ProcessorStats.this.sourceContext == null
+                            || Objects.equals(c, ProcessorStats.this.sourceContext))) {
+                IRI source = this.sourceInterner.putIfAbsent((IRI) o, (IRI) o);
+                source = source != null ? source : (IRI) o;
                 Context sctx;
                 synchronized (this.contextList) {
                     sctx = this.contextMap.get(sh);
@@ -246,7 +245,7 @@ final class ProcessorStats implements RDFProcessor {
                 }
                 synchronized (sctx) {
                     if (!Arrays.asList(sctx.sources).contains(source)) {
-                        final URI[] array = new URI[sctx.sources.length + 1];
+                        final IRI[] array = new IRI[sctx.sources.length + 1];
                         System.arraycopy(sctx.sources, 0, array, 0, sctx.sources.length);
                         array[array.length - 1] = source;
                         sctx.sources = array;
@@ -259,7 +258,7 @@ final class ProcessorStats implements RDFProcessor {
             final int ci = ctx == null ? -1 : ctx.index;
 
             final Record direct = Record.create(false, sh, pi, ti, oh, ci);
-            final Record inverse = isURIType ? null : Record.create(true, null, pi, ti, oh, ci);
+            final Record inverse = isIRIType ? null : Record.create(true, null, pi, ti, oh, ci);
 
             try {
                 this.sorter.emit(direct);
@@ -277,7 +276,7 @@ final class ProcessorStats implements RDFProcessor {
                 ps.sampler.add(statement);
             }
 
-            if (s instanceof URI) {
+            if (s instanceof IRI) {
                 synchronized (this.samplerMap) {
                     TypeStats.Sampler sampler = this.samplerMap.get(s);
                     if (sampler != null) {
@@ -289,7 +288,7 @@ final class ProcessorStats implements RDFProcessor {
                         sampler = new TypeStats.Sampler();
                         sampler.add(statement);
                         ts.sampler = sampler;
-                        this.samplerMap.put((URI) s, sampler);
+                        this.samplerMap.put((IRI) s, sampler);
                     }
                 }
             }
@@ -314,7 +313,7 @@ final class ProcessorStats implements RDFProcessor {
                         if (!ctx.used) {
                             this.contextList.set(i, null);
                         } else {
-                            for (final URI source : ctx.sources) {
+                            for (final IRI source : ctx.sources) {
                                 SourceStats ss = this.sourceMap.get(source);
                                 if (ss == null) {
                                     ss = new SourceStats(source, this.sourceList.size());
@@ -343,30 +342,31 @@ final class ProcessorStats implements RDFProcessor {
                         }
                     }
 
-                    LOGGER.debug("Status: {} properties, {} types, {} contexts, " + "{} sources",
-                            this.propertyList.size(), this.typeList.size(),
-                            this.contextMap.size(), this.sourceList.size());
+                    ProcessorStats.LOGGER.debug(
+                            "Status: {} properties, {} types, {} contexts, " + "{} sources",
+                            this.propertyList.size(), this.typeList.size(), this.contextMap.size(),
+                            this.sourceList.size());
 
                     this.sorter.end(false, new Consumer<Record>() {
 
                         @Override
                         public void accept(final Record record) {
                             if (record.inverse) {
-                                handleInverseRecord(record);
+                                Handler.this.handleInverseRecord(record);
                             } else {
-                                handleDirectRecord(record);
+                                Handler.this.handleDirectRecord(record);
                             }
                         }
 
                     });
                     this.sorter = null;
-                    handleDirectRecord(null); // flush last direct block
+                    this.handleDirectRecord(null); // flush last direct block
 
                 } catch (final IOException ex) {
                     throw new RDFHandlerException(ex);
                 }
             }
-            emitStatistics();
+            this.emitStatistics();
             this.handler.endRDF();
             this.firstPass = false;
         }
@@ -431,18 +431,18 @@ final class ProcessorStats implements RDFProcessor {
                 }
             }
 
-            handleDirectRecordHelper(record, this.sourceList.get(0));
+            this.handleDirectRecordHelper(record, this.sourceList.get(0));
             if (record.context >= 0) {
                 final Context ctx = this.contextList.get(record.context);
-                for (final URI source : ctx.sources) {
-                    handleDirectRecordHelper(record, this.sourceMap.get(source));
+                for (final IRI source : ctx.sources) {
+                    this.handleDirectRecordHelper(record, this.sourceMap.get(source));
                 }
             }
         }
 
         private void handleDirectRecordHelper(final Record record, final SourceStats ss) {
 
-            final boolean isEntity = record.subject.isURI();
+            final boolean isEntity = record.subject.isIRI();
 
             PartialStats s = this.directBlockStats.get(ss);
             if (s == null) {
@@ -528,7 +528,7 @@ final class ProcessorStats implements RDFProcessor {
             }
             if (record.context >= 0) {
                 final Context ctx = this.contextList.get(record.context);
-                for (final URI source : ctx.sources) {
+                for (final IRI source : ctx.sources) {
                     final SourceStats ss = this.sourceMap.get(source); // TODO avoid sourceMap
                     PropertyStats.Partition p = ps.partitions[ss.index];
                     if (p == null) {
@@ -547,26 +547,26 @@ final class ProcessorStats implements RDFProcessor {
             this.handler.handleNamespace(VOID.PREFIX, VOID.NAMESPACE);
             this.handler.handleNamespace(VOIDX.PREFIX, VOIDX.NAMESPACE);
 
-            final Map<URI, URI> spURIs = new HashMap<URI, URI>();
+            final Map<IRI, IRI> spIRIs = new HashMap<IRI, IRI>();
             for (final SourceStats s : this.sourceList) {
-                final URI uri = mintURI(s.source != null ? s.source : VOID.DATASET);
-                final String label = Statements.formatValue(uri, Namespaces.DEFAULT) + " ("
+                final IRI iri = this.mintIRI(s.source != null ? s.source : VOID.DATASET);
+                final String label = Statements.formatValue(iri, Namespaces.DEFAULT) + " ("
                         + s.entities + ", " + s.triples + ")";
-                spURIs.put(s.source, uri);
-                emit(uri, RDF.TYPE, VOID.DATASET);
-                emit(uri, VOIDX.LABEL, label);
-                emit(uri, VOIDX.SOURCE, s.source);
-                emit(uri, VOID.ENTITIES, s.entities);
-                emit(uri, VOID.TRIPLES, s.triples);
-                emit(uri, VOIDX.TBOX_TRIPLES, s.tboxTriples);
-                emit(uri, VOIDX.ABOX_TRIPLES, s.aboxTriples);
-                emit(uri, VOIDX.TYPE_TRIPLES, s.typeTriples);
-                emit(uri, VOIDX.SAME_AS_TRIPLES, s.sameAsTriples);
+                spIRIs.put(s.source, iri);
+                this.emit(iri, RDF.TYPE, VOID.DATASET);
+                this.emit(iri, VOIDX.LABEL, label);
+                this.emit(iri, VOIDX.SOURCE, s.source);
+                this.emit(iri, VOID.ENTITIES, s.entities);
+                this.emit(iri, VOID.TRIPLES, s.triples);
+                this.emit(iri, VOIDX.TBOX_TRIPLES, s.tboxTriples);
+                this.emit(iri, VOIDX.ABOX_TRIPLES, s.aboxTriples);
+                this.emit(iri, VOIDX.TYPE_TRIPLES, s.typeTriples);
+                this.emit(iri, VOIDX.SAME_AS_TRIPLES, s.sameAsTriples);
                 if (s.types != null) {
-                    emit(uri, VOID.CLASSES, s.types.cardinality());
+                    this.emit(iri, VOID.CLASSES, s.types.cardinality());
                 }
                 if (s.properties != null) {
-                    emit(uri, VOID.PROPERTIES, s.properties.cardinality());
+                    this.emit(iri, VOID.PROPERTIES, s.properties.cardinality());
                 }
             }
 
@@ -577,39 +577,40 @@ final class ProcessorStats implements RDFProcessor {
                 }
                 final String label = Statements.formatValue(ts.type, Namespaces.DEFAULT) + " ("
                         + p0.entities + ")";
-                emit(ts.type, VOIDX.LABEL, label);
+                this.emit(ts.type, VOIDX.LABEL, label);
                 if (ts.example != null) {
-                    emit(ts.type, VOIDX.EXAMPLE, ts.example);
+                    this.emit(ts.type, VOIDX.EXAMPLE, ts.example);
                 }
                 for (int i = 0; i < ts.partitions.length; ++i) {
                     final TypeStats.Partition p = ts.partitions[i];
                     if (p != null && p.entities >= ProcessorStats.this.threshold) {
-                        final URI source = this.sourceList.get(i).source;
-                        final URI spURI = spURIs.get(source);
-                        final URI tpURI = mintURI(source, ts.type);
-                        final String tpLabel = Statements.formatValue(tpURI, Namespaces.DEFAULT)
+                        final IRI source = this.sourceList.get(i).source;
+                        final IRI spIRI = spIRIs.get(source);
+                        final IRI tpIRI = this.mintIRI(source, ts.type);
+                        final String tpLabel = Statements.formatValue(tpIRI, Namespaces.DEFAULT)
                                 + " (" + p.entities + ", C)";
-                        emit(ts.type, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, tpURI);
-                        emit(spURI, VOID.CLASS_PARTITION, tpURI);
-                        emit(tpURI, RDF.TYPE, VOID.DATASET);
-                        emit(tpURI, VOIDX.LABEL, tpLabel);
-                        emit(tpURI, VOIDX.SOURCE, source);
-                        emit(tpURI, VOID.CLASS, ts.type);
-                        emit(tpURI, VOID.ENTITIES, p.entities);
-                        emit(tpURI, VOID.TRIPLES, p.triples);
-                        emit(tpURI, VOIDX.TBOX_TRIPLES, p.tboxTriples);
-                        emit(tpURI, VOIDX.ABOX_TRIPLES, p.aboxTriples);
-                        emit(tpURI, VOIDX.TYPE_TRIPLES, p.typeTriples);
-                        emit(tpURI, VOIDX.SAME_AS_TRIPLES, p.sameAsTriples);
+                        this.emit(ts.type, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS,
+                                tpIRI);
+                        this.emit(spIRI, VOID.CLASS_PARTITION, tpIRI);
+                        this.emit(tpIRI, RDF.TYPE, VOID.DATASET);
+                        this.emit(tpIRI, VOIDX.LABEL, tpLabel);
+                        this.emit(tpIRI, VOIDX.SOURCE, source);
+                        this.emit(tpIRI, VOID.CLASS, ts.type);
+                        this.emit(tpIRI, VOID.ENTITIES, p.entities);
+                        this.emit(tpIRI, VOID.TRIPLES, p.triples);
+                        this.emit(tpIRI, VOIDX.TBOX_TRIPLES, p.tboxTriples);
+                        this.emit(tpIRI, VOIDX.ABOX_TRIPLES, p.aboxTriples);
+                        this.emit(tpIRI, VOIDX.TYPE_TRIPLES, p.typeTriples);
+                        this.emit(tpIRI, VOIDX.SAME_AS_TRIPLES, p.sameAsTriples);
                         if (p.types != null) {
-                            emit(tpURI, VOID.CLASSES, p.types.cardinality());
+                            this.emit(tpIRI, VOID.CLASSES, p.types.cardinality());
                         }
                         if (p.properties != null) {
-                            emit(tpURI, VOID.PROPERTIES, p.properties.cardinality());
+                            this.emit(tpIRI, VOID.PROPERTIES, p.properties.cardinality());
                         }
                         if (p.entities > 0) {
-                            emit(tpURI, VOIDX.AVERAGE_PROPERTIES, (double) p.predicates
-                                    / p.entities);
+                            this.emit(tpIRI, VOIDX.AVERAGE_PROPERTIES,
+                                    (double) p.predicates / p.entities);
                         }
                     }
                 }
@@ -627,60 +628,62 @@ final class ProcessorStats implements RDFProcessor {
                 final boolean invfun = p0.triples > 0 && p0.triples == p0.distinctObjects;
                 final boolean data = OWL.DATATYPEPROPERTY.equals(ps.detectedType);
                 final boolean object = OWL.OBJECTPROPERTY.equals(ps.detectedType);
-                final String label = String.format("%s (%d, %s%s%s)", Statements.formatValue(
-                        ps.property, Namespaces.DEFAULT), p0.triples, data ? "D" : object ? "O"
-                        : "P", fun ? "F" : "", invfun ? "I" : "");
-                emit(ps.property, VOIDX.LABEL, label);
-                emit(ps.property, VOIDX.TYPE, ps.detectedType);
+                final String label = String.format("%s (%d, %s%s%s)",
+                        Statements.formatValue(ps.property, Namespaces.DEFAULT), p0.triples,
+                        data ? "D" : object ? "O" : "P", fun ? "F" : "", invfun ? "I" : "");
+                this.emit(ps.property, VOIDX.LABEL, label);
+                this.emit(ps.property, VOIDX.TYPE, ps.detectedType);
                 if (fun) {
-                    emit(ps.property, VOIDX.TYPE, OWL.FUNCTIONALPROPERTY);
+                    this.emit(ps.property, VOIDX.TYPE, OWL.FUNCTIONALPROPERTY);
                 }
                 if (invfun) {
-                    emit(ps.property, VOIDX.TYPE, OWL.INVERSEFUNCTIONALPROPERTY);
+                    this.emit(ps.property, VOIDX.TYPE, OWL.INVERSEFUNCTIONALPROPERTY);
                 }
                 if (ps.example != null) {
-                    emit(ps.property, VOIDX.EXAMPLE, ps.example);
+                    this.emit(ps.property, VOIDX.EXAMPLE, ps.example);
                 }
                 for (int i = 0; i < ps.partitions.length; ++i) {
                     final PropertyStats.Partition p = ps.partitions[i];
                     if (p != null && p.triples >= ProcessorStats.this.threshold) {
-                        final URI source = this.sourceList.get(i).source;
-                        final URI spURI = spURIs.get(source);
-                        final URI ppURI = mintURI(source, ps.property);
+                        final IRI source = this.sourceList.get(i).source;
+                        final IRI spIRI = spIRIs.get(source);
+                        final IRI ppIRI = this.mintIRI(source, ps.property);
                         final boolean ppFun = p.triples > 0 && p.triples == p.distinctSubjects;
                         final boolean ppInvfun = p.triples > 0 && p.triples == p.distinctObjects;
-                        final String ppLabel = String.format("%s (%d, %s%s%s)", Statements
-                                .formatValue(ppURI, Namespaces.DEFAULT), p.triples, data ? "D"
-                                : object ? "O" : "P", ppFun ? "F" : "", ppInvfun ? "I" : "");
-                        emit(ps.property, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS, ppURI);
-                        emit(spURI, VOID.PROPERTY_PARTITION, ppURI);
-                        emit(ppURI, RDF.TYPE, VOID.DATASET);
-                        emit(ppURI, VOIDX.LABEL, ppLabel);
-                        emit(ppURI, VOIDX.SOURCE, source);
-                        emit(ppURI, VOID.PROPERTY, ps.property);
-                        emit(ppURI, VOID.CLASSES, 0);
-                        emit(ppURI, VOID.PROPERTIES, 1);
-                        emit(ppURI, VOID.ENTITIES, p.entities);
-                        emit(ppURI, VOID.TRIPLES, p.triples);
-                        emit(ppURI, VOIDX.TBOX_TRIPLES, isTBox ? p.triples : 0);
-                        emit(ppURI, VOIDX.ABOX_TRIPLES, isTBox ? 0 : p.triples);
-                        emit(ppURI, VOIDX.TYPE_TRIPLES, isType ? p.triples : 0);
-                        emit(ppURI, VOIDX.SAME_AS_TRIPLES, isSameAs ? p.triples : 0);
-                        emit(ppURI, VOID.DISTINCT_SUBJECTS, p.distinctSubjects);
-                        emit(ppURI, VOID.DISTINCT_OBJECTS, p.distinctObjects);
+                        final String ppLabel = String.format("%s (%d, %s%s%s)",
+                                Statements.formatValue(ppIRI, Namespaces.DEFAULT), p.triples,
+                                data ? "D" : object ? "O" : "P", ppFun ? "F" : "",
+                                ppInvfun ? "I" : "");
+                        this.emit(ps.property, p == p0 ? VOIDX.GLOBAL_STATS : VOIDX.SOURCE_STATS,
+                                ppIRI);
+                        this.emit(spIRI, VOID.PROPERTY_PARTITION, ppIRI);
+                        this.emit(ppIRI, RDF.TYPE, VOID.DATASET);
+                        this.emit(ppIRI, VOIDX.LABEL, ppLabel);
+                        this.emit(ppIRI, VOIDX.SOURCE, source);
+                        this.emit(ppIRI, VOID.PROPERTY, ps.property);
+                        this.emit(ppIRI, VOID.CLASSES, 0);
+                        this.emit(ppIRI, VOID.PROPERTIES, 1);
+                        this.emit(ppIRI, VOID.ENTITIES, p.entities);
+                        this.emit(ppIRI, VOID.TRIPLES, p.triples);
+                        this.emit(ppIRI, VOIDX.TBOX_TRIPLES, isTBox ? p.triples : 0);
+                        this.emit(ppIRI, VOIDX.ABOX_TRIPLES, isTBox ? 0 : p.triples);
+                        this.emit(ppIRI, VOIDX.TYPE_TRIPLES, isType ? p.triples : 0);
+                        this.emit(ppIRI, VOIDX.SAME_AS_TRIPLES, isSameAs ? p.triples : 0);
+                        this.emit(ppIRI, VOID.DISTINCT_SUBJECTS, p.distinctSubjects);
+                        this.emit(ppIRI, VOID.DISTINCT_OBJECTS, p.distinctObjects);
                     }
                 }
             }
 
-            for (final URI term : VOID.TERMS) {
-                emit(term, VOIDX.LABEL, Statements.formatValue(term, Namespaces.DEFAULT));
+            for (final IRI term : VOID.TERMS) {
+                this.emit(term, VOIDX.LABEL, Statements.formatValue(term, Namespaces.DEFAULT));
             }
-            for (final URI term : VOIDX.TERMS) {
-                emit(term, VOIDX.LABEL, Statements.formatValue(term, Namespaces.DEFAULT));
+            for (final IRI term : VOIDX.TERMS) {
+                this.emit(term, VOIDX.LABEL, Statements.formatValue(term, Namespaces.DEFAULT));
             }
         }
 
-        private void emit(@Nullable final Resource subject, @Nullable final URI predicate,
+        private void emit(@Nullable final Resource subject, @Nullable final IRI predicate,
                 @Nullable final Object object) throws RDFHandlerException {
 
             Value value = null;
@@ -701,12 +704,12 @@ final class ProcessorStats implements RDFProcessor {
             }
 
             if (value != null) {
-                this.handler.handleStatement(Statements.VALUE_FACTORY.createStatement(subject,
-                        predicate, value));
+                this.handler.handleStatement(
+                        Statements.VALUE_FACTORY.createStatement(subject, predicate, value));
             }
         }
 
-        private URI mintURI(final URI... inputURIs) {
+        private IRI mintIRI(final IRI... inputIRIs) {
             final StringBuilder builder = new StringBuilder();
             if (ProcessorStats.this.outputNamespace != null) {
                 builder.append(ProcessorStats.this.outputNamespace);
@@ -714,20 +717,20 @@ final class ProcessorStats implements RDFProcessor {
                 builder.append("stats:");
             }
             boolean started = false;
-            for (final URI uri : inputURIs) {
-                if (uri != null) {
+            for (final IRI iri : inputIRIs) {
+                if (iri != null) {
                     if (started) {
                         builder.append("_");
                     }
                     started = true;
-                    builder.append(uri.getLocalName());
+                    builder.append(iri.getLocalName());
                 }
             }
             final String base = builder.toString();
             for (int i = 0; i < 1000; ++i) {
                 final String candidate = i == 0 ? base : base + "_" + i;
-                if (this.mintedURIs.add(candidate)) {
-                    return Statements.VALUE_FACTORY.createURI(candidate);
+                if (this.mintedIRIs.add(candidate)) {
+                    return Statements.VALUE_FACTORY.createIRI(candidate);
                 }
             }
             throw new Error();
@@ -766,7 +769,7 @@ final class ProcessorStats implements RDFProcessor {
     private static final class SourceStats {
 
         @Nullable
-        final URI source;
+        final IRI source;
 
         final int index;
 
@@ -788,7 +791,7 @@ final class ProcessorStats implements RDFProcessor {
 
         long sameAsTriples;
 
-        SourceStats(final URI source, final int index) {
+        SourceStats(final IRI source, final int index) {
             this.source = source;
             this.index = index;
             this.types = null;
@@ -806,7 +809,7 @@ final class ProcessorStats implements RDFProcessor {
     private static final class TypeStats {
 
         @Nullable
-        final URI type;
+        final IRI type;
 
         final int index;
 
@@ -819,7 +822,7 @@ final class ProcessorStats implements RDFProcessor {
         @Nullable
         Partition[] partitions;
 
-        TypeStats(@Nullable final URI type, final int index) {
+        TypeStats(@Nullable final IRI type, final int index) {
             this.type = type;
             this.index = index;
         }
@@ -852,7 +855,7 @@ final class ProcessorStats implements RDFProcessor {
 
             private static final int MAX_STATEMENTS = 20;
 
-            private URI id;
+            private IRI id;
 
             private final List<Value> data;
 
@@ -861,8 +864,8 @@ final class ProcessorStats implements RDFProcessor {
             }
 
             synchronized void add(final Statement statement) {
-                if (this.data.size() < MAX_STATEMENTS * 2) {
-                    this.id = (URI) statement.getSubject();
+                if (this.data.size() < Sampler.MAX_STATEMENTS * 2) {
+                    this.id = (IRI) statement.getSubject();
                     this.data.add(statement.getPredicate());
                     this.data.add(statement.getObject());
                 }
@@ -873,14 +876,13 @@ final class ProcessorStats implements RDFProcessor {
                 for (int i = 0; i < this.data.size(); i += 2) {
                     final String predicate = Statements.formatValue(this.data.get(i),
                             Namespaces.DEFAULT);
-                    final String object = Statements.formatValue(
-                            Statements.shortenValue(this.data.get(i + 1), MAX_VALUE_LENGTH),
-                            Namespaces.DEFAULT);
+                    final String object = Statements.formatValue(Statements.shortenValue(
+                            this.data.get(i + 1), Sampler.MAX_VALUE_LENGTH), Namespaces.DEFAULT);
                     lines.add(predicate + " " + object);
                 }
                 Collections.sort(lines);
-                final StringBuilder builder = new StringBuilder(Statements.formatValue(this.id,
-                        Namespaces.DEFAULT));
+                final StringBuilder builder = new StringBuilder(
+                        Statements.formatValue(this.id, Namespaces.DEFAULT));
                 for (int i = 0; i < lines.size(); ++i) {
                     builder.append("\n    ").append(lines.get(i));
                     builder.append(i < lines.size() - 1 ? ';' : '.');
@@ -895,7 +897,7 @@ final class ProcessorStats implements RDFProcessor {
     private static final class PropertyStats {
 
         @Nullable
-        final URI property;
+        final IRI property;
 
         final int index;
 
@@ -906,12 +908,12 @@ final class ProcessorStats implements RDFProcessor {
         String example;
 
         @Nullable
-        URI detectedType;
+        IRI detectedType;
 
         @Nullable
         Partition[] partitions;
 
-        PropertyStats(final URI property, final int index) {
+        PropertyStats(final IRI property, final int index) {
             this.property = property;
             this.index = index;
             this.detectedType = null;
@@ -943,15 +945,15 @@ final class ProcessorStats implements RDFProcessor {
 
             private boolean haveLiteral;
 
-            private boolean haveURI;
+            private boolean haveIRI;
 
             private int size;
 
             Sampler() {
-                this.statements = new Statement[MAX_STATEMENTS];
+                this.statements = new Statement[Sampler.MAX_STATEMENTS];
                 this.haveBNode = false;
                 this.haveLiteral = false;
-                this.haveURI = false;
+                this.haveIRI = false;
                 this.size = 0;
             }
 
@@ -959,14 +961,13 @@ final class ProcessorStats implements RDFProcessor {
 
                 final Resource s = statement.getSubject();
                 final Value o = statement.getObject();
-                final boolean isURI = o instanceof URI;
+                final boolean isIRI = o instanceof IRI;
                 final boolean isBNode = o instanceof BNode;
                 final boolean isLiteral = o instanceof Literal;
 
-                if (!(s instanceof URI)
-                        || this.size == this.statements.length
-                        && (isURI && this.haveURI || isBNode && this.haveBNode || isLiteral
-                                && this.haveLiteral)) {
+                if (!(s instanceof IRI)
+                        || this.size == this.statements.length && (isIRI && this.haveIRI
+                                || isBNode && this.haveBNode || isLiteral && this.haveLiteral)) {
                     return;
                 }
 
@@ -979,7 +980,7 @@ final class ProcessorStats implements RDFProcessor {
                         break;
                     } else if (stmt.equals(statement)) {
                         return;
-                    } else if (!this.haveURI && isURI //
+                    } else if (!this.haveIRI && isIRI //
                             || !this.haveBNode && isBNode //
                             || !this.haveLiteral && isLiteral) {
                         index = i;
@@ -988,7 +989,7 @@ final class ProcessorStats implements RDFProcessor {
                 }
                 if (index >= 0) {
                     this.statements[index] = statement;
-                    this.haveURI |= isURI;
+                    this.haveIRI |= isIRI;
                     this.haveBNode |= isBNode;
                     this.haveLiteral |= isLiteral;
                 }
@@ -1005,9 +1006,12 @@ final class ProcessorStats implements RDFProcessor {
                                 .append(Statements.formatValue(statement.getPredicate(),
                                         Namespaces.DEFAULT))
                                 .append(" ")
-                                .append(Statements.formatValue(Statements.shortenValue(
-                                        statement.getObject(), MAX_VALUE_LENGTH),
-                                        Namespaces.DEFAULT)).append(" .");
+                                .append(Statements
+                                        .formatValue(
+                                                Statements.shortenValue(statement.getObject(),
+                                                        Sampler.MAX_VALUE_LENGTH),
+                                                Namespaces.DEFAULT))
+                                .append(" .");
                     }
                 }
                 return builder.toString();
@@ -1019,17 +1023,17 @@ final class ProcessorStats implements RDFProcessor {
 
     private static final class Context {
 
-        private static final URI[] EMPTY = new URI[0];
+        private static final IRI[] EMPTY = new IRI[0];
 
         final int index;
 
-        URI[] sources;
+        IRI[] sources;
 
         boolean used;
 
         Context(final int index) {
             this.index = index;
-            this.sources = EMPTY;
+            this.sources = Context.EMPTY;
             this.used = false;
         }
 
@@ -1108,7 +1112,7 @@ final class ProcessorStats implements RDFProcessor {
                 context = (int) reader.readNumber();
             }
 
-            return create(inverse, subject, predicate, type, object, context);
+            return Record.create(inverse, subject, predicate, type, object, context);
         }
 
         public void write(final Output writer) throws IOException {
@@ -1148,11 +1152,11 @@ final class ProcessorStats implements RDFProcessor {
 
         private static final int TABLE_SIZE = 4 * 1024 - 1;
 
-        private static final Hash[] TABLE_HASHES = new Hash[TABLE_SIZE];
+        private static final Hash[] TABLE_HASHES = new Hash[Hash.TABLE_SIZE];
 
-        private static final Value[] TABLE_VALUES = new Value[TABLE_SIZE];
+        private static final Value[] TABLE_VALUES = new Value[Hash.TABLE_SIZE];
 
-        private static final Index<URI> DATATYPE_INDEX = new Index<URI>(1024);
+        private static final Index<IRI> DATATYPE_INDEX = new Index<IRI>(1024);
 
         private static final Index<String> LANGUAGE_INDEX = new Index<String>(1024);
 
@@ -1167,19 +1171,19 @@ final class ProcessorStats implements RDFProcessor {
         }
 
         public static Hash create(final Value value) {
-            if (value.stringValue().length() > MAX_LENGTH) {
-                return compute(value);
+            if (value.stringValue().length() > Hash.MAX_LENGTH) {
+                return Hash.compute(value);
             }
-            final int index = (value.hashCode() & 0x7FFFFFFF) % TABLE_SIZE;
-            synchronized (TABLE_VALUES) {
-                if (value.equals(TABLE_VALUES[index])) {
-                    return TABLE_HASHES[index];
+            final int index = (value.hashCode() & 0x7FFFFFFF) % Hash.TABLE_SIZE;
+            synchronized (Hash.TABLE_VALUES) {
+                if (value.equals(Hash.TABLE_VALUES[index])) {
+                    return Hash.TABLE_HASHES[index];
                 }
             }
-            final Hash hash = compute(value);
-            synchronized (TABLE_VALUES) {
-                TABLE_VALUES[index] = value;
-                TABLE_HASHES[index] = hash;
+            final Hash hash = Hash.compute(value);
+            synchronized (Hash.TABLE_VALUES) {
+                Hash.TABLE_VALUES[index] = value;
+                Hash.TABLE_HASHES[index] = hash;
             }
             return hash;
         }
@@ -1226,7 +1230,7 @@ final class ProcessorStats implements RDFProcessor {
             hi = hi & 0x7F7F7F7F7F7F7F7FL | (hi & 0x8080808080808080L) >> 1;
             hi = hi & 0x0FFFFFFFFFFFFFFFL | 0x4000000000000000L;
 
-            if (value instanceof URI) {
+            if (value instanceof IRI) {
                 hi = hi | 0x3000000000000000L;
             } else if (value instanceof BNode) {
                 hi = hi | 0x2000000000000000L;
@@ -1234,10 +1238,10 @@ final class ProcessorStats implements RDFProcessor {
                 hi = hi | 0x1000000000000000L;
                 final Literal literal = (Literal) value;
                 int index = 0;
-                if (literal.getLanguage() != null) {
-                    index = LANGUAGE_INDEX.put(literal.getLanguage()) | 0x40000000;
+                if (literal.getLanguage().isPresent()) {
+                    index = Hash.LANGUAGE_INDEX.put(literal.getLanguage().get()) | 0x40000000;
                 } else if (literal.getDatatype() != null) {
-                    index = DATATYPE_INDEX.put(literal.getDatatype());
+                    index = Hash.DATATYPE_INDEX.put(literal.getDatatype());
                 }
                 index = index & 0x7FFFFFFF;
                 lo = (lo ^ index) & 0xFFFFFFFF7F7F7F7FL;
@@ -1263,7 +1267,7 @@ final class ProcessorStats implements RDFProcessor {
             this.hi = hi;
         }
 
-        public boolean isURI() {
+        public boolean isIRI() {
             return (this.hi & 0x3000000000000000L) == 0x3000000000000000L;
         }
 

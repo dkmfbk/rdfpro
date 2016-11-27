@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -29,17 +29,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.helpers.RDFWriterBase;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFWriter;
 
 /**
  * An implementation of the RDFWriter interface that writes RDF documents in the JSON-LD format.
@@ -56,7 +56,7 @@ import org.openrdf.rio.helpers.RDFWriterBase;
  * {@link JSONLD#ROOT_TYPES}).
  * </p>
  */
-public class JSONLDWriter extends RDFWriterBase {
+public class JSONLDWriter extends AbstractRDFWriter {
 
     private static final int WINDOW = 32 * 1024;
 
@@ -79,7 +79,7 @@ public class JSONLDWriter extends RDFWriterBase {
 
     private Map<Resource, JSONLDWriter.Node> emitContextNodes; // id-to-node map for cur. context
 
-    private Set<URI> rootTypes;
+    private Set<IRI> rootTypes;
 
     /**
      * Creates a new JSONLDWriter that will write to the supplied OutputStream. The UTF-8
@@ -119,25 +119,25 @@ public class JSONLDWriter extends RDFWriterBase {
 
     @Override
     public void startRDF() throws RDFHandlerException {
-        this.rootTypes = getWriterConfig().get(JSONLD.ROOT_TYPES);
+        this.rootTypes = this.getWriterConfig().get(JSONLD.ROOT_TYPES);
     }
 
     @Override
     public void handleComment(final String comment) throws RDFHandlerException {
         try {
             // comments cannot be emitted in JSONLD, but still we use them to flush output
-            flush(true);
+            this.flush(true);
         } catch (final IOException ex) {
             throw new RDFHandlerException(ex);
         }
     }
 
     @Override
-    public void handleNamespace(final String prefix, final String uri) throws RDFHandlerException {
+    public void handleNamespace(final String prefix, final String iri) throws RDFHandlerException {
 
         // add only if emission to writer not started yet
         if (this.emitContextNodes == null) {
-            this.prefixes.put(uri, prefix);
+            this.prefixes.put(iri, prefix);
         }
     }
 
@@ -156,12 +156,12 @@ public class JSONLDWriter extends RDFWriterBase {
         final Resource subject = statement.getSubject();
         JSONLDWriter.Node node = nodes.get(subject);
         if (node != null) {
-            detach(node);
+            this.detach(node);
         } else {
             node = new Node(subject, context);
             nodes.put(subject, node);
         }
-        attach(node, this.lrsTail); // move node at the end of LRS list
+        this.attach(node, this.lrsTail); // move node at the end of LRS list
         node.counter = this.counter++; // update LRS statement counter
         node.statements.add(statement);
         if (statement.getPredicate().equals(RDF.TYPE)
@@ -170,7 +170,7 @@ public class JSONLDWriter extends RDFWriterBase {
         }
 
         try {
-            flush(false); // emit nodes not seen in last WINDOW statement
+            this.flush(false); // emit nodes not seen in last WINDOW statement
         } catch (final IOException ex) {
             throw new RDFHandlerException(ex);
         }
@@ -179,7 +179,7 @@ public class JSONLDWriter extends RDFWriterBase {
     @Override
     public void endRDF() throws RDFHandlerException {
         try {
-            flush(true);
+            this.flush(true);
             this.writer.append("]\n}");
             this.writer.flush();
         } catch (final IOException ex) {
@@ -191,7 +191,7 @@ public class JSONLDWriter extends RDFWriterBase {
 
         // Emit preamble of JSONLD document if necessary and select context
         if (this.emitContextNodes == null
-                && (force || this.counter - this.lrsHead.counter >= WINDOW)) {
+                && (force || this.counter - this.lrsHead.counter >= JSONLDWriter.WINDOW)) {
             this.writer.append("{\n\t\"@context\": {");
             if (!this.prefixes.isEmpty()) {
                 String separator = "\n\t\t";
@@ -202,9 +202,9 @@ public class JSONLDWriter extends RDFWriterBase {
                     final String prefix = this.prefixes.get(namespace);
                     this.writer.append(separator);
                     this.writer.append('\"');
-                    emitString(prefix);
+                    this.emitString(prefix);
                     this.writer.append("\": \"");
-                    emitString(namespace);
+                    this.emitString(namespace);
                     this.writer.append('\"');
                     separator = ",\n\t\t";
                 }
@@ -213,7 +213,8 @@ public class JSONLDWriter extends RDFWriterBase {
         }
 
         // Emit all the nodes if force=true, otherwise limit to old nodes
-        while (this.lrsHead != null && (force || this.counter - this.lrsHead.counter >= WINDOW)) {
+        while (this.lrsHead != null
+                && (force || this.counter - this.lrsHead.counter >= JSONLDWriter.WINDOW)) {
 
             // detect change of context
             final boolean sameContext = Objects.equals(this.lrsHead.context, this.emitContext);
@@ -234,7 +235,7 @@ public class JSONLDWriter extends RDFWriterBase {
             if (!sameContext) {
                 if (this.lrsHead.context != null) {
                     this.writer.append("{\n\t\t\"@id\": ");
-                    emit(this.lrsHead.context, false);
+                    this.emit(this.lrsHead.context, false);
                     this.writer.append(",\n\t\t\"@graph\": [");
                     ++this.indent;
                 }
@@ -243,7 +244,7 @@ public class JSONLDWriter extends RDFWriterBase {
             }
 
             // emit the node
-            emitNode(this.emitContextNodes.get(this.lrsHead.id));
+            this.emitNode(this.emitContextNodes.get(this.lrsHead.id));
         }
 
         // if force=true, close the context if necessary
@@ -257,19 +258,19 @@ public class JSONLDWriter extends RDFWriterBase {
     private void emit(final Value value, final boolean expand) throws IOException {
 
         if (value instanceof Literal) {
-            emitLiteral((Literal) value);
+            this.emitLiteral((Literal) value);
         } else {
             final JSONLDWriter.Node node = expand ? this.emitContextNodes.get(value) : null;
             if (node != null && !node.root) {
-                emitNode(node);
+                this.emitNode(node);
             } else {
                 if (expand) {
                     this.writer.append("{\"@id\": ");
                 }
                 if (value instanceof BNode) {
-                    emitBNode((BNode) value);
-                } else if (value instanceof URI) {
-                    emitURI((URI) value);
+                    this.emitBNode((BNode) value);
+                } else if (value instanceof IRI) {
+                    this.emitIRI((IRI) value);
                 }
                 if (expand) {
                     this.writer.append('}');
@@ -281,13 +282,13 @@ public class JSONLDWriter extends RDFWriterBase {
     private void emitNode(final JSONLDWriter.Node node) throws IOException {
 
         this.emitContextNodes.remove(node.id);
-        detach(node);
+        this.detach(node);
 
         ++this.indent;
         this.writer.append('{');
-        emitNewline();
+        this.emitNewline();
         this.writer.append("\"@id\": ");
-        emit(node.id, false);
+        this.emit(node.id, false);
 
         boolean startProperty = true;
         boolean isTypeProperty = true;
@@ -298,18 +299,18 @@ public class JSONLDWriter extends RDFWriterBase {
         for (int i = 0; i < statementCount; ++i) {
 
             final Statement statement = node.statements.get(i);
-            final URI property = statement.getPredicate();
+            final IRI property = statement.getPredicate();
             final boolean last = i == statementCount - 1
                     || !property.equals(node.statements.get(i + 1).getPredicate());
 
             if (startProperty) {
                 this.writer.append(',');
-                emitNewline();
+                this.emitNewline();
                 isTypeProperty = property.equals(RDF.TYPE);
                 if (isTypeProperty) {
                     this.writer.append("\"@type\"");
                 } else {
-                    emit(property, false);
+                    this.emit(property, false);
                 }
                 this.writer.append(": ");
                 insideArray = !last;
@@ -320,7 +321,7 @@ public class JSONLDWriter extends RDFWriterBase {
                 this.writer.append(", ");
             }
 
-            emit(statement.getObject(), !isTypeProperty);
+            this.emit(statement.getObject(), !isTypeProperty);
 
             startProperty = last;
             if (startProperty && insideArray) {
@@ -329,46 +330,46 @@ public class JSONLDWriter extends RDFWriterBase {
         }
 
         --this.indent;
-        emitNewline();
+        this.emitNewline();
         this.writer.append('}');
     }
 
     private void emitBNode(final BNode bnode) throws IOException {
         this.writer.append("\"_:");
-        emitString(bnode.getID());
+        this.emitString(bnode.getID());
         this.writer.append('\"');
     }
 
-    private void emitURI(final URI uri) throws IOException {
-        final String prefix = this.prefixes.get(uri.getNamespace());
+    private void emitIRI(final IRI iri) throws IOException {
+        final String prefix = this.prefixes.get(iri.getNamespace());
         this.writer.append('\"');
         if (prefix != null) {
-            emitString(prefix);
+            this.emitString(prefix);
             this.writer.append(':');
-            emitString(uri.getLocalName());
+            this.emitString(iri.getLocalName());
         } else {
-            emitString(uri.stringValue());
+            this.emitString(iri.stringValue());
         }
         this.writer.append('\"');
     }
 
     private void emitLiteral(final Literal literal) throws IOException {
-        final String language = literal.getLanguage();
+        final String language = literal.getLanguage().orElse(null);
         if (language != null) {
             this.writer.append("{\"@language\": \"");
-            emitString(language);
+            this.emitString(language);
             this.writer.append("\", \"@value\": \"");
         } else {
-            final URI datatype = literal.getDatatype();
+            final IRI datatype = literal.getDatatype();
             if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
                 this.writer.append("{\"@type\": ");
-                emit(datatype, false);
+                this.emit(datatype, false);
                 this.writer.append(", \"@value\": \"");
             } else {
                 this.writer.append("{\"@value\": \"");
             }
         }
-        emitString(literal.getLabel());
+        this.emitString(literal.getLabel());
         this.writer.append("\"}");
     }
 
@@ -468,9 +469,9 @@ public class JSONLDWriter extends RDFWriterBase {
 
         @Override
         public int compare(final Statement first, final Statement second) {
-            int result = compare(first.getPredicate(), second.getPredicate());
+            int result = this.compare(first.getPredicate(), second.getPredicate());
             if (result == 0) {
-                result = compare(first.getObject(), second.getObject());
+                result = this.compare(first.getObject(), second.getObject());
             }
             return result;
         }
@@ -483,16 +484,17 @@ public class JSONLDWriter extends RDFWriterBase {
                     if (result == 0) {
                         final Literal firstLit = (Literal) first;
                         final Literal secondLit = (Literal) second;
-                        final String firstLang = firstLit.getLanguage();
-                        final String secondLang = secondLit.getLanguage();
+                        final String firstLang = firstLit.getLanguage().orElse(null);
+                        final String secondLang = secondLit.getLanguage().orElse(null);
                         result = firstLang == null ? secondLang == null ? 0 : -1
                                 : secondLang == null ? 1 : firstLang.compareTo(secondLang);
                         if (result == 0) {
-                            final URI firstDt = firstLit.getDatatype();
-                            final URI secondDt = secondLit.getDatatype();
+                            final IRI firstDt = firstLit.getDatatype();
+                            final IRI secondDt = secondLit.getDatatype();
                             result = firstDt == null ? secondDt == null ? 0 : -1
-                                    : secondDt == null ? 1 : firstDt.stringValue().compareTo(
-                                            secondDt.stringValue());
+                                    : secondDt == null ? 1
+                                            : firstDt.stringValue()
+                                                    .compareTo(secondDt.stringValue());
                         }
                     }
                     return result;
@@ -500,8 +502,8 @@ public class JSONLDWriter extends RDFWriterBase {
                     return -1;
                 }
 
-            } else if (first instanceof URI) {
-                if (second instanceof URI) {
+            } else if (first instanceof IRI) {
+                if (second instanceof IRI) {
                     int result = first.stringValue().compareTo(second.stringValue());
                     if (result != 0) {
                         if (first.equals(RDF.TYPE)) { // rdf:type always first

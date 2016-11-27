@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -36,34 +36,32 @@ import javax.annotation.Nullable;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.Rio;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.Rio;
 
 public final class Statements {
 
     public static final ValueFactory VALUE_FACTORY;
 
     static {
-        final boolean hashfactory = Boolean.parseBoolean(Environment.getProperty(
-                "rdfpro.hashfactory", "true"));
+        final boolean hashfactory = Boolean
+                .parseBoolean(Environment.getProperty("rdfpro.hashfactory", "true"));
         if (hashfactory) {
             VALUE_FACTORY = HashValueFactory.INSTANCE;
         } else {
-            VALUE_FACTORY = ValueFactoryImpl.getInstance();
+            VALUE_FACTORY = SimpleValueFactory.getInstance();
         }
     }
 
@@ -71,54 +69,58 @@ public final class Statements {
 
         @Override
         public Value apply(final Value value) {
-            return normalize(value);
+            return Statements.normalize(value);
         }
 
     };
 
     public static final DatatypeFactory DATATYPE_FACTORY;
 
-    public static final Set<URI> TBOX_CLASSES = Collections.unmodifiableSet(new HashSet<URI>(
-            Arrays.asList(RDFS.CLASS, RDFS.DATATYPE, RDF.PROPERTY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "AllDisjointClasses"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "AllDisjointProperties"),
+    public static final Set<IRI> TBOX_CLASSES = Collections
+            .unmodifiableSet(new HashSet<>(Arrays.asList(RDFS.CLASS, RDFS.DATATYPE, RDF.PROPERTY,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "AllDisjointClasses"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "AllDisjointProperties"),
                     OWL.ANNOTATIONPROPERTY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "AsymmetricProperty"), OWL.CLASS,
-                    OWL.DATATYPEPROPERTY, OWL.FUNCTIONALPROPERTY, OWL.INVERSEFUNCTIONALPROPERTY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "IrreflexiveProperty"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "AsymmetricProperty"),
+                    OWL.CLASS, OWL.DATATYPEPROPERTY, OWL.FUNCTIONALPROPERTY,
+                    OWL.INVERSEFUNCTIONALPROPERTY,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "IrreflexiveProperty"),
                     OWL.OBJECTPROPERTY, OWL.ONTOLOGY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "ReflexiveProperty"), OWL.RESTRICTION,
-                    OWL.SYMMETRICPROPERTY, OWL.TRANSITIVEPROPERTY)));
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "ReflexiveProperty"),
+                    OWL.RESTRICTION, OWL.SYMMETRICPROPERTY, OWL.TRANSITIVEPROPERTY)));
 
     // NOTE: rdf:first and rdf:rest considered as TBox statements as used (essentially) for
     // encoding OWL axioms
 
-    public static final Set<URI> TBOX_PROPERTIES = Collections.unmodifiableSet(new HashSet<URI>(
+    public static final Set<IRI> TBOX_PROPERTIES = Collections.unmodifiableSet(new HashSet<>(
             Arrays.asList(RDF.FIRST, RDF.REST, RDFS.DOMAIN, RDFS.RANGE, RDFS.SUBCLASSOF,
                     RDFS.SUBPROPERTYOF, OWL.ALLVALUESFROM, OWL.CARDINALITY, OWL.COMPLEMENTOF,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "datatypeComplementOf"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "disjointUnionOf"), OWL.DISJOINTWITH,
-                    OWL.EQUIVALENTCLASS, OWL.EQUIVALENTPROPERTY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "hasKey"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "hasSelf"), OWL.HASVALUE, OWL.IMPORTS,
-                    OWL.INTERSECTIONOF, OWL.INVERSEOF, OWL.MAXCARDINALITY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "maxQualifiedCardinality"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "members"), OWL.MINCARDINALITY,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "minQualifiedCardinality"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "onClass"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "onDataRange"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "onDataType"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "onProperties"), OWL.ONPROPERTY,
-                    OWL.ONEOF, VALUE_FACTORY.createURI(OWL.NAMESPACE, "propertyChainAxiom"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "propertyDisjointWith"),
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "qualifiedCardinality"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "datatypeComplementOf"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "disjointUnionOf"),
+                    OWL.DISJOINTWITH, OWL.EQUIVALENTCLASS, OWL.EQUIVALENTPROPERTY,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "hasKey"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "hasSelf"), OWL.HASVALUE,
+                    OWL.IMPORTS, OWL.INTERSECTIONOF, OWL.INVERSEOF, OWL.MAXCARDINALITY,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "maxQualifiedCardinality"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "members"),
+                    OWL.MINCARDINALITY,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "minQualifiedCardinality"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "onClass"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "onDataRange"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "onDataType"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "onProperties"),
+                    OWL.ONPROPERTY, OWL.ONEOF,
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "propertyChainAxiom"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "propertyDisjointWith"),
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "qualifiedCardinality"),
                     OWL.SOMEVALUESFROM, OWL.UNIONOF, OWL.VERSIONIRI,
-                    VALUE_FACTORY.createURI(OWL.NAMESPACE, "withRestrictions"))));
+                    Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "withRestrictions"))));
 
     private static final Comparator<Value> DEFAULT_VALUE_ORDERING = new ValueComparator();
 
     private static final Comparator<Statement> DEFAULT_STATEMENT_ORDERING = new StatementComparator(
             "spoc", new ValueComparator(RDF.NAMESPACE));
+
     static {
         try {
             DATATYPE_FACTORY = DatatypeFactory.newInstance();
@@ -130,18 +132,18 @@ public final class Statements {
     private static final Hash NIL_HASH = Hash.murmur3("\u0001");
 
     public static Comparator<Value> valueComparator(final String... rankedNamespaces) {
-        return rankedNamespaces == null || rankedNamespaces.length == 0 ? DEFAULT_VALUE_ORDERING
-                : new ValueComparator(rankedNamespaces);
+        return rankedNamespaces == null || rankedNamespaces.length == 0
+                ? Statements.DEFAULT_VALUE_ORDERING : new ValueComparator(rankedNamespaces);
     }
 
     public static Comparator<Statement> statementComparator(@Nullable final String components,
             @Nullable final Comparator<? super Value> valueComparator) {
         if (components == null) {
-            return valueComparator == null ? DEFAULT_STATEMENT_ORDERING //
+            return valueComparator == null ? Statements.DEFAULT_STATEMENT_ORDERING //
                     : new StatementComparator("spoc", valueComparator);
         } else {
             return new StatementComparator(components,
-                    valueComparator == null ? DEFAULT_VALUE_ORDERING : valueComparator);
+                    valueComparator == null ? Statements.DEFAULT_VALUE_ORDERING : valueComparator);
         }
     }
 
@@ -158,23 +160,23 @@ public final class Statements {
     }
 
     public static Statement normalize(final Statement statement) {
-        final Resource subj = normalize(statement.getSubject());
-        final URI pred = normalize(statement.getPredicate());
-        final Value obj = normalize(statement.getObject());
-        final Resource ctx = normalize(statement.getContext());
+        final Resource subj = Statements.normalize(statement.getSubject());
+        final IRI pred = Statements.normalize(statement.getPredicate());
+        final Value obj = Statements.normalize(statement.getObject());
+        final Resource ctx = Statements.normalize(statement.getContext());
         if (subj == statement.getSubject() && pred == statement.getPredicate()
                 && obj == statement.getObject() && ctx == statement.getContext()) {
             return statement;
         } else if (ctx != null) {
-            return new ContextStatementImpl(subj, pred, obj, ctx);
+            return Statements.VALUE_FACTORY.createStatement(subj, pred, obj, ctx);
         } else {
-            return new StatementImpl(subj, pred, obj);
+            return Statements.VALUE_FACTORY.createStatement(subj, pred, obj);
         }
     }
 
     @Nullable
     public static <T extends Value> T normalize(@Nullable final T value) {
-        if (VALUE_FACTORY instanceof HashValueFactory) {
+        if (Statements.VALUE_FACTORY instanceof HashValueFactory) {
             return HashValueFactory.normalize(value);
         }
         return value;
@@ -182,35 +184,36 @@ public final class Statements {
 
     public static Hash getHash(final Statement statement) {
         return statement instanceof Hashable ? ((Hashable) statement).getHash()
-                : computeHash(statement);
+                : Statements.computeHash(statement);
     }
 
     public static Hash getHash(@Nullable final Value value) {
-        return value instanceof Hashable ? ((Hashable) value).getHash() : computeHash(value);
+        return value instanceof Hashable ? ((Hashable) value).getHash()
+                : Statements.computeHash(value);
     }
 
     public static Hash computeHash(final Statement statement) {
-        final Hash subjHash = getHash(statement.getSubject());
-        final Hash predHash = getHash(statement.getPredicate());
-        final Hash objHash = getHash(statement.getObject());
-        final Hash ctxHash = getHash(statement.getContext());
+        final Hash subjHash = Statements.getHash(statement.getSubject());
+        final Hash predHash = Statements.getHash(statement.getPredicate());
+        final Hash objHash = Statements.getHash(statement.getObject());
+        final Hash ctxHash = Statements.getHash(statement.getContext());
         return Hash.combine(subjHash, predHash, objHash, ctxHash);
     }
 
     public static Hash computeHash(@Nullable final Value value) {
         if (value == null) {
-            return NIL_HASH;
+            return Statements.NIL_HASH;
         }
         Hash hash;
-        if (value instanceof URI) {
+        if (value instanceof IRI) {
             hash = Hash.murmur3("\u0001", value.stringValue());
         } else if (value instanceof BNode) {
             hash = Hash.murmur3("\u0002", ((BNode) value).getID());
         } else {
             final Literal l = (Literal) value;
-            if (l.getLanguage() != null) {
-                hash = Hash.murmur3("\u0003", l.getLanguage(), l.getLabel());
-            } else if (l.getDatatype() != null) {
+            if (l.getLanguage().isPresent()) {
+                hash = Hash.murmur3("\u0003", l.getLanguage().get(), l.getLabel());
+            } else if (!l.getDatatype().equals(XMLSchema.STRING)) {
                 hash = Hash.murmur3("\u0004", l.getDatatype().stringValue(), l.getLabel());
             } else {
                 hash = Hash.murmur3("\u0005", l.getLabel());
@@ -240,15 +243,15 @@ public final class Statements {
         RDFFormat format = null;
         if (index > 0) {
             final String name = "test." + fileSpec.substring(0, index);
-            format = Rio.getParserFormatForFileName(name);
+            format = Rio.getParserFormatForFileName(name).orElse(null);
             if (format == null) {
-                format = Rio.getWriterFormatForFileName(name);
+                format = Rio.getWriterFormatForFileName(name).orElse(null);
             }
         }
         if (format == null) {
-            format = Rio.getParserFormatForFileName(fileSpec);
+            format = Rio.getParserFormatForFileName(fileSpec).orElse(null);
             if (format == null) {
-                format = Rio.getWriterFormatForFileName(fileSpec);
+                format = Rio.getWriterFormatForFileName(fileSpec).orElse(null);
             }
         }
         if (format == null) {
@@ -283,8 +286,8 @@ public final class Statements {
     public static Value shortenValue(final Value value, final int threshold) {
         if (value instanceof Literal) {
             final Literal literal = (Literal) value;
-            final URI datatype = literal.getDatatype();
-            final String language = literal.getLanguage();
+            final IRI datatype = literal.getDatatype();
+            final String language = literal.getLanguage().orElse(null);
             final String label = ((Literal) value).getLabel();
             if (label.length() > threshold
                     && (datatype == null || datatype.equals(XMLSchema.STRING))) {
@@ -297,11 +300,11 @@ public final class Statements {
                 }
                 final String newLabel = label.substring(0, offset) + "...";
                 if (language != null) {
-                    return VALUE_FACTORY.createLiteral(newLabel, language);
+                    return Statements.VALUE_FACTORY.createLiteral(newLabel, language);
                 } else if (datatype != null) {
-                    return VALUE_FACTORY.createLiteral(newLabel, datatype);
+                    return Statements.VALUE_FACTORY.createLiteral(newLabel, datatype);
                 } else {
-                    return VALUE_FACTORY.createLiteral(newLabel);
+                    return Statements.VALUE_FACTORY.createLiteral(newLabel);
                 }
             }
         }
@@ -310,7 +313,7 @@ public final class Statements {
 
     @Nullable
     public static String formatValue(@Nullable final Value value) {
-        return formatValue(value, null);
+        return Statements.formatValue(value, null);
     }
 
     public static String formatValue(@Nullable final Value value,
@@ -320,7 +323,7 @@ public final class Statements {
         }
         try {
             final StringBuilder builder = new StringBuilder(value.stringValue().length() * 2);
-            formatValue(value, namespaces, builder);
+            Statements.formatValue(value, namespaces, builder);
             return builder.toString();
         } catch (final Throwable ex) {
             throw new Error("Unexpected exception (!)", ex);
@@ -329,12 +332,12 @@ public final class Statements {
 
     public static void formatValue(final Value value, @Nullable final Namespaces namespaces,
             final Appendable out) throws IOException {
-        if (value instanceof URI) {
-            formatURI((URI) value, out, namespaces);
+        if (value instanceof IRI) {
+            Statements.formatIRI((IRI) value, out, namespaces);
         } else if (value instanceof BNode) {
-            formatBNode((BNode) value, out);
+            Statements.formatBNode((BNode) value, out);
         } else if (value instanceof Literal) {
-            formatLiteral((Literal) value, out, namespaces);
+            Statements.formatLiteral((Literal) value, out, namespaces);
         } else {
             throw new Error("Unexpected value class (!): " + value.getClass().getName());
         }
@@ -344,12 +347,13 @@ public final class Statements {
 
         final int prefixLen = prefix.length();
         if (prefixLen > 0) {
-            if (!isPN_CHARS_BASE(prefix.charAt(0)) || !isPN_CHARS(prefix.charAt(prefixLen - 1))) {
+            if (!Statements.isPN_CHARS_BASE(prefix.charAt(0))
+                    || !Statements.isPN_CHARS(prefix.charAt(prefixLen - 1))) {
                 return false;
             }
             for (int i = 1; i < prefixLen - 1; ++i) {
                 final char c = prefix.charAt(i);
-                if (!isPN_CHARS(c) && c != '.') {
+                if (!Statements.isPN_CHARS(c) && c != '.') {
                     return false;
                 }
             }
@@ -360,8 +364,9 @@ public final class Statements {
             int i = 0;
             while (i < nameLen) {
                 final char c = name.charAt(i++);
-                if (!isPN_CHARS_BASE(c) && c != ':' && (i != 1 || c != '_' && !isNumber(c))
-                        && (i == 1 || !isPN_CHARS(c) && (i == nameLen || c != '.'))) {
+                if (!Statements.isPN_CHARS_BASE(c) && c != ':'
+                        && (i != 1 || c != '_' && !Statements.isNumber(c))
+                        && (i == 1 || !Statements.isPN_CHARS(c) && (i == nameLen || c != '.'))) {
                     return false;
                 }
             }
@@ -370,14 +375,14 @@ public final class Statements {
         return true;
     }
 
-    private static void formatURI(final URI uri, final Appendable out,
+    private static void formatIRI(final IRI iri, final Appendable out,
             @Nullable final Namespaces namespaces) throws IOException {
 
         if (namespaces != null) {
-            final String prefix = namespaces.prefixFor(uri.getNamespace());
+            final String prefix = namespaces.prefixFor(iri.getNamespace());
             if (prefix != null) {
-                final String name = uri.getLocalName();
-                if (isGoodQName(prefix, name)) {
+                final String name = iri.getLocalName();
+                if (Statements.isGoodQName(prefix, name)) {
                     out.append(prefix);
                     out.append(":");
                     out.append(name);
@@ -386,7 +391,7 @@ public final class Statements {
             }
         }
 
-        final String string = uri.stringValue();
+        final String string = iri.stringValue();
         final int len = string.length();
         out.append('<');
         for (int i = 0; i < len; ++i) {
@@ -442,7 +447,7 @@ public final class Statements {
             out.append("genid-hash-").append(Integer.toHexString(System.identityHashCode(bnode)));
         } else {
             char ch = id.charAt(0);
-            if (isPN_CHARS_U(ch) || isNumber(ch)) {
+            if (Statements.isPN_CHARS_U(ch) || Statements.isNumber(ch)) {
                 out.append(ch);
             } else {
                 out.append("genid-start-").append(ch);
@@ -450,14 +455,14 @@ public final class Statements {
             if (last > 0) {
                 for (int i = 1; i < last; ++i) {
                     ch = id.charAt(i);
-                    if (isPN_CHARS(ch) || ch == '.') {
+                    if (Statements.isPN_CHARS(ch) || ch == '.') {
                         out.append(ch);
                     } else {
                         out.append(Integer.toHexString(ch));
                     }
                 }
                 ch = id.charAt(last);
-                if (isPN_CHARS(ch)) {
+                if (Statements.isPN_CHARS(ch)) {
                     out.append(ch);
                 } else {
                     out.append(Integer.toHexString(ch));
@@ -516,7 +521,7 @@ public final class Statements {
             }
         }
         out.append('"');
-        final String language = literal.getLanguage();
+        final String language = literal.getLanguage().orElse(null);
         if (language != null) {
             out.append('@');
             final int len = language.length();
@@ -530,32 +535,32 @@ public final class Statements {
                         valid = false;
                     } else {
                         final char prev = language.charAt(i - 1);
-                        valid &= isLetter(prev) || isNumber(prev);
+                        valid &= Statements.isLetter(prev) || Statements.isNumber(prev);
                     }
-                } else if (isNumber(ch)) {
+                } else if (Statements.isNumber(ch)) {
                     valid &= minusFound;
                 } else {
-                    valid &= isLetter(ch);
+                    valid &= Statements.isLetter(ch);
                 }
                 out.append(ch);
             }
             if (!valid || language.charAt(len - 1) == '-') {
-                throw new IllegalArgumentException("Invalid language tag '" + language + "' in '"
-                        + literal + "'");
+                throw new IllegalArgumentException(
+                        "Invalid language tag '" + language + "' in '" + literal + "'");
             }
         } else {
-            final URI datatype = literal.getDatatype();
+            final IRI datatype = literal.getDatatype();
             if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
                 out.append('^');
                 out.append('^');
-                formatURI(datatype, out, namespaces);
+                Statements.formatIRI(datatype, out, namespaces);
             }
         }
     }
 
     @Nullable
     public static Value parseValue(@Nullable final CharSequence sequence) {
-        return parseValue(sequence, null);
+        return Statements.parseValue(sequence, null);
     }
 
     public static Value parseValue(@Nullable final CharSequence sequence,
@@ -565,47 +570,48 @@ public final class Statements {
         }
         final int c = sequence.charAt(0);
         if (c == '_') {
-            return parseBNode(sequence);
+            return Statements.parseBNode(sequence);
         } else if (c == '"' || c == '\'') {
-            return parseLiteral(sequence, namespaces);
+            return Statements.parseLiteral(sequence, namespaces);
         } else {
-            return parseURI(sequence, namespaces);
+            return Statements.parseIRI(sequence, namespaces);
         }
     }
 
-    private static URI parseURI(final CharSequence sequence, @Nullable final Namespaces namespaces) {
+    private static IRI parseIRI(final CharSequence sequence,
+            @Nullable final Namespaces namespaces) {
 
         if (sequence.charAt(0) == '<') {
             final int last = sequence.length() - 1;
             final StringBuilder builder = new StringBuilder(last - 1);
             if (sequence.charAt(last) != '>') {
-                throw new IllegalArgumentException("Invalid URI: " + sequence);
+                throw new IllegalArgumentException("Invalid IRI: " + sequence);
             }
             int i = 1;
             while (i < last) {
                 char c = sequence.charAt(i++);
                 if (c < 32) { // discard control chars but accept other chars forbidden by W3C
-                    throw new IllegalArgumentException("Invalid char '" + c + "' in URI: "
-                            + sequence);
+                    throw new IllegalArgumentException(
+                            "Invalid char '" + c + "' in IRI: " + sequence);
                 } else if (c != '\\') {
                     builder.append(c);
                 } else {
                     if (i == last) {
-                        throw new IllegalArgumentException("Invalid URI: " + sequence);
+                        throw new IllegalArgumentException("Invalid IRI: " + sequence);
                     }
                     c = sequence.charAt(i++);
                     if (c == 'u') {
-                        builder.append(parseHex(sequence, i, 4));
+                        builder.append(Statements.parseHex(sequence, i, 4));
                         i += 4;
                     } else if (c == 'U') {
-                        builder.append(parseHex(sequence, i, 8));
+                        builder.append(Statements.parseHex(sequence, i, 8));
                         i += 8;
                     } else {
                         builder.append(c); // accept \> and \\ plus others
                     }
                 }
             }
-            return VALUE_FACTORY.createURI(builder.toString());
+            return Statements.VALUE_FACTORY.createIRI(builder.toString());
 
         } else if (namespaces != null) {
             final int len = sequence.length();
@@ -615,11 +621,12 @@ public final class Statements {
             while (i < len) {
                 final char c = sequence.charAt(i++);
                 if (c == ':') {
-                    if (i > 2 && !isPN_CHARS(sequence.charAt(i - 2))) {
+                    if (i > 2 && !Statements.isPN_CHARS(sequence.charAt(i - 2))) {
                         throw new IllegalArgumentException("Invalid qname " + sequence);
                     }
                     break;
-                } else if (i == 1 && !isPN_CHARS_BASE(c) || i > 1 && !isPN_CHARS(c) && c != '.') {
+                } else if (i == 1 && !Statements.isPN_CHARS_BASE(c)
+                        || i > 1 && !Statements.isPN_CHARS(c) && c != '.') {
                     throw new IllegalArgumentException("Invalid qname " + sequence);
                 } else {
                     builder.append(c);
@@ -635,20 +642,21 @@ public final class Statements {
             while (i < len) {
                 final char c = sequence.charAt(i++);
                 if (c == '%') {
-                    builder.append(parseHex(sequence, i, 2));
+                    builder.append(Statements.parseHex(sequence, i, 2));
                     i += 2;
                 } else if (c == '\\') {
                     final char d = sequence.charAt(i++);
                     if (d == '_' || d == '~' || d == '.' || d == '-' || d == '!' || d == '$'
                             || d == '&' || d == '\'' || d == '(' || d == ')' || d == '*'
-                            || d == '+' || d == ',' || d == ';' || d == '=' || d == '/'
-                            || d == '?' || d == '#' || d == '@' || d == '%') {
+                            || d == '+' || d == ',' || d == ';' || d == '=' || d == '/' || d == '?'
+                            || d == '#' || d == '@' || d == '%') {
                         builder.append(d);
                     } else {
                         throw new IllegalArgumentException("Invalid qname " + sequence);
                     }
-                } else if (isPN_CHARS_BASE(c) || c == ':' || i == 1 && (c == '_' || isNumber(c))
-                        || i > 1 && (isPN_CHARS(c) || i < len && c == '.')) {
+                } else if (Statements.isPN_CHARS_BASE(c) || c == ':'
+                        || i == 1 && (c == '_' || Statements.isNumber(c))
+                        || i > 1 && (Statements.isPN_CHARS(c) || i < len && c == '.')) {
                     builder.append(c);
                 } else {
                     throw new IllegalArgumentException("Invalid qname " + sequence);
@@ -656,7 +664,7 @@ public final class Statements {
             }
             final String name = builder.toString();
 
-            return VALUE_FACTORY.createURI(namespace, name);
+            return Statements.VALUE_FACTORY.createIRI(namespace, name);
         }
 
         throw new IllegalArgumentException("Unsupported qname " + sequence);
@@ -669,17 +677,17 @@ public final class Statements {
             boolean ok = true;
             char c = sequence.charAt(2);
             builder.append(c);
-            ok &= isPN_CHARS_U(c) || isNumber(c);
+            ok &= Statements.isPN_CHARS_U(c) || Statements.isNumber(c);
             for (int i = 2; i < len - 1; ++i) {
                 c = sequence.charAt(i);
                 builder.append(c);
-                ok &= isPN_CHARS(c) || c == '.';
+                ok &= Statements.isPN_CHARS(c) || c == '.';
             }
             c = sequence.charAt(len - 1);
             builder.append(c);
-            ok &= isPN_CHARS(c);
+            ok &= Statements.isPN_CHARS(c);
             if (ok) {
-                return VALUE_FACTORY.createBNode(builder.toString());
+                return Statements.VALUE_FACTORY.createBNode(builder.toString());
             }
         }
         throw new IllegalArgumentException("Invalid BNode '" + sequence + "'");
@@ -714,11 +722,11 @@ public final class Statements {
                     builder.append('\t');
                     break;
                 case 'u':
-                    builder.append(parseHex(sequence, i, 4));
+                    builder.append(Statements.parseHex(sequence, i, 4));
                     i += 4;
                     break;
                 case 'U':
-                    builder.append(parseHex(sequence, i, 8));
+                    builder.append(Statements.parseHex(sequence, i, 8));
                     i += 8;
                     break;
                 default:
@@ -732,25 +740,25 @@ public final class Statements {
         final String label = builder.toString();
 
         if (i == len && c == delim) {
-            return VALUE_FACTORY.createLiteral(label);
+            return Statements.VALUE_FACTORY.createLiteral(label);
 
         } else if (i < len - 2 && sequence.charAt(i) == '^' && sequence.charAt(i + 1) == '^') {
-            final URI datatype = parseURI(sequence.subSequence(i + 2, len), namespaces);
-            return VALUE_FACTORY.createLiteral(label, datatype);
+            final IRI datatype = Statements.parseIRI(sequence.subSequence(i + 2, len), namespaces);
+            return Statements.VALUE_FACTORY.createLiteral(label, datatype);
 
         } else if (i < len - 1 && sequence.charAt(i) == '@') {
             builder.setLength(0);
             boolean minusFound = false;
             for (int j = i + 1; j < len; ++j) {
                 c = sequence.charAt(j);
-                if (!isLetter(c) && (c != '-' || j == i + 1 || j == len - 1)
-                        && (!isNumber(c) || !minusFound)) {
+                if (!Statements.isLetter(c) && (c != '-' || j == i + 1 || j == len - 1)
+                        && (!Statements.isNumber(c) || !minusFound)) {
                     throw new IllegalArgumentException("Invalid lang in '" + sequence + "'");
                 }
                 minusFound |= c == '-';
                 builder.append(c);
             }
-            return VALUE_FACTORY.createLiteral(label, builder.toString());
+            return Statements.VALUE_FACTORY.createLiteral(label, builder.toString());
         }
 
         throw new IllegalArgumentException("Invalid literal '" + sequence + "'");
@@ -767,8 +775,8 @@ public final class Statements {
             final char c = sequence.charAt(index + i);
             final int digit = Character.digit(c, 16);
             if (digit < 0) {
-                throw new IllegalArgumentException("Invalid hex digit '" + c + "' in RDF value '"
-                        + sequence + "'");
+                throw new IllegalArgumentException(
+                        "Invalid hex digit '" + c + "' in RDF value '" + sequence + "'");
             }
             code = code * 16 + digit;
         }
@@ -776,20 +784,21 @@ public final class Statements {
     }
 
     private static boolean isPN_CHARS(final int c) { // ok
-        return isPN_CHARS_U(c) || isNumber(c) || c == '-' || c == 0x00B7 || c >= 0x0300
-                && c <= 0x036F || c >= 0x203F && c <= 0x2040;
+        return Statements.isPN_CHARS_U(c) || Statements.isNumber(c) || c == '-' || c == 0x00B7
+                || c >= 0x0300 && c <= 0x036F || c >= 0x203F && c <= 0x2040;
     }
 
     private static boolean isPN_CHARS_U(final int c) { // ok
-        return isPN_CHARS_BASE(c) || c == '_';
+        return Statements.isPN_CHARS_BASE(c) || c == '_';
     }
 
     private static boolean isPN_CHARS_BASE(final int c) { // ok
-        return isLetter(c) || c >= 0x00C0 && c <= 0x00D6 || c >= 0x00D8 && c <= 0x00F6
-                || c >= 0x00F8 && c <= 0x02FF || c >= 0x0370 && c <= 0x037D || c >= 0x037F
-                && c <= 0x1FFF || c >= 0x200C && c <= 0x200D || c >= 0x2070 && c <= 0x218F
-                || c >= 0x2C00 && c <= 0x2FEF || c >= 0x3001 && c <= 0xD7FF || c >= 0xF900
-                && c <= 0xFDCF || c >= 0xFDF0 && c <= 0xFFFD || c >= 0x10000 && c <= 0xEFFFF;
+        return Statements.isLetter(c) || c >= 0x00C0 && c <= 0x00D6 || c >= 0x00D8 && c <= 0x00F6
+                || c >= 0x00F8 && c <= 0x02FF || c >= 0x0370 && c <= 0x037D
+                || c >= 0x037F && c <= 0x1FFF || c >= 0x200C && c <= 0x200D
+                || c >= 0x2070 && c <= 0x218F || c >= 0x2C00 && c <= 0x2FEF
+                || c >= 0x3001 && c <= 0xD7FF || c >= 0xF900 && c <= 0xFDCF
+                || c >= 0xFDF0 && c <= 0xFFFD || c >= 0x10000 && c <= 0xEFFFF;
     }
 
     private static boolean isLetter(final int c) {
@@ -818,11 +827,12 @@ public final class Statements {
      * </tr>
      * <tr>
      * <td>{@link String}, {@link Literal} (plain, {@code xsd:string})</td>
-     * <td>{@link String}, {@link Literal} (plain, {@code xsd:string}), {@code URI} (as uri
+     * <td>{@link String}, {@link Literal} (plain, {@code xsd:string}), {@code IRI} (as IRI
      * string), {@code BNode} (as BNode ID), {@link Integer}, {@link Long}, {@link Double},
      * {@link Float}, {@link Short}, {@link Byte}, {@link BigDecimal}, {@link BigInteger},
      * {@link AtomicInteger}, {@link AtomicLong}, {@link Boolean}, {@link XMLGregorianCalendar},
-     * {@link GregorianCalendar}, {@link Date} (via parsing), {@link Character} (length &gt;= 1)</td>
+     * {@link GregorianCalendar}, {@link Date} (via parsing), {@link Character} (length &gt;=
+     * 1)</td>
      * </tr>
      * <tr>
      * <td>{@link Number}, {@link Literal} (any numeric {@code xsd:} type)</td>
@@ -837,12 +847,12 @@ public final class Statements {
      * ({@code xsd:dateTime}), {@link String}</td>
      * </tr>
      * <tr>
-     * <td>{@link URI}</td>
-     * <td>{@link URI}, {@link String}</td>
+     * <td>{@link IRI}</td>
+     * <td>{@link IRI}, {@link String}</td>
      * </tr>
      * <tr>
      * <td>{@link BNode}</td>
-     * <td>{@link BNode}, {@link URI} (skolemization), {@link String}</td>
+     * <td>{@link BNode}, {@link IRI} (skolemization), {@link String}</td>
      * </tr>
      * <tr>
      * <td>{@link Statement}</td>
@@ -874,7 +884,7 @@ public final class Statements {
         if (clazz.isInstance(object)) {
             return (T) object;
         }
-        final T result = (T) convertObject(object, clazz);
+        final T result = (T) Statements.convertObject(object, clazz);
         if (result != null) {
             return result;
         }
@@ -909,7 +919,7 @@ public final class Statements {
             return (T) object;
         }
         try {
-            final T result = (T) convertObject(object, clazz);
+            final T result = (T) Statements.convertObject(object, clazz);
             return result != null ? result : defaultValue;
         } catch (final RuntimeException ex) {
             return defaultValue;
@@ -919,37 +929,37 @@ public final class Statements {
     @Nullable
     private static Object convertObject(final Object object, final Class<?> clazz) {
         if (object instanceof Literal) {
-            return convertLiteral((Literal) object, clazz);
-        } else if (object instanceof URI) {
-            return convertURI((URI) object, clazz);
+            return Statements.convertLiteral((Literal) object, clazz);
+        } else if (object instanceof IRI) {
+            return Statements.convertIRI((IRI) object, clazz);
         } else if (object instanceof String) {
-            return convertString((String) object, clazz);
+            return Statements.convertString((String) object, clazz);
         } else if (object instanceof Number) {
-            return convertNumber((Number) object, clazz);
+            return Statements.convertNumber((Number) object, clazz);
         } else if (object instanceof Boolean) {
-            return convertBoolean((Boolean) object, clazz);
+            return Statements.convertBoolean((Boolean) object, clazz);
         } else if (object instanceof XMLGregorianCalendar) {
-            return convertCalendar((XMLGregorianCalendar) object, clazz);
+            return Statements.convertCalendar((XMLGregorianCalendar) object, clazz);
         } else if (object instanceof BNode) {
-            return convertBNode((BNode) object, clazz);
+            return Statements.convertBNode((BNode) object, clazz);
         } else if (object instanceof Statement) {
-            return convertStatement((Statement) object, clazz);
+            return Statements.convertStatement((Statement) object, clazz);
         } else if (object instanceof GregorianCalendar) {
-            final XMLGregorianCalendar calendar = DATATYPE_FACTORY
+            final XMLGregorianCalendar calendar = Statements.DATATYPE_FACTORY
                     .newXMLGregorianCalendar((GregorianCalendar) object);
-            return clazz == XMLGregorianCalendar.class ? calendar : convertCalendar(calendar,
-                    clazz);
+            return clazz == XMLGregorianCalendar.class ? calendar
+                    : Statements.convertCalendar(calendar, clazz);
         } else if (object instanceof Date) {
             final GregorianCalendar calendar = new GregorianCalendar();
             calendar.setTime((Date) object);
-            final XMLGregorianCalendar xmlCalendar = DATATYPE_FACTORY
+            final XMLGregorianCalendar xmlCalendar = Statements.DATATYPE_FACTORY
                     .newXMLGregorianCalendar(calendar);
-            return clazz == XMLGregorianCalendar.class ? xmlCalendar : convertCalendar(
-                    xmlCalendar, clazz);
+            return clazz == XMLGregorianCalendar.class ? xmlCalendar
+                    : Statements.convertCalendar(xmlCalendar, clazz);
         } else if (object instanceof Enum<?>) {
-            return convertEnum((Enum<?>) object, clazz);
+            return Statements.convertEnum((Enum<?>) object, clazz);
         } else if (object instanceof File) {
-            return convertFile((File) object, clazz);
+            return Statements.convertFile((File) object, clazz);
         }
         return null;
     }
@@ -964,38 +974,39 @@ public final class Statements {
 
     @Nullable
     private static Object convertLiteral(final Literal literal, final Class<?> clazz) {
-        final URI datatype = literal.getDatatype();
+        final IRI datatype = literal.getDatatype();
         if (datatype == null || datatype.equals(XMLSchema.STRING)) {
-            return convertString(literal.getLabel(), clazz);
+            return Statements.convertString(literal.getLabel(), clazz);
         } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-            return convertBoolean(literal.booleanValue(), clazz);
+            return Statements.convertBoolean(literal.booleanValue(), clazz);
         } else if (datatype.equals(XMLSchema.DATE) || datatype.equals(XMLSchema.DATETIME)) {
-            return convertCalendar(literal.calendarValue(), clazz);
+            return Statements.convertCalendar(literal.calendarValue(), clazz);
         } else if (datatype.equals(XMLSchema.INT)) {
-            return convertNumber(literal.intValue(), clazz);
+            return Statements.convertNumber(literal.intValue(), clazz);
         } else if (datatype.equals(XMLSchema.LONG)) {
-            return convertNumber(literal.longValue(), clazz);
+            return Statements.convertNumber(literal.longValue(), clazz);
         } else if (datatype.equals(XMLSchema.DOUBLE)) {
-            return convertNumber(literal.doubleValue(), clazz);
+            return Statements.convertNumber(literal.doubleValue(), clazz);
         } else if (datatype.equals(XMLSchema.FLOAT)) {
-            return convertNumber(literal.floatValue(), clazz);
+            return Statements.convertNumber(literal.floatValue(), clazz);
         } else if (datatype.equals(XMLSchema.SHORT)) {
-            return convertNumber(literal.shortValue(), clazz);
+            return Statements.convertNumber(literal.shortValue(), clazz);
         } else if (datatype.equals(XMLSchema.BYTE)) {
-            return convertNumber(literal.byteValue(), clazz);
+            return Statements.convertNumber(literal.byteValue(), clazz);
         } else if (datatype.equals(XMLSchema.DECIMAL)) {
-            return convertNumber(literal.decimalValue(), clazz);
+            return Statements.convertNumber(literal.decimalValue(), clazz);
         } else if (datatype.equals(XMLSchema.INTEGER)) {
-            return convertNumber(literal.integerValue(), clazz);
+            return Statements.convertNumber(literal.integerValue(), clazz);
         } else if (datatype.equals(XMLSchema.NON_NEGATIVE_INTEGER)
                 || datatype.equals(XMLSchema.NON_POSITIVE_INTEGER)
                 || datatype.equals(XMLSchema.NEGATIVE_INTEGER)
                 || datatype.equals(XMLSchema.POSITIVE_INTEGER)) {
-            return convertNumber(literal.integerValue(), clazz); // infrequent integer cases
+            return Statements.convertNumber(literal.integerValue(), clazz); // infrequent integer
+                                                                            // cases
         } else if (datatype.equals(XMLSchema.NORMALIZEDSTRING) || datatype.equals(XMLSchema.TOKEN)
                 || datatype.equals(XMLSchema.NMTOKEN) || datatype.equals(XMLSchema.LANGUAGE)
                 || datatype.equals(XMLSchema.NAME) || datatype.equals(XMLSchema.NCNAME)) {
-            return convertString(literal.getLabel(), clazz); // infrequent string cases
+            return Statements.convertString(literal.getLabel(), clazz); // infrequent string cases
         }
         return null;
     }
@@ -1005,7 +1016,7 @@ public final class Statements {
         if (clazz == Boolean.class || clazz == boolean.class) {
             return bool;
         } else if (clazz.isAssignableFrom(Literal.class)) {
-            return VALUE_FACTORY.createLiteral(bool);
+            return Statements.VALUE_FACTORY.createLiteral(bool);
         } else if (clazz.isAssignableFrom(String.class)) {
             return bool.toString();
         }
@@ -1017,26 +1028,26 @@ public final class Statements {
         if (clazz.isInstance(string)) {
             return string;
         } else if (clazz.isAssignableFrom(Literal.class)) {
-            return VALUE_FACTORY.createLiteral(string, XMLSchema.STRING);
-        } else if (clazz.isAssignableFrom(URI.class)) {
-            return VALUE_FACTORY.createURI(string);
+            return Statements.VALUE_FACTORY.createLiteral(string, XMLSchema.STRING);
+        } else if (clazz.isAssignableFrom(IRI.class)) {
+            return Statements.VALUE_FACTORY.createIRI(string);
         } else if (clazz.isAssignableFrom(BNode.class)) {
-            return VALUE_FACTORY.createBNode(string.startsWith("_:") ? string.substring(2)
-                    : string);
+            return Statements.VALUE_FACTORY
+                    .createBNode(string.startsWith("_:") ? string.substring(2) : string);
         } else if (clazz == Boolean.class || clazz == boolean.class) {
             return Boolean.valueOf(string);
         } else if (clazz == Integer.class || clazz == int.class) {
-            return Integer.valueOf((int) toLong(string));
+            return Integer.valueOf((int) Statements.toLong(string));
         } else if (clazz == Long.class || clazz == long.class) {
-            return Long.valueOf(toLong(string));
+            return Long.valueOf(Statements.toLong(string));
         } else if (clazz == Double.class || clazz == double.class) {
             return Double.valueOf(string);
         } else if (clazz == Float.class || clazz == float.class) {
             return Float.valueOf(string);
         } else if (clazz == Short.class || clazz == short.class) {
-            return Short.valueOf((short) toLong(string));
+            return Short.valueOf((short) Statements.toLong(string));
         } else if (clazz == Byte.class || clazz == byte.class) {
-            return Byte.valueOf((byte) toLong(string));
+            return Byte.valueOf((byte) Statements.toLong(string));
         } else if (clazz == BigDecimal.class) {
             return new BigDecimal(string);
         } else if (clazz == BigInteger.class) {
@@ -1047,13 +1058,15 @@ public final class Statements {
             return new AtomicLong(Long.parseLong(string));
         } else if (clazz == Date.class) {
             final String fixed = string.contains("T") ? string : string + "T00:00:00";
-            return DATATYPE_FACTORY.newXMLGregorianCalendar(fixed).toGregorianCalendar().getTime();
+            return Statements.DATATYPE_FACTORY.newXMLGregorianCalendar(fixed).toGregorianCalendar()
+                    .getTime();
         } else if (clazz.isAssignableFrom(GregorianCalendar.class)) {
             final String fixed = string.contains("T") ? string : string + "T00:00:00";
-            return DATATYPE_FACTORY.newXMLGregorianCalendar(fixed).toGregorianCalendar();
+            return Statements.DATATYPE_FACTORY.newXMLGregorianCalendar(fixed)
+                    .toGregorianCalendar();
         } else if (clazz.isAssignableFrom(XMLGregorianCalendar.class)) {
             final String fixed = string.contains("T") ? string : string + "T00:00:00";
-            return DATATYPE_FACTORY.newXMLGregorianCalendar(fixed);
+            return Statements.DATATYPE_FACTORY.newXMLGregorianCalendar(fixed);
         } else if (clazz == Character.class || clazz == char.class) {
             return string.isEmpty() ? null : string.charAt(0);
         } else if (clazz.isEnum()) {
@@ -1062,8 +1075,8 @@ public final class Statements {
                     return constant;
                 }
             }
-            throw new IllegalArgumentException("Illegal " + clazz.getSimpleName() + " constant: "
-                    + string);
+            throw new IllegalArgumentException(
+                    "Illegal " + clazz.getSimpleName() + " constant: " + string);
         } else if (clazz == File.class) {
             return new File(string);
         }
@@ -1074,21 +1087,23 @@ public final class Statements {
     private static Object convertNumber(final Number number, final Class<?> clazz) {
         if (clazz.isAssignableFrom(Literal.class)) {
             if (number instanceof Integer || number instanceof AtomicInteger) {
-                return VALUE_FACTORY.createLiteral(number.intValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.intValue());
             } else if (number instanceof Long || number instanceof AtomicLong) {
-                return VALUE_FACTORY.createLiteral(number.longValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.longValue());
             } else if (number instanceof Double) {
-                return VALUE_FACTORY.createLiteral(number.doubleValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.doubleValue());
             } else if (number instanceof Float) {
-                return VALUE_FACTORY.createLiteral(number.floatValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.floatValue());
             } else if (number instanceof Short) {
-                return VALUE_FACTORY.createLiteral(number.shortValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.shortValue());
             } else if (number instanceof Byte) {
-                return VALUE_FACTORY.createLiteral(number.byteValue());
+                return Statements.VALUE_FACTORY.createLiteral(number.byteValue());
             } else if (number instanceof BigDecimal) {
-                return VALUE_FACTORY.createLiteral(number.toString(), XMLSchema.DECIMAL);
+                return Statements.VALUE_FACTORY.createLiteral(number.toString(),
+                        XMLSchema.DECIMAL);
             } else if (number instanceof BigInteger) {
-                return VALUE_FACTORY.createLiteral(number.toString(), XMLSchema.INTEGER);
+                return Statements.VALUE_FACTORY.createLiteral(number.toString(),
+                        XMLSchema.INTEGER);
             }
         } else if (clazz.isAssignableFrom(String.class)) {
             return number.toString();
@@ -1105,9 +1120,9 @@ public final class Statements {
         } else if (clazz == Byte.class || clazz == byte.class) {
             return Byte.valueOf(number.byteValue());
         } else if (clazz == BigDecimal.class) {
-            return toBigDecimal(number);
+            return Statements.toBigDecimal(number);
         } else if (clazz == BigInteger.class) {
-            return toBigInteger(number);
+            return Statements.toBigInteger(number);
         } else if (clazz == AtomicInteger.class) {
             return new AtomicInteger(number.intValue());
         } else if (clazz == AtomicLong.class) {
@@ -1122,7 +1137,7 @@ public final class Statements {
         if (clazz.isInstance(calendar)) {
             return calendar;
         } else if (clazz.isAssignableFrom(Literal.class)) {
-            return VALUE_FACTORY.createLiteral(calendar);
+            return Statements.VALUE_FACTORY.createLiteral(calendar);
         } else if (clazz.isAssignableFrom(String.class)) {
             return calendar.toXMLFormat();
         } else if (clazz == Date.class) {
@@ -1134,13 +1149,13 @@ public final class Statements {
     }
 
     @Nullable
-    private static Object convertURI(final URI uri, final Class<?> clazz) {
-        if (clazz.isInstance(uri)) {
-            return uri;
+    private static Object convertIRI(final IRI iri, final Class<?> clazz) {
+        if (clazz.isInstance(iri)) {
+            return iri;
         } else if (clazz.isAssignableFrom(String.class)) {
-            return uri.stringValue();
-        } else if (clazz == File.class && uri.stringValue().startsWith("file://")) {
-            return new File(uri.stringValue().substring(7));
+            return iri.stringValue();
+        } else if (clazz == File.class && iri.stringValue().startsWith("file://")) {
+            return new File(iri.stringValue().substring(7));
         }
         return null;
     }
@@ -1149,8 +1164,8 @@ public final class Statements {
     private static Object convertBNode(final BNode bnode, final Class<?> clazz) {
         if (clazz.isInstance(bnode)) {
             return bnode;
-        } else if (clazz.isAssignableFrom(URI.class)) {
-            return VALUE_FACTORY.createURI("bnode:" + bnode.getID());
+        } else if (clazz.isAssignableFrom(IRI.class)) {
+            return Statements.VALUE_FACTORY.createIRI("bnode:" + bnode.getID());
         } else if (clazz.isAssignableFrom(String.class)) {
             return "_:" + bnode.getID();
         }
@@ -1164,7 +1179,7 @@ public final class Statements {
         } else if (clazz.isAssignableFrom(String.class)) {
             return constant.name();
         } else if (clazz.isAssignableFrom(Literal.class)) {
-            return VALUE_FACTORY.createLiteral(constant.name(), XMLSchema.STRING);
+            return Statements.VALUE_FACTORY.createLiteral(constant.name(), XMLSchema.STRING);
         }
         return null;
     }
@@ -1173,8 +1188,8 @@ public final class Statements {
     private static Object convertFile(final File file, final Class<?> clazz) {
         if (clazz.isInstance(file)) {
             return clazz.cast(file);
-        } else if (clazz.isAssignableFrom(URI.class)) {
-            return VALUE_FACTORY.createURI("file://" + file.getAbsolutePath());
+        } else if (clazz.isAssignableFrom(IRI.class)) {
+            return Statements.VALUE_FACTORY.createIRI("file://" + file.getAbsolutePath());
         } else if (clazz.isAssignableFrom(String.class)) {
             return file.getAbsolutePath();
         }
@@ -1233,10 +1248,10 @@ public final class Statements {
 
         @Override
         public int compare(final Value v1, final Value v2) {
-            if (v1 instanceof URI) {
-                if (v2 instanceof URI) {
-                    final int rank1 = rankOf(((URI) v1).getNamespace());
-                    final int rank2 = rankOf(((URI) v2).getNamespace());
+            if (v1 instanceof IRI) {
+                if (v2 instanceof IRI) {
+                    final int rank1 = this.rankOf(((IRI) v1).getNamespace());
+                    final int rank2 = this.rankOf(((IRI) v2).getNamespace());
                     if (rank1 >= 0 && (rank1 < rank2 || rank2 < 0)) {
                         return -1;
                     } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
@@ -1251,7 +1266,7 @@ public final class Statements {
             } else if (v1 instanceof BNode) {
                 if (v2 instanceof BNode) {
                     return ((BNode) v1).getID().compareTo(((BNode) v2).getID());
-                } else if (v2 instanceof URI) {
+                } else if (v2 instanceof IRI) {
                     return 1;
                 } else {
                     return -1;
@@ -1306,8 +1321,8 @@ public final class Statements {
         public int compare(final Statement s1, final Statement s2) {
             for (int i = 0; i < this.components.length(); ++i) {
                 final char c = this.components.charAt(i);
-                final Value v1 = getValue(s1, c);
-                final Value v2 = getValue(s2, c);
+                final Value v1 = this.getValue(s1, c);
+                final Value v2 = this.getValue(s2, c);
                 final int result = this.valueComparator.compare(v1, v2);
                 if (result != 0) {
                     return result;
@@ -1365,17 +1380,17 @@ public final class Statements {
                 if (ch0 == '+' || ch0 == '-') {
                     action = ch0;
                     if (token.length() == 1) {
-                        throw new IllegalArgumentException("No component(s) specified in '" + spec
-                                + "'");
+                        throw new IllegalArgumentException(
+                                "No component(s) specified in '" + spec + "'");
                     }
                     components.clear();
                     for (int i = 1; i < token.length(); ++i) {
                         final char ch1 = Character.toLowerCase(token.charAt(i));
-                        final int component = ch1 == 's' ? 0 : ch1 == 'p' ? 1 : ch1 == 'o' ? 2
-                                : ch1 == 'c' ? 3 : -1;
+                        final int component = ch1 == 's' ? 0
+                                : ch1 == 'p' ? 1 : ch1 == 'o' ? 2 : ch1 == 'c' ? 3 : -1;
                         if (component < 0) {
-                            throw new IllegalArgumentException("Invalid component '" + ch1
-                                    + "' in '" + spec + "'");
+                            throw new IllegalArgumentException(
+                                    "Invalid component '" + ch1 + "' in '" + spec + "'");
                         }
                         components.add(component);
                     }
@@ -1399,8 +1414,9 @@ public final class Statements {
             // Create ValueTransformers
             final ValueMatcher[] matchers = new ValueMatcher[4];
             for (int i = 0; i < 4; ++i) {
-                matchers[i] = expressions[i].isEmpty() ? null : new ValueMatcher(
-                        (List<String>) expressions[i], Boolean.TRUE.equals(includes[i]));
+                matchers[i] = expressions[i].isEmpty() ? null
+                        : new ValueMatcher((List<String>) expressions[i],
+                                Boolean.TRUE.equals(includes[i]));
             }
             this.subjMatcher = matchers[0];
             this.predMatcher = matchers[1];
@@ -1420,13 +1436,13 @@ public final class Statements {
 
             private final boolean include;
 
-            // for URIs
+            // for IRIs
 
-            private final boolean matchAnyURI;
+            private final boolean matchAnyIRI;
 
-            private final Set<String> matchedURINamespaces;
+            private final Set<String> matchedIRINamespaces;
 
-            private final Set<URI> matchedURIs;
+            private final Set<IRI> matchedIRIs;
 
             // for BNodes
 
@@ -1444,7 +1460,7 @@ public final class Statements {
 
             private final Set<String> matchedLanguages;
 
-            private final Set<URI> matchedDatatypeURIs;
+            private final Set<IRI> matchedDatatypeIRIs;
 
             private final Set<String> matchedDatatypeNamespaces;
 
@@ -1454,15 +1470,15 @@ public final class Statements {
 
                 this.include = include;
 
-                this.matchedURINamespaces = new HashSet<>();
-                this.matchedURIs = new HashSet<>();
+                this.matchedIRINamespaces = new HashSet<>();
+                this.matchedIRIs = new HashSet<>();
                 this.matchedBNodes = new HashSet<>();
                 this.matchedLanguages = new HashSet<>();
-                this.matchedDatatypeURIs = new HashSet<>();
+                this.matchedDatatypeIRIs = new HashSet<>();
                 this.matchedDatatypeNamespaces = new HashSet<>();
                 this.matchedLiterals = new HashSet<>();
 
-                boolean matchAnyURI = false;
+                boolean matchAnyIRI = false;
                 boolean matchAnyBNode = false;
                 boolean matchAnyPlainLiteral = false;
                 boolean matchAnyLangLiteral = false;
@@ -1470,7 +1486,7 @@ public final class Statements {
 
                 for (final String expression : matchExpressions) {
                     if ("<*>".equals(expression)) {
-                        matchAnyURI = true;
+                        matchAnyIRI = true;
                     } else if ("_:*".equals(expression)) {
                         matchAnyBNode = true;
                     } else if ("*".equals(expression)) {
@@ -1486,20 +1502,20 @@ public final class Statements {
                             this.matchedDatatypeNamespaces.add(Namespaces.DEFAULT
                                     .uriFor(expression.substring(3, expression.length() - 2)));
                         } else {
-                            this.matchedDatatypeURIs.add((URI) Statements.parseValue(
-                                    expression.substring(3), Namespaces.DEFAULT));
+                            this.matchedDatatypeIRIs.add((IRI) Statements
+                                    .parseValue(expression.substring(3), Namespaces.DEFAULT));
                         }
                     } else if (expression.endsWith(":*")) {
-                        this.matchedURINamespaces.add(Namespaces.DEFAULT.uriFor(expression
-                                .substring(0, expression.length() - 2)));
+                        this.matchedIRINamespaces.add(Namespaces.DEFAULT
+                                .uriFor(expression.substring(0, expression.length() - 2)));
 
                     } else if (expression.endsWith("*>")) {
-                        this.matchedURINamespaces.add(expression.substring(1,
-                                expression.length() - 2));
+                        this.matchedIRINamespaces
+                                .add(expression.substring(1, expression.length() - 2));
                     } else {
                         final Value value = Statements.parseValue(expression, Namespaces.DEFAULT);
-                        if (value instanceof URI) {
-                            this.matchedURIs.add((URI) value);
+                        if (value instanceof IRI) {
+                            this.matchedIRIs.add((IRI) value);
                         } else if (value instanceof BNode) {
                             this.matchedBNodes.add((BNode) value);
                         } else if (value instanceof Literal) {
@@ -1509,7 +1525,7 @@ public final class Statements {
                     }
                 }
 
-                this.matchAnyURI = matchAnyURI;
+                this.matchAnyIRI = matchAnyIRI;
                 this.matchAnyBNode = matchAnyBNode;
                 this.matchAnyPlainLiteral = matchAnyPlainLiteral;
                 this.matchAnyLangLiteral = matchAnyLangLiteral;
@@ -1517,32 +1533,33 @@ public final class Statements {
             }
 
             boolean match(final Value value) {
-                final boolean matched = matchHelper(value);
+                final boolean matched = this.matchHelper(value);
                 return this.include == matched;
             }
 
             private boolean matchHelper(final Value value) {
-                if (value instanceof URI) {
-                    return this.matchAnyURI //
-                            || contains(this.matchedURIs, value)
-                            || containsNs(this.matchedURINamespaces, (URI) value);
+                if (value instanceof IRI) {
+                    return this.matchAnyIRI //
+                            || ValueMatcher.contains(this.matchedIRIs, value)
+                            || ValueMatcher.containsNs(this.matchedIRINamespaces, (IRI) value);
                 } else if (value instanceof Literal) {
                     final Literal lit = (Literal) value;
-                    final String lang = lit.getLanguage();
-                    final URI dt = lit.getDatatype();
-                    return lang == null
-                            && (dt == null || XMLSchema.STRING.equals(dt))
+                    final String lang = lit.getLanguage().orElse(null);
+                    final IRI dt = lit.getDatatype();
+                    return lang == null && (dt == null || XMLSchema.STRING.equals(dt))
                             && this.matchAnyPlainLiteral //
                             || lang != null //
-                            && (this.matchAnyLangLiteral || contains(this.matchedLanguages, lang)) //
+                                    && (this.matchAnyLangLiteral
+                                            || ValueMatcher.contains(this.matchedLanguages, lang)) //
                             || dt != null //
-                            && (this.matchAnyTypedLiteral
-                                    || contains(this.matchedDatatypeURIs, dt) || containsNs(
-                                        this.matchedDatatypeNamespaces, dt)) //
-                            || contains(this.matchedLiterals, lit);
+                                    && (this.matchAnyTypedLiteral
+                                            || ValueMatcher.contains(this.matchedDatatypeIRIs, dt)
+                                            || ValueMatcher.containsNs(
+                                                    this.matchedDatatypeNamespaces, dt)) //
+                            || ValueMatcher.contains(this.matchedLiterals, lit);
                 } else {
                     return this.matchAnyBNode //
-                            || contains(this.matchedBNodes, value);
+                            || ValueMatcher.contains(this.matchedBNodes, value);
                 }
             }
 
@@ -1550,16 +1567,16 @@ public final class Statements {
                 return !set.isEmpty() && set.contains(value);
             }
 
-            private static boolean containsNs(final Set<String> set, final URI uri) {
+            private static boolean containsNs(final Set<String> set, final IRI iri) {
                 if (set.isEmpty()) {
                     return false;
                 }
-                if (set.contains(uri.getNamespace())) {
+                if (set.contains(iri.getNamespace())) {
                     return true; // exact lookup
                 }
-                final String uriString = uri.stringValue();
+                final String iriString = iri.stringValue();
                 for (final String elem : set) {
-                    if (uriString.startsWith(elem)) {
+                    if (iriString.startsWith(elem)) {
                         return true; // prefix match
                     }
                 }

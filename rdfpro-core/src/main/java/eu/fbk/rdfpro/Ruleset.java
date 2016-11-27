@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -32,14 +32,14 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.Var;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,18 +58,21 @@ public final class Ruleset {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Ruleset.class);
 
-    public static final Ruleset RHODF = fromRDF(Environment.getProperty("rdfpro.rules.rhodf"));
+    public static final Ruleset RHODF = Ruleset
+            .fromRDF(Environment.getProperty("rdfpro.rules.rhodf"));
 
-    public static final Ruleset RDFS = fromRDF(Environment.getProperty("rdfpro.rules.rdfs"));
+    public static final Ruleset RDFS = Ruleset
+            .fromRDF(Environment.getProperty("rdfpro.rules.rdfs"));
 
-    public static final Ruleset OWL2RL = fromRDF(Environment.getProperty("rdfpro.rules.owl2rl"));
+    public static final Ruleset OWL2RL = Ruleset
+            .fromRDF(Environment.getProperty("rdfpro.rules.owl2rl"));
 
     private final Set<Rule> rules;
 
-    private final Set<URI> metaVocabularyTerms;
+    private final Set<IRI> metaVocabularyTerms;
 
     @Nullable
-    private transient Map<URI, Rule> ruleIndex;
+    private transient Map<IRI, Rule> ruleIndex;
 
     @Nullable
     private transient List<RuleSplit> ruleSplits;
@@ -93,12 +96,12 @@ public final class Ruleset {
      * @param metaVocabularyTerms
      *            the meta-vocabulary terms
      */
-    public Ruleset(final Iterable<Rule> rules, @Nullable final Iterable<URI> metaVocabularyTerms) {
+    public Ruleset(final Iterable<Rule> rules, @Nullable final Iterable<IRI> metaVocabularyTerms) {
 
         this.rules = ImmutableSet.copyOf(Ordering.natural().sortedCopy(rules));
         this.metaVocabularyTerms = metaVocabularyTerms == null ? ImmutableSet.of() //
-                : ImmutableSet.copyOf(Ordering.from(Statements.valueComparator()).sortedCopy(
-                        metaVocabularyTerms));
+                : ImmutableSet.copyOf(Ordering.from(Statements.valueComparator())
+                        .sortedCopy(metaVocabularyTerms));
 
         this.ruleIndex = null;
         this.ruleSplits = null;
@@ -111,7 +114,7 @@ public final class Ruleset {
     /**
      * Returns the rules in this ruleset.
      *
-     * @return a set of rules sorted by phase index, fixpoint flag and rule URI.
+     * @return a set of rules sorted by phase index, fixpoint flag and rule IRI.
      */
     public Set<Rule> getRules() {
         return this.rules;
@@ -125,9 +128,9 @@ public final class Ruleset {
      * @return the rule for the ID specified, or null if it does not exist
      */
     @Nullable
-    public Rule getRule(final URI ruleID) {
+    public Rule getRule(final IRI ruleID) {
         if (this.ruleIndex == null) {
-            final ImmutableMap.Builder<URI, Rule> builder = ImmutableMap.builder();
+            final ImmutableMap.Builder<IRI, Rule> builder = ImmutableMap.builder();
             for (final Rule rule : this.rules) {
                 builder.put(rule.getID(), rule);
             }
@@ -139,9 +142,9 @@ public final class Ruleset {
     /**
      * Returns the meta-vocabulary terms associated to this ruleset.
      *
-     * @return a set of term URIs, sorted by URI
+     * @return a set of term IRIs, sorted by IRI
      */
-    public Set<URI> getMetaVocabularyTerms() {
+    public Set<IRI> getMetaVocabularyTerms() {
         return this.metaVocabularyTerms;
     }
 
@@ -217,7 +220,7 @@ public final class Ruleset {
                                 && !p.getObjectVar().hasValue()
                                 && (p.getContextVar() == null || !p.getContextVar().hasValue())) {
                             filters = new BloomFilter[0];
-                            LOGGER.debug("Rules contain <?s ?p ?o ?c> pattern");
+                            Ruleset.LOGGER.debug("Rules contain <?s ?p ?o ?c> pattern");
                             break;
                         }
                     }
@@ -234,8 +237,8 @@ public final class Ruleset {
                         }
                         counts[i] = hashes.size();
                         if (!hashes.isEmpty()) {
-                            final BloomFilter<Integer> filter = BloomFilter.create(
-                                    Funnels.integerFunnel(), hashes.size());
+                            final BloomFilter<Integer> filter = BloomFilter
+                                    .create(Funnels.integerFunnel(), hashes.size());
                             filters[i] = filter;
                             for (final Integer hash : hashes) {
                                 filter.put(hash);
@@ -246,10 +249,11 @@ public final class Ruleset {
 
                     // Atomically store the constructed filter list
                     this.filters = filters;
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Number of constants in pattern components: "
-                                + "s = {}, p = {}, o = {}, c = {}", counts[0], counts[1],
-                                counts[2], counts[3]);
+                    if (Ruleset.LOGGER.isDebugEnabled()) {
+                        Ruleset.LOGGER.debug(
+                                "Number of constants in pattern components: "
+                                        + "s = {}, p = {}, o = {}, c = {}",
+                                counts[0], counts[1], counts[2], counts[3]);
                     }
                 }
             }
@@ -301,7 +305,7 @@ public final class Ruleset {
         }
 
         // Compute preprocessing rules that obtain bindings of TBox WHERE exprs
-        final Map<URI, List<BindingSet>> bindingsMap = new ConcurrentHashMap<>();
+        final Map<IRI, List<BindingSet>> bindingsMap = new ConcurrentHashMap<>();
         final List<Runnable> queries = new ArrayList<>();
         int numABoxRules = 0;
         for (final RuleSplit split : this.ruleSplits) {
@@ -312,8 +316,8 @@ public final class Ruleset {
 
                         @Override
                         public void run() {
-                            final List<BindingSet> bindings = Lists.newArrayList(tboxData
-                                    .evaluate(split.tboxWhereExpr, null, null));
+                            final List<BindingSet> bindings = Lists.newArrayList(
+                                    tboxData.evaluate(split.tboxWhereExpr, null, null));
                             bindingsMap.put(split.rule.getID(), bindings);
                         }
 
@@ -327,11 +331,11 @@ public final class Ruleset {
         final List<Rule> rules = new ArrayList<>();
         for (final RuleSplit split : this.ruleSplits) {
             if (split.aboxDeleteExpr != null || split.aboxInsertExpr != null) {
-                final URI id = split.rule.getID();
+                final IRI id = split.rule.getID();
                 final boolean fixpoint = split.rule.isFixpoint();
                 final int phase = split.rule.getPhase();
                 if (split.tboxWhereExpr == null) {
-                    final URI newID = Rule.newID(id.stringValue());
+                    final IRI newID = Rule.newID(id.stringValue());
                     rules.add(new Rule(newID, fixpoint, phase, split.aboxDeleteExpr,
                             split.aboxInsertExpr, split.aboxWhereExpr));
                 } else {
@@ -348,7 +352,7 @@ public final class Ruleset {
                                     Algebra.rewrite(split.aboxWhereExpr, b),
                                     Statements.VALUE_NORMALIZER);
                             if (!Objects.equals(insert, where) || delete != null) {
-                                final URI newID = Rule.newID(id.stringValue());
+                                final IRI newID = Rule.newID(id.stringValue());
                                 rules.add(new Rule(newID, fixpoint, phase, delete, insert, where));
                             }
                         }
@@ -356,9 +360,10 @@ public final class Ruleset {
                 }
             }
         }
-        LOGGER.debug("{} ABox rules derived from {} TBox quads and {} original rules "
-                + "({} with ABox components, {} with TBox & ABox components)", rules.size(),
-                tboxData.size(), this.rules.size(), numABoxRules, queries.size());
+        Ruleset.LOGGER.debug(
+                "{} ABox rules derived from {} TBox quads and {} original rules "
+                        + "({} with ABox components, {} with TBox & ABox components)",
+                rules.size(), tboxData.size(), this.rules.size(), numABoxRules, queries.size());
 
         // Build and return the resulting ruleset
         return new Ruleset(rules, this.metaVocabularyTerms);
@@ -366,18 +371,18 @@ public final class Ruleset {
 
     /**
      * Returns the ruleset obtained by rewriting the rules of this ruleset according to the GLOBAL
-     * graph inference mode, using the global graph URI specified. Meta-vocabulary terms are not
+     * graph inference mode, using the global graph IRI specified. Meta-vocabulary terms are not
      * affected.
      *
      *
      * @param globalGraph
-     *            the URI of the global graph where to insert new quads; if null, quads will be
+     *            the IRI of the global graph where to insert new quads; if null, quads will be
      *            inserted in the default graph {@code sesame:nil}
      * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
      *         ruleset
-     * @see Rule#rewriteGlobalGM(URI)
+     * @see Rule#rewriteGlobalGM(IRI)
      */
-    public Ruleset rewriteGlobalGM(@Nullable final URI globalGraph) {
+    public Ruleset rewriteGlobalGM(@Nullable final IRI globalGraph) {
         final List<Rule> rewrittenRules = new ArrayList<>();
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteGlobalGM(globalGraph));
@@ -403,17 +408,17 @@ public final class Ruleset {
 
     /**
      * Returns the ruleset obtained by rewriting the rules of this ruleset according to the STAR
-     * graph inference mode, using the global graph URI supplied. Meta-vocabulary terms are not
+     * graph inference mode, using the global graph IRI supplied. Meta-vocabulary terms are not
      * affected.
      *
      * @param globalGraph
-     *            the URI of the global graph whose quads are 'imported' in other graphs; if null,
+     *            the IRI of the global graph whose quads are 'imported' in other graphs; if null,
      *            the default graph {@code sesame:nil} will be used
      * @return a ruleset with the rewritten rules and the same meta-vocabulary terms of this
      *         ruleset
-     * @see Rule#rewriteStarGM(URI)
+     * @see Rule#rewriteStarGM(IRI)
      */
-    public Ruleset rewriteStarGM(@Nullable final URI globalGraph) {
+    public Ruleset rewriteStarGM(@Nullable final IRI globalGraph) {
         final List<Rule> rewrittenRules = new ArrayList<>();
         for (final Rule rule : this.rules) {
             rewrittenRules.add(rule.rewriteStarGM(globalGraph));
@@ -453,8 +458,8 @@ public final class Ruleset {
      */
     public Ruleset mergeSameWhereExpr() {
         final List<Rule> rules = Rule.mergeSameWhereExpr(this.rules);
-        return rules.size() == this.rules.size() ? this : new Ruleset(rules,
-                this.metaVocabularyTerms);
+        return rules.size() == this.rules.size() ? this
+                : new Ruleset(rules, this.metaVocabularyTerms);
     }
 
     /**
@@ -494,9 +499,9 @@ public final class Ruleset {
         final StringBuilder builder = new StringBuilder();
         builder.append("META-VOCABULARY TERMS (").append(this.metaVocabularyTerms.size())
                 .append("):");
-        for (final URI metaVocabularyTerm : this.metaVocabularyTerms) {
-            builder.append("\n").append(
-                    Statements.formatValue(metaVocabularyTerm, Namespaces.DEFAULT));
+        for (final IRI metaVocabularyTerm : this.metaVocabularyTerms) {
+            builder.append("\n")
+                    .append(Statements.formatValue(metaVocabularyTerm, Namespaces.DEFAULT));
         }
         builder.append("\n\nRULES (").append(this.rules.size()).append("):");
         for (final Rule rule : this.rules) {
@@ -517,7 +522,7 @@ public final class Ruleset {
 
         // Emit meta-vocabulary terms
         final ValueFactory vf = Statements.VALUE_FACTORY;
-        for (final URI metaVocabularyTerm : this.metaVocabularyTerms) {
+        for (final IRI metaVocabularyTerm : this.metaVocabularyTerms) {
             vf.createStatement(metaVocabularyTerm, RDF.TYPE, RR.META_VOCABULARY_TERM);
         }
 
@@ -540,11 +545,11 @@ public final class Ruleset {
     public static Ruleset fromRDF(final Iterable<Statement> model) {
 
         // Parse meta-vocabulary terms
-        final List<URI> metaVocabularyTerms = new ArrayList<>();
+        final List<IRI> metaVocabularyTerms = new ArrayList<>();
         for (final Statement stmt : model) {
-            if (stmt.getSubject() instanceof URI && RDF.TYPE.equals(stmt.getPredicate())
+            if (stmt.getSubject() instanceof IRI && RDF.TYPE.equals(stmt.getPredicate())
                     && RR.META_VOCABULARY_TERM.equals(stmt.getObject())) {
-                metaVocabularyTerms.add((URI) stmt.getSubject());
+                metaVocabularyTerms.add((IRI) stmt.getSubject());
             }
         }
 
@@ -585,7 +590,7 @@ public final class Ruleset {
         } else if (rulesets.length == 1) {
             return rulesets[0];
         } else {
-            final List<URI> metaVocabularyTerms = new ArrayList<>();
+            final List<IRI> metaVocabularyTerms = new ArrayList<>();
             final List<Rule> rules = new ArrayList<>();
             for (final Ruleset ruleset : rulesets) {
                 metaVocabularyTerms.addAll(ruleset.getMetaVocabularyTerms());
@@ -617,14 +622,14 @@ public final class Ruleset {
         @Nullable
         final TupleExpr aboxWhereExpr;
 
-        RuleSplit(final Rule rule, final Set<URI> terms) {
+        RuleSplit(final Rule rule, final Set<IRI> terms) {
             try {
-                final TupleExpr[] deleteExprs = Algebra.splitTupleExpr(rule.getDeleteExpr(),
-                        terms, -1);
-                final TupleExpr[] insertExprs = Algebra.splitTupleExpr(rule.getInsertExpr(),
-                        terms, -1);
-                final TupleExpr[] whereExprs = Algebra.splitTupleExpr(
-                        Algebra.explodeFilters(rule.getWhereExpr()), terms, 1);
+                final TupleExpr[] deleteExprs = Algebra.splitTupleExpr(rule.getDeleteExpr(), terms,
+                        -1);
+                final TupleExpr[] insertExprs = Algebra.splitTupleExpr(rule.getInsertExpr(), terms,
+                        -1);
+                final TupleExpr[] whereExprs = Algebra
+                        .splitTupleExpr(Algebra.explodeFilters(rule.getWhereExpr()), terms, 1);
 
                 this.rule = rule;
                 this.tboxDeleteExpr = deleteExprs[0];
@@ -634,7 +639,7 @@ public final class Ruleset {
                 this.tboxWhereExpr = whereExprs[0];
                 this.aboxWhereExpr = whereExprs[1];
 
-                LOGGER.trace("{}", this);
+                Ruleset.LOGGER.trace("{}", this);
 
             } catch (final Throwable ex) {
                 throw new IllegalArgumentException("Cannot split rule " + rule.getID(), ex);
@@ -645,15 +650,15 @@ public final class Ruleset {
         public String toString() {
             final StringBuilder builder = new StringBuilder();
             builder.append("Splitting of rule ").append(this.rule.getID());
-            toStringHelper(builder, "\n  DELETE original: ", this.rule.getDeleteExpr());
-            toStringHelper(builder, "\n  DELETE tbox:     ", this.tboxDeleteExpr);
-            toStringHelper(builder, "\n  DELETE abox:     ", this.aboxDeleteExpr);
-            toStringHelper(builder, "\n  INSERT original: ", this.rule.getInsertExpr());
-            toStringHelper(builder, "\n  INSERT tbox:     ", this.tboxInsertExpr);
-            toStringHelper(builder, "\n  INSERT abox:     ", this.aboxInsertExpr);
-            toStringHelper(builder, "\n  WHERE  original: ", this.rule.getWhereExpr());
-            toStringHelper(builder, "\n  WHERE  tbox:     ", this.tboxWhereExpr);
-            toStringHelper(builder, "\n  WHERE  abox:     ", this.aboxWhereExpr);
+            this.toStringHelper(builder, "\n  DELETE original: ", this.rule.getDeleteExpr());
+            this.toStringHelper(builder, "\n  DELETE tbox:     ", this.tboxDeleteExpr);
+            this.toStringHelper(builder, "\n  DELETE abox:     ", this.aboxDeleteExpr);
+            this.toStringHelper(builder, "\n  INSERT original: ", this.rule.getInsertExpr());
+            this.toStringHelper(builder, "\n  INSERT tbox:     ", this.tboxInsertExpr);
+            this.toStringHelper(builder, "\n  INSERT abox:     ", this.aboxInsertExpr);
+            this.toStringHelper(builder, "\n  WHERE  original: ", this.rule.getWhereExpr());
+            this.toStringHelper(builder, "\n  WHERE  tbox:     ", this.tboxWhereExpr);
+            this.toStringHelper(builder, "\n  WHERE  abox:     ", this.aboxWhereExpr);
             return builder.toString();
         }
 

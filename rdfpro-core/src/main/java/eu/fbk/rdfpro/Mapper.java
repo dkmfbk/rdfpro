@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -19,14 +19,13 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.Scripting;
@@ -57,7 +56,7 @@ import eu.fbk.rdfpro.util.Statements;
 public interface Mapper {
 
     /** Special key used to bypass the reduce stage and directly emit the statement in output. */
-    URI BYPASS_KEY = new URIImpl("rdfpro:bypass");
+    IRI BYPASS_KEY = Statements.VALUE_FACTORY.createIRI("rdfpro:bypass");
 
     /**
      * Maps a statement to zero or more {@code Value} keys. When used in a MapReduce job,
@@ -86,9 +85,10 @@ public interface Mapper {
      *            the predicate; if null, no bypassing is performed
      * @return the resulting mapper
      */
-    public static Mapper bypass(final Mapper mapper, @Nullable final Predicate<Statement> predicate) {
+    public static Mapper bypass(final Mapper mapper,
+            @Nullable final Predicate<Statement> predicate) {
         if (predicate != null) {
-            final Value[] bypass = new Value[] { BYPASS_KEY };
+            final Value[] bypass = new Value[] { Mapper.BYPASS_KEY };
             return new Mapper() {
 
                 @Override
@@ -116,7 +116,8 @@ public interface Mapper {
      *            the predicate; if null, no filtering is performed
      * @return the resulting mapper
      */
-    public static Mapper filter(final Mapper mapper, @Nullable final Predicate<Statement> predicate) {
+    public static Mapper filter(final Mapper mapper,
+            @Nullable final Predicate<Statement> predicate) {
         if (predicate != null) {
             final Value[] empty = new Value[0];
             return new Mapper() {
@@ -244,23 +245,23 @@ public interface Mapper {
                 int header = 0;
                 int count = 0;
 
-                if (hasSubj) {
-                    final int bits = classify(statement.getSubject());
+                if (this.hasSubj) {
+                    final int bits = this.classify(statement.getSubject());
                     header |= bits << 24;
                     count += bits & 0xF;
                 }
-                if (hasPred) {
-                    final int bits = classify(statement.getPredicate());
+                if (this.hasPred) {
+                    final int bits = this.classify(statement.getPredicate());
                     header |= bits << 16;
                     count += bits & 0xF;
                 }
-                if (hasObj) {
-                    final int bits = classify(statement.getObject());
+                if (this.hasObj) {
+                    final int bits = this.classify(statement.getObject());
                     header |= bits << 8;
                     count += bits & 0xF;
                 }
-                if (hasCtx) {
-                    final int bits = classify(statement.getContext());
+                if (this.hasCtx) {
+                    final int bits = this.classify(statement.getContext());
                     header |= bits;
                     count += bits & 0xF;
                 }
@@ -268,17 +269,17 @@ public interface Mapper {
                 final String[] strings = new String[count];
                 int index = 0;
                 strings[index++] = Integer.toString(header);
-                if (hasSubj) {
-                    index = add(strings, index, statement.getSubject());
+                if (this.hasSubj) {
+                    index = this.add(strings, index, statement.getSubject());
                 }
-                if (hasPred) {
-                    index = add(strings, index, statement.getPredicate());
+                if (this.hasPred) {
+                    index = this.add(strings, index, statement.getPredicate());
                 }
-                if (hasObj) {
-                    index = add(strings, index, statement.getObject());
+                if (this.hasObj) {
+                    index = this.add(strings, index, statement.getObject());
                 }
-                if (hasCtx) {
-                    index = add(strings, index, statement.getContext());
+                if (this.hasCtx) {
+                    index = this.add(strings, index, statement.getContext());
                 }
 
                 final String hash = Hash.murmur3(strings).toString();
@@ -290,11 +291,11 @@ public interface Mapper {
                     return 0;
                 } else if (value instanceof BNode) {
                     return 0x11;
-                } else if (value instanceof URI) {
+                } else if (value instanceof IRI) {
                     return 0x21;
                 }
                 final Literal l = (Literal) value;
-                if (l.getLanguage() != null) {
+                if (l.getLanguage().isPresent()) {
                     return 0x52;
                 } else if (l.getDatatype() != null) {
                     return 0x42;
@@ -304,13 +305,13 @@ public interface Mapper {
             }
 
             private int add(final String[] strings, int index, final Value value) {
-                if (value instanceof URI || value instanceof BNode) {
+                if (value instanceof IRI || value instanceof BNode) {
                     strings[index++] = value.stringValue();
                 } else if (value instanceof Literal) {
                     final Literal l = (Literal) value;
                     strings[index++] = l.getLabel();
-                    if (l.getLanguage() != null) {
-                        strings[index++] = l.getLanguage();
+                    if (l.getLanguage().isPresent()) {
+                        strings[index++] = l.getLanguage().get();
                     } else if (l.getDatatype() != null) {
                         strings[index++] = l.getDatatype().stringValue();
                     }
@@ -337,7 +338,7 @@ public interface Mapper {
         } else if (Scripting.isScript(expression)) {
             return Scripting.compile(Mapper.class, expression, "q");
         } else {
-            return select(expression);
+            return Mapper.select(expression);
         }
     }
 

@@ -19,25 +19,25 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFParseException;
-import org.openrdf.rio.helpers.NTriplesParserSettings;
-import org.openrdf.rio.helpers.RDFParserBase;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
+import org.eclipse.rdf4j.rio.helpers.NTriplesParserSettings;
 
 /**
  * A parser that can parse RDF documents that are in the Turtle Quads (TQL) format. TQL is N-Quads
  * with the more permissive (and efficient!) Turtle encoding. TQL is used in DBpedia exports and
  * is supported in input by the Virtuoso triple store.
  */
-public class TQLParser extends RDFParserBase {
+public class TQLParser extends AbstractRDFParser {
 
     private static final int EOF = -1;
 
@@ -50,7 +50,7 @@ public class TQLParser extends RDFParserBase {
     private Value value;
 
     /**
-     * Creates a new TQLParser that will use a {@link ValueFactoryImpl} to create RDF model
+     * Creates a new TQLParser that will use a {@link SimpleValueFactory} to create RDF model
      * objects.
      */
     public TQLParser() {
@@ -74,14 +74,14 @@ public class TQLParser extends RDFParserBase {
     }
 
     @Override
-    public void parse(final InputStream stream, final String baseURI) throws IOException,
-            RDFParseException, RDFHandlerException {
-        parse(new InputStreamReader(stream, Charset.forName("UTF-8")), baseURI);
+    public void parse(final InputStream stream, final String baseIRI)
+            throws IOException, RDFParseException, RDFHandlerException {
+        parse(new InputStreamReader(stream, Charset.forName("UTF-8")), baseIRI);
     }
 
     @Override
-    public void parse(final Reader reader, final String baseURI) throws IOException,
-            RDFParseException, RDFHandlerException {
+    public void parse(final Reader reader, final String baseIRI)
+            throws IOException, RDFParseException, RDFHandlerException {
 
         if (reader == null) {
             throw new NullPointerException("Null reader");
@@ -151,7 +151,8 @@ public class TQLParser extends RDFParserBase {
         return c;
     }
 
-    private int parseQuad(final int ch) throws IOException, RDFParseException, RDFHandlerException {
+    private int parseQuad(final int ch)
+            throws IOException, RDFParseException, RDFHandlerException {
 
         int c = ch;
         try {
@@ -163,9 +164,9 @@ public class TQLParser extends RDFParserBase {
             }
 
             c = skipWhitespace(c);
-            c = parseURI(c);
+            c = parseIRI(c);
             periodConsumed = (c & 0x80000000) != 0;
-            final URI predicate = (URI) this.value;
+            final IRI predicate = (IRI) this.value;
             if (periodConsumed) {
                 throwParseException("Found unexpected '.' " + (char) c);
             }
@@ -211,8 +212,8 @@ public class TQLParser extends RDFParserBase {
             }
 
         } catch (final RDFParseException ex) {
-            if (getParserConfig().isNonFatalError(
-                    NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES)) {
+            if (getParserConfig()
+                    .isNonFatalError(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES)) {
                 reportError(ex, this.lineNo, -1,
                         NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES);
             } else {
@@ -227,7 +228,7 @@ public class TQLParser extends RDFParserBase {
     private int parseValue(final int ch) throws IOException, RDFParseException {
         int c = ch;
         if (c == '<') {
-            c = parseURI(c);
+            c = parseIRI(c);
         } else if (c == '_') {
             c = parseBNode(c);
         } else if (c == '"' || c == '\'') {
@@ -243,7 +244,7 @@ public class TQLParser extends RDFParserBase {
     private int parseResource(final int ch) throws IOException, RDFParseException {
         int c = ch;
         if (c == '<') {
-            c = parseURI(c);
+            c = parseIRI(c);
         } else if (c == '_') {
             c = parseBNode(c);
         } else if (c == EOF) {
@@ -254,7 +255,7 @@ public class TQLParser extends RDFParserBase {
         return c;
     }
 
-    private int parseURI(final int ch) throws IOException, RDFParseException {
+    private int parseIRI(final int ch) throws IOException, RDFParseException {
         int c = ch;
         if (c != '<') {
             throwParseException("Supplied char should be a '<', it is: " + c);
@@ -402,8 +403,8 @@ public class TQLParser extends RDFParserBase {
             } else if (c != '<') {
                 throwParseException("Expected '<', found: " + (char) c);
             }
-            c = parseURI(c);
-            final URI datatype = (URI) this.value;
+            c = parseIRI(c);
+            final IRI datatype = (IRI) this.value;
             this.value = createLiteral(label, null, datatype, this.lineNo, -1);
         } else {
             this.value = createLiteral(label, null, null, this.lineNo, -1);

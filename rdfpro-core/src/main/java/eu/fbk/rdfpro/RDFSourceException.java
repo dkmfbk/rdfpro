@@ -15,7 +15,7 @@ package eu.fbk.rdfpro;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 /**
  * Signals a failure in retrieving data from an {@code RDFSource}

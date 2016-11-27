@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -25,15 +25,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,14 +58,14 @@ final class ProcessorTBox implements RDFProcessor {
 
         private static final int NUM_LOCKS = 128;
 
-        private final Map<URI, Term> terms;
+        private final Map<IRI, Term> terms;
 
         private final Object[] locks;
 
         Handler(@Nullable final RDFHandler handler) {
             super(handler);
-            this.terms = new ConcurrentHashMap<URI, Term>();
-            this.locks = new Object[NUM_LOCKS];
+            this.terms = new ConcurrentHashMap<>();
+            this.locks = new Object[Handler.NUM_LOCKS];
             for (int i = 0; i < this.locks.length; ++i) {
                 this.locks[i] = new Object();
             }
@@ -75,10 +75,10 @@ final class ProcessorTBox implements RDFProcessor {
         public void startRDF() throws RDFHandlerException {
             super.startRDF();
             this.terms.clear();
-            for (final URI type : Statements.TBOX_CLASSES) {
+            for (final IRI type : Statements.TBOX_CLASSES) {
                 this.terms.put(type, new Term(true, false, true, false));
             }
-            for (final URI property : Statements.TBOX_PROPERTIES) {
+            for (final IRI property : Statements.TBOX_PROPERTIES) {
                 this.terms.put(property, new Term(true, true, true, false));
             }
         }
@@ -92,13 +92,13 @@ final class ProcessorTBox implements RDFProcessor {
         public void handleStatement(final Statement statement) throws RDFHandlerException {
 
             final Resource s = statement.getSubject();
-            final URI p = statement.getPredicate();
+            final IRI p = statement.getPredicate();
             final Value o = statement.getObject();
 
             boolean emit = false;
 
             if (!p.equals(RDF.TYPE)) {
-                synchronized (getLock(p)) {
+                synchronized (this.getLock(p)) {
                     Term term = this.terms.get(p);
                     if (term == null) {
                         term = new Term(false, true, false, true);
@@ -108,28 +108,28 @@ final class ProcessorTBox implements RDFProcessor {
                         emit = true;
                     }
                 }
-            } else if (o instanceof URI) {
-                synchronized (getLock(o)) {
+            } else if (o instanceof IRI) {
+                synchronized (this.getLock(o)) {
                     Term term = this.terms.get(o);
                     if (term == null) {
                         term = new Term(false, false, false, true);
-                        this.terms.put((URI) o, term);
+                        this.terms.put((IRI) o, term);
                     } else if (term.isLanguage) {
                         term.isUsed = true;
                         emit = true;
                     }
                 }
-                if (s instanceof URI) {
+                if (s instanceof IRI) {
                     final boolean isType = o.equals(RDFS.CLASS) || o.equals(OWL.CLASS);
                     final boolean isProperty = o.equals(RDF.PROPERTY)
                             || o.equals(OWL.DATATYPEPROPERTY) || o.equals(OWL.OBJECTPROPERTY)
                             || o.equals(OWL.ANNOTATIONPROPERTY);
                     if (isType || isProperty) {
-                        synchronized (getLock(s)) {
+                        synchronized (this.getLock(s)) {
                             Term sterm = this.terms.get(s);
                             if (sterm == null) {
                                 sterm = new Term(false, isProperty, true, true);
-                                this.terms.put((URI) s, sterm);
+                                this.terms.put((IRI) s, sterm);
                             } else {
                                 sterm.isDefined = true;
                             }
@@ -146,7 +146,7 @@ final class ProcessorTBox implements RDFProcessor {
         @Override
         public void endRDF() throws RDFHandlerException {
 
-            if (LOGGER.isInfoEnabled()) {
+            if (ProcessorTBox.LOGGER.isInfoEnabled()) {
 
                 int numTypes = 0;
                 int numTypesDefined = 0;
@@ -158,12 +158,12 @@ final class ProcessorTBox implements RDFProcessor {
                 final List<String> languageProperties = new ArrayList<String>();
                 final Set<String> undefinedVocabularies = new HashSet<String>();
 
-                for (final Map.Entry<URI, Term> entry : this.terms.entrySet()) {
-                    final URI uri = entry.getKey();
+                for (final Map.Entry<IRI, Term> entry : this.terms.entrySet()) {
+                    final IRI iri = entry.getKey();
                     final Term term = entry.getValue();
                     if (term.isLanguage) {
                         if (term.isUsed) {
-                            final String s = Statements.formatValue(uri, Namespaces.DEFAULT);
+                            final String s = Statements.formatValue(iri, Namespaces.DEFAULT);
                             if (term.isProperty) {
                                 languageProperties.add(s);
                             } else {
@@ -179,7 +179,7 @@ final class ProcessorTBox implements RDFProcessor {
                             numTypesDefined += term.isDefined ? 1 : 0;
                         }
                         if (!term.isDefined) {
-                            undefinedVocabularies.add(uri.getNamespace());
+                            undefinedVocabularies.add(iri.getNamespace());
                         }
                     }
                 }
@@ -188,18 +188,20 @@ final class ProcessorTBox implements RDFProcessor {
                 Collections.sort(languageProperties);
 
                 if (numTypes > 0) {
-                    LOGGER.info("Found " + numTypes + " classes (" + numTypesDefined + " defined)");
+                    ProcessorTBox.LOGGER.info(
+                            "Found " + numTypes + " classes (" + numTypesDefined + " defined)");
                 }
                 if (numProperties > 0) {
-                    LOGGER.info("Found " + numProperties + " properties (" + numPropertiesDefined
-                            + " defined)");
+                    ProcessorTBox.LOGGER.info("Found " + numProperties + " properties ("
+                            + numPropertiesDefined + " defined)");
                 }
                 if (!languageTypes.isEmpty()) {
-                    LOGGER.info("Found language classes: " + String.join(" ", languageTypes));
+                    ProcessorTBox.LOGGER
+                            .info("Found language classes: " + String.join(" ", languageTypes));
                 }
                 if (!languageProperties.isEmpty()) {
-                    LOGGER.info("Found language properties: "
-                            + String.join(" ", languageProperties));
+                    ProcessorTBox.LOGGER.info(
+                            "Found language properties: " + String.join(" ", languageProperties));
                 }
 
                 if (!undefinedVocabularies.isEmpty()) {
@@ -221,7 +223,7 @@ final class ProcessorTBox implements RDFProcessor {
                     for (final String ns : sortedVocabularies) {
                         builder.append("\n- ").append(ns);
                     }
-                    LOGGER.info(builder.toString());
+                    ProcessorTBox.LOGGER.info(builder.toString());
                 }
             }
 
@@ -230,10 +232,10 @@ final class ProcessorTBox implements RDFProcessor {
         }
 
         private Object getLock(final Value value) {
-            final String s = value.stringValue(); // assume URI with >= 3 chars
+            final String s = value.stringValue(); // assume IRI with >= 3 chars
             final int length = s.length();
             final int index = s.charAt(length - 1) * 37 + s.charAt(length - 2);
-            return this.locks[(index & 0x7FFFFFFF) % NUM_LOCKS];
+            return this.locks[(index & 0x7FFFFFFF) % Handler.NUM_LOCKS];
         }
 
         private static class Term {

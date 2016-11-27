@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -19,17 +19,17 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFParseException;
-import org.openrdf.rio.helpers.RDFParserBase;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
 import org.semarglproject.jsonld.JsonLdParser;
 import org.semarglproject.rdf.ParseException;
 import org.semarglproject.sink.CharSink;
@@ -44,13 +44,13 @@ import org.semarglproject.sink.QuadSink;
  * </p>
  * <p>
  * This implementation wraps the parser provided by the SEMARGL project -
- * http://semarglproject.org/, adapting it to the Sesame RIO API.
+ * http://semarglproject.org/, adapting it to the RDF4J RIO API.
  * </p>
  */
-public class JSONLDParser extends RDFParserBase {
+public class JSONLDParser extends AbstractRDFParser {
 
     /**
-     * Creates a new JSONLDParser that will use a {@link ValueFactoryImpl} to create RDF model
+     * Creates a new JSONLDParser that will use a {@link SimpleValueFactory} to create RDF model
      * objects.
      */
     public JSONLDParser() {
@@ -60,7 +60,7 @@ public class JSONLDParser extends RDFParserBase {
     /**
      * Creates a new JSONLDParser that will use the supplied ValueFactory to create RDF model
      * objects.
-     * 
+     *
      * @param valueFactory
      *            the ValueFactory to use
      */
@@ -74,16 +74,16 @@ public class JSONLDParser extends RDFParserBase {
     }
 
     @Override
-    public void parse(final InputStream in, final String baseURI) throws IOException,
-            RDFParseException, RDFHandlerException {
-        parse(new InputStreamReader(in, Charset.forName("UTF-8")), baseURI);
+    public void parse(final InputStream in, final String baseIRI)
+            throws IOException, RDFParseException, RDFHandlerException {
+        this.parse(new InputStreamReader(in, Charset.forName("UTF-8")), baseIRI);
     }
 
     @Override
-    public void parse(final Reader reader, final String baseURI) throws IOException,
-            RDFParseException, RDFHandlerException {
+    public void parse(final Reader reader, final String baseIRI)
+            throws IOException, RDFParseException, RDFHandlerException {
 
-        final QuadSink sink = new SesameSink(this.rdfHandler, this.valueFactory);
+        final QuadSink sink = new RDF4JSink(this.rdfHandler, this.valueFactory);
         try {
             final CharSink parser = JsonLdParser.connect(sink);
             parser.startStream();
@@ -101,13 +101,13 @@ public class JSONLDParser extends RDFParserBase {
         }
     }
 
-    private static final class SesameSink implements QuadSink {
+    private static final class RDF4JSink implements QuadSink {
 
         private final RDFHandler handler;
 
         private final ValueFactory factory;
 
-        SesameSink(final RDFHandler handler, final ValueFactory factory) {
+        RDF4JSink(final RDFHandler handler, final ValueFactory factory) {
             this.handler = handler;
             this.factory = factory;
         }
@@ -132,37 +132,37 @@ public class JSONLDParser extends RDFParserBase {
 
         @Override
         public void addNonLiteral(final String subj, final String pred, final String obj) {
-            emit(subj, pred, obj, false, null, null, null);
+            this.emit(subj, pred, obj, false, null, null, null);
         }
 
         @Override
         public void addPlainLiteral(final String subj, final String pred, final String obj,
                 final String lang) {
-            emit(subj, pred, obj, true, lang, null, null);
+            this.emit(subj, pred, obj, true, lang, null, null);
         }
 
         @Override
         public void addTypedLiteral(final String subj, final String pred, final String obj,
                 final String dt) {
-            emit(subj, pred, obj, true, null, dt, null);
+            this.emit(subj, pred, obj, true, null, dt, null);
         }
 
         @Override
         public void addNonLiteral(final String subj, final String pred, final String obj,
                 final String ctx) {
-            emit(subj, pred, obj, false, null, null, ctx);
+            this.emit(subj, pred, obj, false, null, null, ctx);
         }
 
         @Override
         public void addPlainLiteral(final String subj, final String pred, final String obj,
                 final String lang, final String ctx) {
-            emit(subj, pred, obj, true, lang, null, ctx);
+            this.emit(subj, pred, obj, true, lang, null, ctx);
         }
 
         @Override
         public void addTypedLiteral(final String subj, final String pred, final String obj,
                 final String dt, final String ctx) {
-            emit(subj, pred, obj, true, null, dt, ctx);
+            this.emit(subj, pred, obj, true, null, dt, ctx);
         }
 
         @Override
@@ -178,18 +178,18 @@ public class JSONLDParser extends RDFParserBase {
                 final boolean literal, final String lang, final String dt, final String ctx) {
 
             final Resource s = subj.startsWith("_:") ? this.factory.createBNode(subj.substring(2))
-                    : this.factory.createURI(subj);
+                    : this.factory.createIRI(subj);
 
-            final URI p = this.factory.createURI(pred);
+            final IRI p = this.factory.createIRI(pred);
 
             final Value o;
             if (!literal) {
                 o = obj.startsWith("_:") ? this.factory.createBNode(obj.substring(2))
-                        : this.factory.createURI(obj);
+                        : this.factory.createIRI(obj);
             } else if (lang != null) {
                 o = this.factory.createLiteral(obj, lang);
             } else if (dt != null) {
-                o = this.factory.createLiteral(obj, this.factory.createURI(dt));
+                o = this.factory.createLiteral(obj, this.factory.createIRI(dt));
             } else {
                 o = this.factory.createLiteral(obj);
             }
@@ -198,8 +198,8 @@ public class JSONLDParser extends RDFParserBase {
             if (ctx == null) {
                 stmt = this.factory.createStatement(s, p, o);
             } else {
-                final Resource c = ctx.startsWith("_:") ? this.factory.createBNode(ctx
-                        .substring(2)) : this.factory.createURI(ctx);
+                final Resource c = ctx.startsWith("_:")
+                        ? this.factory.createBNode(ctx.substring(2)) : this.factory.createIRI(ctx);
                 stmt = this.factory.createStatement(s, p, o, c);
             }
 

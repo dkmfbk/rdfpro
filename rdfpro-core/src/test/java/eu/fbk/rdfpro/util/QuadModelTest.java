@@ -1,10 +1,5 @@
 package eu.fbk.rdfpro.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -18,7 +13,29 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import org.eclipse.rdf4j.IsolationLevels;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.LinkedHashModel;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.impl.TreeModel;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.MalformedQueryException;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.impl.ListBindingSet;
+import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.eclipse.rdf4j.repository.sail.SailRepository;
+import org.eclipse.rdf4j.sail.SailConnection;
+import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,33 +44,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.openrdf.IsolationLevels;
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.impl.LinkedHashModel;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.impl.TreeModel;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.MalformedQueryException;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.impl.ListBindingSet;
-import org.openrdf.repository.Repository;
-import org.openrdf.repository.RepositoryConnection;
-import org.openrdf.repository.sail.SailRepository;
-import org.openrdf.sail.SailConnection;
-import org.openrdf.sail.memory.MemoryStore;
-
-import eu.fbk.rdfpro.util.Algebra;
-import eu.fbk.rdfpro.util.IO;
-import eu.fbk.rdfpro.util.QuadModel;
 
 @RunWith(Parameterized.class)
 public final class QuadModelTest {
@@ -70,17 +60,17 @@ public final class QuadModelTest {
 
     private Literal literal2;
 
-    private URI uri1;
+    private IRI iri1;
 
-    private URI uri2;
+    private IRI iri2;
 
     private BNode bnode1;
 
     private BNode bnode2;
 
-    private URI ctx1;
+    private IRI ctx1;
 
-    private URI ctx2;
+    private IRI ctx2;
 
     @Parameters
     public static Collection<String> parameters() {
@@ -128,7 +118,8 @@ public final class QuadModelTest {
                 throw new Error();
             }
         } catch (final Throwable ex) {
-            throw Throwables.propagate(ex);
+            Throwables.throwIfUnchecked(ex);
+            throw new RuntimeException(ex);
         }
     }
 
@@ -138,15 +129,15 @@ public final class QuadModelTest {
 
     @Before
     public void setUp() {
-        final ValueFactory vf = ValueFactoryImpl.getInstance();
-        this.uri1 = vf.createURI("urn:test:uri:1");
-        this.uri2 = vf.createURI("urn:test:uri:2");
+        final ValueFactory vf = Statements.VALUE_FACTORY;
+        this.iri1 = vf.createIRI("urn:test:iri:1");
+        this.iri2 = vf.createIRI("urn:test:iri:2");
         this.bnode1 = vf.createBNode("bnode1");
         this.bnode2 = vf.createBNode("bnode2");
         this.literal1 = vf.createLiteral("test literal 1");
         this.literal2 = vf.createLiteral("test literal 2");
-        this.ctx1 = vf.createURI("urn:test:ctx:1");
-        this.ctx2 = vf.createURI("urn:test:ctx:2");
+        this.ctx1 = vf.createIRI("urn:test:ctx:1");
+        this.ctx2 = vf.createIRI("urn:test:ctx:2");
     }
 
     @After
@@ -155,144 +146,147 @@ public final class QuadModelTest {
 
     @Test
     public final void testEmpty() {
-        final QuadModel model = newModel();
+        final QuadModel model = this.newModel();
         try {
-            assertEquals(0, model.size());
-            assertEquals(null, model.objectValue());
-            assertEquals(null, model.objectLiteral());
-            assertEquals(null, model.objectResource());
-            assertEquals(null, model.objectURI());
-            assertEquals(null, model.objectString());
+            Assert.assertEquals(0, model.size());
+            Assert.assertEquals(null, model.objectValue());
+            Assert.assertEquals(null, model.objectLiteral());
+            Assert.assertEquals(null, model.objectResource());
+            Assert.assertEquals(null, model.objectURI());
+            Assert.assertEquals(null, model.objectString());
         } finally {
-            disposeModel(model);
+            this.disposeModel(model);
         }
     }
 
     @Test
     public final void testSingleLiteral() {
-        final QuadModel model = newModel();
+        final QuadModel model = this.newModel();
         try {
-            model.add(this.uri1, RDFS.LABEL, this.literal1, this.ctx1);
-            assertEquals(1, model.size());
-            assertEquals(
-                    new HashSet<Statement>(ImmutableSet.of(new ContextStatementImpl(this.uri1,
-                            RDFS.LABEL, this.literal1, this.ctx1))), new HashSet<Statement>(model));
-            assertTrue(model.contains(null, null, this.literal1));
-            assertTrue(model.contains(null, null, this.literal1, this.ctx1));
-            assertFalse(model.filter(null, null, this.literal1).isEmpty());
-            assertFalse(model.filter(null, null, this.literal1, this.ctx1).isEmpty());
-            assertTrue(model.filter(null, null, this.literal1, (Resource) null).isEmpty());
-            assertEquals(this.literal1, model.objectValue());
-            assertEquals(this.literal1, model.objectLiteral());
-            assertEquals(this.literal1.stringValue(), model.objectString());
-            assertThrown(Throwable.class, () -> {
+            model.add(this.iri1, RDFS.LABEL, this.literal1, this.ctx1);
+            Assert.assertEquals(1, model.size());
+            Assert.assertEquals(
+                    new HashSet<Statement>(ImmutableSet.of(Statements.VALUE_FACTORY
+                            .createStatement(this.iri1, RDFS.LABEL, this.literal1, this.ctx1))),
+                    new HashSet<Statement>(model));
+            Assert.assertTrue(model.contains(null, null, this.literal1));
+            Assert.assertTrue(model.contains(null, null, this.literal1, this.ctx1));
+            Assert.assertFalse(model.filter(null, null, this.literal1).isEmpty());
+            Assert.assertFalse(model.filter(null, null, this.literal1, this.ctx1).isEmpty());
+            Assert.assertTrue(model.filter(null, null, this.literal1, (Resource) null).isEmpty());
+            Assert.assertEquals(this.literal1, model.objectValue());
+            Assert.assertEquals(this.literal1, model.objectLiteral());
+            Assert.assertEquals(this.literal1.stringValue(), model.objectString());
+            QuadModelTest.assertThrown(Throwable.class, () -> {
                 model.objectResource();
             });
-            assertThrown(Throwable.class, () -> {
+            QuadModelTest.assertThrown(Throwable.class, () -> {
                 model.objectURI();
             });
         } finally {
-            disposeModel(model);
+            this.disposeModel(model);
         }
     }
 
     @Test
-    public final void testSingleURI() {
-        final QuadModel model = newModel();
+    public final void testSingleIRI() {
+        final QuadModel model = this.newModel();
         try {
-            final Statement stmt = new ContextStatementImpl(this.uri1, RDFS.LABEL, this.uri2,
-                    this.ctx1);
+            final Statement stmt = Statements.VALUE_FACTORY.createStatement(this.iri1, RDFS.LABEL,
+                    this.iri2, this.ctx1);
             model.add(stmt);
-            assertTrue(model.contains(this.uri1, RDFS.LABEL, this.uri2, this.ctx1));
-            assertTrue(model.contains(this.uri1, RDFS.LABEL, this.uri2));
-            assertTrue(model.contains(stmt));
-            assertTrue(ImmutableSet.copyOf(model).equals(ImmutableSet.of(stmt)));
-            assertEquals(1, model.size());
-            assertEquals(this.uri2, model.objectValue());
-            assertEquals(this.uri2, model.objectResource());
-            assertEquals(this.uri2, model.objectURI());
-            assertThrown(Throwable.class, () -> {
+            Assert.assertTrue(model.contains(this.iri1, RDFS.LABEL, this.iri2, this.ctx1));
+            Assert.assertTrue(model.contains(this.iri1, RDFS.LABEL, this.iri2));
+            Assert.assertTrue(model.contains(stmt));
+            Assert.assertTrue(ImmutableSet.copyOf(model).equals(ImmutableSet.of(stmt)));
+            Assert.assertEquals(1, model.size());
+            Assert.assertEquals(this.iri2, model.objectValue());
+            Assert.assertEquals(this.iri2, model.objectResource());
+            Assert.assertEquals(this.iri2, model.objectURI());
+            QuadModelTest.assertThrown(Throwable.class, () -> {
                 model.objectLiteral();
             });
         } finally {
-            disposeModel(model);
+            this.disposeModel(model);
         }
     }
 
     @Test
     public final void testSingleBNode() {
-        final QuadModel model = newModel();
+        final QuadModel model = this.newModel();
         try {
-            model.add(this.uri1, RDFS.LABEL, this.bnode1, this.ctx1);
-            assertEquals(1, model.size());
-            assertEquals(this.bnode1, model.objectValue());
-            assertEquals(this.bnode1, model.objectResource());
-            assertEquals(this.bnode1.stringValue(), model.objectString());
-            assertThrown(Throwable.class, () -> {
+            model.add(this.iri1, RDFS.LABEL, this.bnode1, this.ctx1);
+            Assert.assertEquals(1, model.size());
+            Assert.assertEquals(this.bnode1, model.objectValue());
+            Assert.assertEquals(this.bnode1, model.objectResource());
+            Assert.assertEquals(this.bnode1.stringValue(), model.objectString());
+            QuadModelTest.assertThrown(Throwable.class, () -> {
                 model.objectLiteral();
             });
-            assertThrown(Throwable.class, () -> {
+            QuadModelTest.assertThrown(Throwable.class, () -> {
                 model.objectURI();
             });
         } finally {
-            disposeModel(model);
+            this.disposeModel(model);
         }
     }
 
     @Test
     public final void testMultiple() {
-        for (final Value obj1 : new Value[] { this.uri1, this.bnode1, this.literal1 }) {
-            for (final Value obj2 : new Value[] { this.uri2, this.bnode2, this.literal2 }) {
-                final QuadModel model = newModel();
+        for (final Value obj1 : new Value[] { this.iri1, this.bnode1, this.literal1 }) {
+            for (final Value obj2 : new Value[] { this.iri2, this.bnode2, this.literal2 }) {
+                final QuadModel model = this.newModel();
                 try {
-                    assertEquals(true, model.isEmpty());
-                    assertEquals(0, model.size());
-                    model.add(this.uri1, RDFS.LABEL, obj1, this.ctx1);
-                    model.add(this.uri1, RDFS.LABEL, obj2, this.ctx2);
-                    assertEquals(false, model.isEmpty());
-                    assertEquals(2, model.size());
-                    assertEquals(2, model.size(null, RDFS.LABEL, null));
-                    assertEquals(1, model.size(null, RDFS.LABEL, null, this.ctx1));
-                    assertEquals(1, model.size(null, RDFS.LABEL, null, this.ctx2));
-                    assertEquals(1, model.size(this.uri1, RDFS.LABEL, obj2, this.ctx2));
-                    assertEquals(0, model.size(this.uri2, null, null));
-                    assertEquals(2, model.size(this.uri1, null, null, this.ctx1, this.ctx2));
-                    assertEquals(ImmutableSet.of(RDFS.LABEL), model.predicates());
-                    assertEquals(ImmutableSet.of(this.uri1), model.subjects());
-                    assertEquals(ImmutableSet.of(obj1, obj2), model.objects());
-                    assertEquals(ImmutableSet.of(this.ctx1, this.ctx2), model.contexts());
-                    assertThrown(Throwable.class, () -> {
+                    Assert.assertEquals(true, model.isEmpty());
+                    Assert.assertEquals(0, model.size());
+                    model.add(this.iri1, RDFS.LABEL, obj1, this.ctx1);
+                    model.add(this.iri1, RDFS.LABEL, obj2, this.ctx2);
+                    Assert.assertEquals(false, model.isEmpty());
+                    Assert.assertEquals(2, model.size());
+                    Assert.assertEquals(2, model.size(null, RDFS.LABEL, null));
+                    Assert.assertEquals(1, model.size(null, RDFS.LABEL, null, this.ctx1));
+                    Assert.assertEquals(1, model.size(null, RDFS.LABEL, null, this.ctx2));
+                    Assert.assertEquals(1, model.size(this.iri1, RDFS.LABEL, obj2, this.ctx2));
+                    Assert.assertEquals(0, model.size(this.iri2, null, null));
+                    Assert.assertEquals(2,
+                            model.size(this.iri1, null, null, this.ctx1, this.ctx2));
+                    Assert.assertEquals(ImmutableSet.of(RDFS.LABEL), model.predicates());
+                    Assert.assertEquals(ImmutableSet.of(this.iri1), model.subjects());
+                    Assert.assertEquals(ImmutableSet.of(obj1, obj2), model.objects());
+                    Assert.assertEquals(ImmutableSet.of(this.ctx1, this.ctx2), model.contexts());
+                    QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectLiteral();
                     });
-                    assertThrown(Throwable.class, () -> {
+                    QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectURI();
                     });
-                    assertThrown(Throwable.class, () -> {
+                    QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectValue();
                     });
-                    assertThrown(Throwable.class, () -> {
+                    QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectResource();
                     });
-                    assertThrown(Throwable.class, () -> {
+                    QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectString();
                     });
+                    ValueFactory vf = Statements.VALUE_FACTORY;
                     final Set<Statement> set = new HashSet<>();
-                    set.add(new ContextStatementImpl(this.uri1, RDFS.LABEL, obj1, this.ctx1));
-                    set.add(new ContextStatementImpl(this.uri1, RDFS.LABEL, obj2, this.ctx2));
+                    set.add(vf.createStatement(this.iri1, RDFS.LABEL, obj1, this.ctx1));
+                    set.add(vf.createStatement(this.iri1, RDFS.LABEL, obj2, this.ctx2));
                     Set<Statement> actual = ImmutableSet.copyOf(model);
-                    assertEquals(set, actual);
-                    assertFalse(model.remove(null, null, obj2, this.ctx1));
-                    assertEquals(2, model.size());
-                    assertTrue(model.remove(null, null, obj2, this.ctx2));
-                    assertEquals(1, model.size());
+                    Assert.assertEquals(set, actual);
+                    Assert.assertFalse(model.remove(null, null, obj2, this.ctx1));
+                    Assert.assertEquals(2, model.size());
+                    Assert.assertTrue(model.remove(null, null, obj2, this.ctx2));
+                    Assert.assertEquals(1, model.size());
                     set.clear();
-                    set.add(new ContextStatementImpl(this.uri1, RDFS.LABEL, obj1, this.ctx1));
+                    set.add(vf.createStatement(this.iri1, RDFS.LABEL, obj1, this.ctx1));
                     actual = ImmutableSet.copyOf(model);
-                    assertEquals(set, actual);
+                    Assert.assertEquals(set, actual);
                     model.clear();
-                    assertEquals(0, model.size());
+                    Assert.assertEquals(0, model.size());
                 } finally {
-                    disposeModel(model);
+                    this.disposeModel(model);
                 }
             }
         }
@@ -300,25 +294,25 @@ public final class QuadModelTest {
 
     @Test
     public final void testNamespaces() {
-        final QuadModel model = newModel();
-        assertEquals(0, model.getNamespaces().size());
+        final QuadModel model = this.newModel();
+        Assert.assertEquals(0, model.getNamespaces().size());
         model.setNamespace("test", "urn:test");
-        assertEquals(1, model.getNamespaces().size());
-        assertEquals(new NamespaceImpl("test", "urn:test"), model.getNamespace("test"));
-        model.setNamespace(new NamespaceImpl("test", "urn:test2"));
-        assertEquals(1, model.getNamespaces().size());
-        assertEquals(new NamespaceImpl("test", "urn:test2"), model.getNamespace("test"));
+        Assert.assertEquals(1, model.getNamespaces().size());
+        Assert.assertEquals(new SimpleNamespace("test", "urn:test"), model.getNamespace("test"));
+        model.setNamespace(new SimpleNamespace("test", "urn:test2"));
+        Assert.assertEquals(1, model.getNamespaces().size());
+        Assert.assertEquals(new SimpleNamespace("test", "urn:test2"), model.getNamespace("test"));
         model.removeNamespace("test");
-        assertEquals(0, model.getNamespaces().size());
-        assertEquals(null, model.getNamespace("test"));
+        Assert.assertEquals(0, model.getNamespaces().size());
+        Assert.assertEquals(null, model.getNamespace("test"));
     }
 
     @Test
     public final void testUnmodifiable() {
-        final QuadModel model = newModel();
-        model.add(this.uri1, RDFS.LABEL, this.bnode1, this.ctx1);
-        assertThrown(Throwable.class, () -> {
-            model.unmodifiable().add(this.uri1, RDFS.LABEL, this.literal1, this.ctx2);
+        final QuadModel model = this.newModel();
+        model.add(this.iri1, RDFS.LABEL, this.bnode1, this.ctx1);
+        QuadModelTest.assertThrown(Throwable.class, () -> {
+            model.unmodifiable().add(this.iri1, RDFS.LABEL, this.literal1, this.ctx2);
         });
     }
 
@@ -326,17 +320,17 @@ public final class QuadModelTest {
     public final void testEvaluate() throws MalformedQueryException {
         final String queryString = "SELECT ?s WHERE { GRAPH <" + this.ctx1 + "> { ?s ?p ?o } }";
         final TupleExpr expr = Algebra.parseTupleExpr(queryString, null, null);
-        final QuadModel model = newModel();
-        model.add(this.uri1, RDFS.LABEL, this.literal1, this.ctx1);
-        model.add(this.uri1, RDFS.LABEL, this.literal2, this.ctx2);
-        final Iterator<BindingSet> iterator = model.evaluate(expr, null, new ListBindingSet(
-                ImmutableList.of("p"), RDFS.LABEL));
+        final QuadModel model = this.newModel();
+        model.add(this.iri1, RDFS.LABEL, this.literal1, this.ctx1);
+        model.add(this.iri1, RDFS.LABEL, this.literal2, this.ctx2);
+        final Iterator<BindingSet> iterator = model.evaluate(expr, null,
+                new ListBindingSet(ImmutableList.of("p"), RDFS.LABEL));
         try {
-            assertTrue(iterator.hasNext());
+            Assert.assertTrue(iterator.hasNext());
             final BindingSet bindings = iterator.next();
-            assertEquals(1, bindings.size());
-            assertEquals(this.uri1, bindings.getValue("s"));
-            assertFalse(iterator.hasNext());
+            Assert.assertEquals(1, bindings.size());
+            Assert.assertEquals(this.iri1, bindings.getValue("s"));
+            Assert.assertFalse(iterator.hasNext());
         } finally {
             IO.closeQuietly(iterator);
         }
@@ -351,7 +345,7 @@ public final class QuadModelTest {
                 return exceptionClazz.cast(ex);
             }
         }
-        fail("Expected " + exceptionClazz.getName());
+        Assert.fail("Expected " + exceptionClazz.getName());
         return null;
     }
 

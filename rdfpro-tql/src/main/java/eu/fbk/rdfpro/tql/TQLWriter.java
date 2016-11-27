@@ -19,23 +19,23 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.helpers.RDFWriterBase;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFWriter;
 
 /**
  * An implementation of the RDFWriter interface that writes RDF documents in the Turtle Quads
  * (TQL) format. TQL is N-Quads with the more permissive (and efficient!) Turtle encoding. TQL is
  * used in DBpedia exports and is supported in input by the Virtuoso triple store.
  */
-public class TQLWriter extends RDFWriterBase {
+public class TQLWriter extends AbstractRDFWriter {
 
     private final Writer writer;
 
@@ -79,7 +79,7 @@ public class TQLWriter extends RDFWriterBase {
     }
 
     @Override
-    public void handleNamespace(final String prefix, final String uri) throws RDFHandlerException {
+    public void handleNamespace(final String prefix, final String iri) throws RDFHandlerException {
         // nothing to do
     }
 
@@ -88,7 +88,7 @@ public class TQLWriter extends RDFWriterBase {
         try {
             emitResource(statement.getSubject());
             this.writer.write(' ');
-            emitURI(statement.getPredicate());
+            emitIRI(statement.getPredicate());
             this.writer.write(' ');
             emitValue(statement.getObject());
             final Resource ctx = statement.getContext();
@@ -115,8 +115,8 @@ public class TQLWriter extends RDFWriterBase {
     }
 
     private void emitValue(final Value value) throws IOException, RDFHandlerException {
-        if (value instanceof URI) {
-            emitURI((URI) value);
+        if (value instanceof IRI) {
+            emitIRI((IRI) value);
         } else if (value instanceof BNode) {
             emitBNode((BNode) value);
         } else if (value instanceof Literal) {
@@ -125,15 +125,15 @@ public class TQLWriter extends RDFWriterBase {
     }
 
     private void emitResource(final Resource resource) throws IOException, RDFHandlerException {
-        if (resource instanceof URI) {
-            emitURI((URI) resource);
+        if (resource instanceof IRI) {
+            emitIRI((IRI) resource);
         } else if (resource instanceof BNode) {
             emitBNode((BNode) resource);
         }
     }
 
-    private void emitURI(final URI uri) throws IOException, RDFHandlerException {
-        final String string = uri.stringValue();
+    private void emitIRI(final IRI iri) throws IOException, RDFHandlerException {
+        final String string = iri.stringValue();
         final int length = string.length();
         this.writer.write('<');
         for (int i = 0; i < length; ++i) {
@@ -266,7 +266,7 @@ public class TQLWriter extends RDFWriterBase {
             }
         }
         this.writer.write('"');
-        final String language = literal.getLanguage();
+        final String language = literal.getLanguage().orElse(null);
         if (language != null) {
             this.writer.write('@');
             final int len = language.length();
@@ -298,11 +298,11 @@ public class TQLWriter extends RDFWriterBase {
                         + "' in TQL: invalid final char '-' (see Turtle specs)");
             }
         } else {
-            final URI datatype = literal.getDatatype();
+            final IRI datatype = literal.getDatatype();
             if (datatype != null && !XMLSchema.STRING.equals(datatype)) {
                 this.writer.write('^');
                 this.writer.write('^');
-                emitURI(datatype);
+                emitIRI(datatype);
             }
         }
     }

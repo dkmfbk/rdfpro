@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -22,20 +22,19 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.QuadModel;
+import eu.fbk.rdfpro.util.Statements;
 import eu.fbk.rdfpro.util.Tracker;
 
 /**
@@ -62,7 +61,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
     public StatementBuffer() {
         this.blocks = Lists.newArrayList();
-        this.offset = BLOCK_SIZE;
+        this.offset = StatementBuffer.BLOCK_SIZE;
         this.addTracker = null;
         this.addTrackCount = 0;
     }
@@ -75,28 +74,29 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
     @Override
     public int size() {
         return this.blocks.isEmpty() ? 0
-                : ((this.blocks.size() - 1) * BLOCK_SIZE + this.offset) / 4;
+                : ((this.blocks.size() - 1) * StatementBuffer.BLOCK_SIZE + this.offset) / 4;
     }
 
-    public boolean contains(final Resource subj, final URI pred, final Value obj,
+    public boolean contains(final Resource subj, final IRI pred, final Value obj,
             @Nullable final Resource ctx) {
 
         // Retrieve (build if necessary) the hash index
-        final int[] buckets = getBuckets();
+        final int[] buckets = this.getBuckets();
 
         // Lookup the statement using the index
-        final int hash = hash(subj, pred, obj, ctx);
+        final int hash = StatementBuffer.hash(subj, pred, obj, ctx);
         int slot = (hash & 0x7FFFFFFF) % buckets.length;
         while (true) {
             if (buckets[slot] == 0) {
                 return false;
             } else {
                 final int pointer = buckets[slot] - 4;
-                final int thisIndex = pointer / BLOCK_SIZE;
-                final int offset = pointer % BLOCK_SIZE;
+                final int thisIndex = pointer / StatementBuffer.BLOCK_SIZE;
+                final int offset = pointer % StatementBuffer.BLOCK_SIZE;
                 final Value[] block = this.blocks.get(thisIndex);
                 if (block[offset].equals(subj) && block[offset + 1].equals(pred)
-                        && block[offset + 2].equals(obj) && Objects.equals(block[offset + 3], ctx)) {
+                        && block[offset + 2].equals(obj)
+                        && Objects.equals(block[offset + 3], ctx)) {
                     return true;
                 }
             }
@@ -112,7 +112,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
         }
 
         final Statement stmt = (Statement) object;
-        return contains(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+        return this.contains(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                 stmt.getContext());
     }
 
@@ -127,8 +127,8 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
             private int offset = 0;
 
-            private int maxOffset = StatementBuffer.this.blocks.size() > 1 ? BLOCK_SIZE
-                    : StatementBuffer.this.offset;
+            private int maxOffset = StatementBuffer.this.blocks.size() > 1
+                    ? StatementBuffer.BLOCK_SIZE : StatementBuffer.this.offset;
 
             @Override
             public boolean hasNext() {
@@ -145,7 +145,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
                 // Otherwise, retrieve the SPOC components of the next statement to return
                 final Resource subj = (Resource) this.block[this.offset++];
-                final URI pred = (URI) this.block[this.offset++];
+                final IRI pred = (IRI) this.block[this.offset++];
                 final Value obj = this.block[this.offset++];
                 final Resource ctx = (Resource) this.block[this.offset++];
 
@@ -155,26 +155,26 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
                     if (this.index < StatementBuffer.this.blocks.size()) {
                         this.block = StatementBuffer.this.blocks.get(this.index);
                         this.offset = 0;
-                        this.maxOffset = this.index < StatementBuffer.this.blocks.size() - 1 ? BLOCK_SIZE
-                                : StatementBuffer.this.offset;
+                        this.maxOffset = this.index < StatementBuffer.this.blocks.size() - 1
+                                ? StatementBuffer.BLOCK_SIZE : StatementBuffer.this.offset;
                     } else {
                         this.block = null;
                     }
                 }
 
                 // Return the statement
-                return new ContextStatementImpl(subj, pred, obj, ctx);
+                return Statements.VALUE_FACTORY.createStatement(subj, pred, obj, ctx);
             }
 
         };
     }
 
     public int toModel(final QuadModel model, final boolean add,
-            @Nullable final RDFHandler callback) {
+            @Nullable final RDFHandler callback) throws RDFHandlerException {
 
         // Create a tracker
-        final Tracker tracker = new Tracker(LOGGER, null, null, "%d triples "
-                + (add ? "inserted" : "deleted") + " (%d tr/s, %d tr/s avg)");
+        final Tracker tracker = new Tracker(StatementBuffer.LOGGER, null, null,
+                "%d triples " + (add ? "inserted" : "deleted") + " (%d tr/s, %d tr/s avg)");
         tracker.start();
 
         try {
@@ -187,12 +187,13 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
             int numChanges = 0;
             for (int index = 0; index < this.blocks.size(); ++index) {
                 final Value[] block = this.blocks.get(index);
-                final int maxOffset = index < this.blocks.size() - 1 ? BLOCK_SIZE : this.offset;
+                final int maxOffset = index < this.blocks.size() - 1 ? StatementBuffer.BLOCK_SIZE
+                        : this.offset;
                 for (int offset = 0; offset < maxOffset; offset += 4) {
 
                     // Retrieve SPOC components of current statement
                     final Resource subj = (Resource) block[offset];
-                    final URI pred = (URI) block[offset + 1];
+                    final IRI pred = (IRI) block[offset + 1];
                     final Value obj = block[offset + 2];
                     final Resource ctx = (Resource) block[offset + 3];
 
@@ -216,7 +217,8 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
                         ++numChanges;
                         tracker.increment();
                         if (callback != null) {
-                            callback.handleStatement(new ContextStatementImpl(subj, pred, obj, ctx));
+                            callback.handleStatement(Statements.VALUE_FACTORY.createStatement(subj,
+                                    pred, obj, ctx));
                         }
                     }
                 }
@@ -230,10 +232,6 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
             // Return the number of statements actually added to or deleted from the model
             return numChanges;
 
-        } catch (final RDFHandlerException ex) {
-            // Wrap and propagate
-            throw Throwables.propagate(ex);
-
         } finally {
             // Stop tracking
             tracker.end();
@@ -246,16 +244,18 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
         handler.startRDF();
         for (int index = 0; index < this.blocks.size(); ++index) {
             final Value[] block = this.blocks.get(index);
-            final int maxOffset = index < this.blocks.size() - 1 ? BLOCK_SIZE : this.offset;
+            final int maxOffset = index < this.blocks.size() - 1 ? StatementBuffer.BLOCK_SIZE
+                    : this.offset;
             for (int offset = 0; offset < maxOffset; offset += 4) {
-                handler.handleStatement(new ContextStatementImpl((Resource) block[offset],
-                        (URI) block[offset + 1], block[offset + 2], (Resource) block[offset + 3]));
+                handler.handleStatement(Statements.VALUE_FACTORY.createStatement(
+                        (Resource) block[offset], (IRI) block[offset + 1], block[offset + 2],
+                        (Resource) block[offset + 3]));
             }
         }
         handler.endRDF();
     }
 
-    public synchronized boolean add(final Resource subj, final URI pred, final Value obj,
+    public synchronized boolean add(final Resource subj, final IRI pred, final Value obj,
             @Nullable final Resource ctx) {
 
         // Invalidate hash index
@@ -263,10 +263,10 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
         // Retrieve the block where to add the statement; add a new block if necessary
         Value[] block;
-        if (this.offset < BLOCK_SIZE) {
+        if (this.offset < StatementBuffer.BLOCK_SIZE) {
             block = this.blocks.get(this.blocks.size() - 1);
         } else {
-            block = new Value[BLOCK_SIZE];
+            block = new Value[StatementBuffer.BLOCK_SIZE];
             this.blocks.add(block);
             this.offset = 0;
         }
@@ -289,7 +289,8 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
     @Override
     public boolean add(final Statement stmt) {
-        return add(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), stmt.getContext());
+        return this.add(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+                stmt.getContext());
     }
 
     @Override
@@ -302,15 +303,16 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
         // Create hash index at first access. Elements of the hash table are pointers to values in
         // the combined block arrays (pointer incremeted by 4 to avoid pointer = 0)
         if (this.buckets == null) {
-            final int size = size();
+            final int size = this.size();
             final int[] buckets = new int[Math.max(4, Integer.highestOneBit(size) * 4) - 1];
             int pointer = 4; // never use 0
             for (int index = 0; index < this.blocks.size(); ++index) {
                 final Value[] block = this.blocks.get(index);
-                final int maxOffset = index < this.blocks.size() - 1 ? BLOCK_SIZE : this.offset;
+                final int maxOffset = index < this.blocks.size() - 1 ? StatementBuffer.BLOCK_SIZE
+                        : this.offset;
                 for (int offset = 0; offset < maxOffset; offset += 4) {
-                    final int hash = hash(block[offset], block[offset + 1], block[offset + 2],
-                            block[offset + 3]);
+                    final int hash = StatementBuffer.hash(block[offset], block[offset + 1],
+                            block[offset + 2], block[offset + 3]);
                     int slot = (hash & 0x7FFFFFFF) % buckets.length;
                     while (buckets[slot] != 0) {
                         slot = (slot + 1) % buckets.length;
@@ -326,7 +328,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
     private synchronized void startAddTracker() {
         if (this.addTracker == null) {
-            this.addTracker = new Tracker(LOGGER, null, null,
+            this.addTracker = new Tracker(StatementBuffer.LOGGER, null, null,
                     "%d triples buffered (%d tr/s, %d tr/s avg)");
             this.addTracker.start();
         }
@@ -350,7 +352,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
         if (blockLength == block.length) {
 
             // (1) A full block is being added. Don't copy, just insert the block in the list
-            if (this.offset >= BLOCK_SIZE) {
+            if (this.offset >= StatementBuffer.BLOCK_SIZE) {
                 this.blocks.add(block);
             } else {
                 final Value[] last = this.blocks.remove(this.blocks.size() - 1);
@@ -365,14 +367,15 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
             int offset = 0;
             while (offset < blockLength) {
                 Value[] thisBlock;
-                if (this.offset < BLOCK_SIZE) {
+                if (this.offset < StatementBuffer.BLOCK_SIZE) {
                     thisBlock = this.blocks.get(this.blocks.size() - 1);
                 } else {
-                    thisBlock = new Value[BLOCK_SIZE];
+                    thisBlock = new Value[StatementBuffer.BLOCK_SIZE];
                     this.blocks.add(thisBlock);
                     this.offset = 0;
                 }
-                final int length = Math.min(blockLength - offset, BLOCK_SIZE - this.offset);
+                final int length = Math.min(blockLength - offset,
+                        StatementBuffer.BLOCK_SIZE - this.offset);
                 System.arraycopy(block, offset, thisBlock, this.offset, length);
                 offset += length;
                 this.offset += length;
@@ -406,11 +409,11 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
         public void startRDF() {
 
             // Allocate a local block
-            this.block = new Value[BLOCK_SIZE];
+            this.block = new Value[StatementBuffer.BLOCK_SIZE];
             this.offset = 0;
 
             // Start tracking if necessary
-            startAddTracker();
+            StatementBuffer.this.startAddTracker();
         }
 
         @Override
@@ -418,7 +421,7 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
 
             // Extract components
             final Resource subj = stmt.getSubject();
-            final URI pred = stmt.getPredicate();
+            final IRI pred = stmt.getPredicate();
             final Value obj = stmt.getObject();
             final Resource ctx = stmt.getContext();
 
@@ -431,8 +434,8 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
             // If the local block is full, copy its content to the buffer (this requires
             // synchronization)
             if (this.offset == this.block.length) {
-                append(this.block, this.block.length);
-                this.block = new Value[BLOCK_SIZE];
+                StatementBuffer.this.append(this.block, this.block.length);
+                this.block = new Value[StatementBuffer.BLOCK_SIZE];
                 this.offset = 0;
             }
 
@@ -444,13 +447,13 @@ final class StatementBuffer extends AbstractCollection<Statement> implements Sup
             // Flush the content of the local block to the buffer, if necessary, and release
             // the block to free memory
             if (this.offset > 0) {
-                append(this.block, this.offset);
+                StatementBuffer.this.append(this.block, this.offset);
                 this.offset = 0;
             }
             this.block = null;
 
             // Stop tracking
-            stopAddTracker();
+            StatementBuffer.this.stopAddTracker();
         }
 
     }
