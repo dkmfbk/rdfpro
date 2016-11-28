@@ -144,13 +144,16 @@ public final class RDFProcessors {
         switch (name) {
         case "r":
         case "read": {
-            final Options options = Options.parse("b!|w|+", args);
+            final Options options = Options.parse("b!|w|s|d|+", args);
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
+            final boolean skipBadStatements = options.hasOption("s");
+            final boolean dumpBadStatements = options.hasOption("d");
             final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
             return RDFProcessors.read(true, preserveBNodes,
-                    base == null ? null : base.stringValue(), null, fileSpecs);
+                    base == null ? null : base.stringValue(), null, skipBadStatements,
+                    dumpBadStatements, fileSpecs);
         }
 
         case "w":
@@ -286,7 +289,8 @@ public final class RDFProcessors {
                             "%d TBox triples read (%d tr/s avg)", //
                             "%d TBox triples read (%d tr/s, %d tr/s avg)"))
                     .wrap(RDFSources.read(true, preserveBNodes,
-                            base == null ? null : base.stringValue(), null, fileSpecs));
+                            base == null ? null : base.stringValue(), null, false, false,
+                            fileSpecs));
             final boolean decomposeOWLAxioms = options.hasOption("d");
             final boolean dropBNodeTypes = options.hasOption("t");
             String[] excludedRules = new String[0];
@@ -725,18 +729,25 @@ public final class RDFProcessors {
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
+     * @param skipBadStatements
+     *            true if statements affected by errors in read RDF data (e.g., syntactically
+     *            invalid URIs) have not to be injected in the output stream of the processor
+     * @param dumpBadStatements
+     *            true if statements affected by errors in read RDF data should be written on disk
+     *            in a file named as the input file but with a ".error" qualifier
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseIRI, @Nullable final ParserConfig config,
+            final boolean skipBadStatements, final boolean dumpBadStatements,
             final String... locations) {
         final RDFProcessor tracker = RDFProcessors
                 .track(new Tracker(RDFProcessors.LOGGER, null, "%d triples read (%d tr/s avg)", //
                         "%d triples read (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseIRI, config,
-                locations);
+                skipBadStatements, dumpBadStatements, locations);
         return RDFProcessors.inject(tracker.wrap(source));
     }
 

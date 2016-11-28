@@ -47,8 +47,10 @@ public class TransformProcessorTest {
 
         final IRI dboCompany = vf.createIRI("http://dbpedia.org/ontology/Company");
 
-        final RDFSource aboxSource = RDFSources.read(true, true, null, null, "dbpedia.tbox.owl");
-        final RDFSource tboxSource = RDFSources.read(true, true, null, null, "dbpedia.abox.nt.gz");
+        final RDFSource aboxSource = RDFSources.read(true, true, null, null, false, false,
+                "dbpedia.tbox.owl");
+        final RDFSource tboxSource = RDFSources.read(true, true, null, null, false, false,
+                "dbpedia.abox.nt.gz");
 
         final RDFHandler labelsSink = RDFHandlers.write(null, 0, "labels.nt.gz");
 

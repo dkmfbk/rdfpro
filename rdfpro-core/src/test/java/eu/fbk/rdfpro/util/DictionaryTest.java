@@ -55,7 +55,8 @@ public class DictionaryTest {
         final Set<Value> set = new HashSet<>();
         final Dictionary d = Dictionary.newMemoryDictionary();
         final long ts = System.currentTimeMillis();
-        RDFSources.read(true, true, null, null, "/mnt/data/pikes/data/abox10m.tql.gz")
+        RDFSources
+                .read(true, true, null, null, false, false, "/mnt/data/pikes/data/abox10m.tql.gz")
                 .emit(new AbstractRDFHandler() {
 
                     private final AtomicInteger counter = new AtomicInteger(0);

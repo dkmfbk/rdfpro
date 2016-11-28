@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -93,11 +93,11 @@ final class ProcessorRules implements RDFProcessor {
         Ruleset ruleset = null;
         if (!rdfRulesetURLs.isEmpty()) {
             final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
-                    rdfRulesetURLs.toArray(new String[rdfRulesetURLs.size()]));
+                    false, false, rdfRulesetURLs.toArray(new String[rdfRulesetURLs.size()]));
             try {
                 ruleset = Ruleset.fromRDF(rulesetSource);
             } catch (final Throwable ex) {
-                LOGGER.error("Invalid ruleset", ex);
+                ProcessorRules.LOGGER.error("Invalid ruleset", ex);
                 throw ex;
             }
         }
@@ -166,9 +166,11 @@ final class ProcessorRules implements RDFProcessor {
         final String[] tboxSpecs = options.getPositionalArgs(String.class).toArray(new String[0]);
         final RDFSource tboxData = tboxSpecs.length == 0 ? null
                 : RDFProcessors
-                        .track(new Tracker(LOGGER, null, "%d TBox triples read (%d tr/s avg)", //
+                        .track(new Tracker(ProcessorRules.LOGGER, null,
+                                "%d TBox triples read (%d tr/s avg)", //
                                 "%d TBox triples read (%d tr/s, %d tr/s avg)"))
-                        .wrap(RDFSources.read(true, preserveBNodes, base, null, tboxSpecs));
+                        .wrap(RDFSources.read(true, preserveBNodes, base, null, false, false,
+                                tboxSpecs));
 
         // Read deduplicate flag
         final boolean deduplicate = options.hasOption("u");
@@ -189,7 +191,7 @@ final class ProcessorRules implements RDFProcessor {
             @Nullable final IRI tboxContext) {
 
         // Process ruleset and static data
-        LOGGER.debug("Processing {} rules {} TBox data", ruleset.getRules().size(),
+        ProcessorRules.LOGGER.debug("Processing {} rules {} TBox data", ruleset.getRules().size(),
                 tboxData == null ? "without" : "with");
         final long ts = System.currentTimeMillis();
         Ruleset processedRuleset = ruleset.mergeSameWhereExpr();
@@ -216,8 +218,8 @@ final class ProcessorRules implements RDFProcessor {
                 }
             }
         }
-        LOGGER.info("{} initialized with {} ABox rules (from {} rules) in {} ms", engine,
-                processedRuleset.getRules().size(), ruleset.getRules().size(),
+        ProcessorRules.LOGGER.info("{} initialized with {} ABox rules (from {} rules) in {} ms",
+                engine, processedRuleset.getRules().size(), ruleset.getRules().size(),
                 System.currentTimeMillis() - ts);
 
         // Setup object

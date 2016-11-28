@@ -906,7 +906,8 @@ final class GroovyProcessor implements RDFProcessor {
             final boolean matchCtx = pattern.contains("c");
             final Set<String> hashes = new TreeSet<>();
             final RDFHandler handler = RDFProcessors
-                    .read(true, false, null, null, file.getAbsolutePath()).wrap(new RDFHandler() {
+                    .read(true, false, null, null, false, false, file.getAbsolutePath())
+                    .wrap(new RDFHandler() {
 
                         @Override
                         public void startRDF() throws RDFHandlerException {

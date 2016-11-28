@@ -23,7 +23,7 @@ public class QuadModelLoadTest {
 
         final long ts = System.currentTimeMillis();
 
-        final RDFSource source = RDFSources.read(false, true, null, null, args);
+        final RDFSource source = RDFSources.read(false, true, null, null, false, false, args);
         source.emit(RDFHandlers.synchronize(RDFHandlers.wrap(model)), 1);
         Runtime.getRuntime().gc();
         final long mem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();

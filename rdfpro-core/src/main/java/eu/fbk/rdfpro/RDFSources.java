@@ -37,6 +37,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
@@ -54,6 +55,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.rio.ParseErrorListener;
 import org.eclipse.rdf4j.rio.ParserConfig;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandler;
@@ -61,6 +63,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.helpers.NTriplesParserSettings;
 import org.eclipse.rdf4j.rio.helpers.ParseErrorLogger;
@@ -80,36 +83,6 @@ import eu.fbk.rdfpro.util.Statements;
  * Utility methods dealing with {@code RDFSource}s.
  */
 public final class RDFSources {
-
-    private static final ParserConfig DEFAULT_PARSER_CONFIG;
-
-    static {
-        final ParserConfig config = new ParserConfig();
-        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
-        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES, false);
-        config.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
-        config.set(BasicParserSettings.VERIFY_LANGUAGE_TAGS, false);
-        config.set(BasicParserSettings.VERIFY_RELATIVE_URIS, false);
-        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
-        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
-        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
-        config.set(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_LANGUAGES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_TYPES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_VALUES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_UNKNOWN_PROPERTY, false);
-        config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
-        config.set(TriXParserSettings.FAIL_ON_TRIX_INVALID_STATEMENT, false);
-        config.set(TriXParserSettings.FAIL_ON_TRIX_MISSING_DATATYPE, false);
-        config.set(XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID, false);
-        config.set(XMLParserSettings.FAIL_ON_INVALID_NCNAME, false);
-        config.set(XMLParserSettings.FAIL_ON_INVALID_QNAME, false);
-        config.set(XMLParserSettings.FAIL_ON_MISMATCHED_TAGS, false);
-        config.set(XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES, false);
-        config.set(XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS, false);
-        DEFAULT_PARSER_CONFIG = config;
-    }
 
     /** The null {@code RDFSource} that returns no statements, namespaces and comments. */
     public static final RDFSource NIL = new RDFSource() {
@@ -294,14 +267,22 @@ public final class RDFSources {
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
+     * @param skipBadStatements
+     *            true if statements affected by errors in read RDF data (e.g., syntactically
+     *            invalid URIs) have not to be injected in the output stream of the processor
+     * @param dumpBadStatements
+     *            true if statements affected by errors in read RDF data should be written on disk
+     *            in a file named as the input file but with a ".error" qualifier
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFSource}
      */
     public static RDFSource read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseIRI, @Nullable final ParserConfig config,
+            final boolean skipBadStatements, final boolean dumpBadStatements,
             final String... locations) {
-        return new FileSource(parallelize, preserveBNodes, baseIRI, config, locations);
+        return new FileSource(parallelize, preserveBNodes, baseIRI, config, skipBadStatements,
+                dumpBadStatements, locations);
     }
 
     /**
@@ -372,6 +353,40 @@ public final class RDFSources {
         };
     }
 
+    private static void configureParser(final ParserConfig config, final boolean verify) {
+
+        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
+        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
+        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
+        config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
+
+        for (final RioSetting<Boolean> setting : Arrays.asList(
+                BasicParserSettings.VERIFY_DATATYPE_VALUES,
+                BasicParserSettings.VERIFY_LANGUAGE_TAGS, //
+                BasicParserSettings.VERIFY_RELATIVE_URIS, //
+                BasicParserSettings.VERIFY_URI_SYNTAX,
+                BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES,
+                BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES,
+                NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_LANGUAGES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_TYPES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_VALUES,
+                RDFJSONParserSettings.FAIL_ON_UNKNOWN_PROPERTY,
+                TriXParserSettings.FAIL_ON_TRIX_INVALID_STATEMENT,
+                TriXParserSettings.FAIL_ON_TRIX_MISSING_DATATYPE,
+                XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID,
+                XMLParserSettings.FAIL_ON_INVALID_NCNAME, //
+                XMLParserSettings.FAIL_ON_INVALID_QNAME, //
+                XMLParserSettings.FAIL_ON_MISMATCHED_TAGS,
+                XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES,
+                XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS)) {
+            config.set(setting, verify);
+            config.addNonFatalError(setting);
+        }
+
+    }
+
     private static class FileSource implements RDFSource {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(FileSource.class);
@@ -382,19 +397,28 @@ public final class RDFSources {
 
         private final String base;
 
+        private final boolean skipBadStatements;
+
+        private final boolean dumpBadStatements;
+
+        private final AtomicLong skippedStatements;
+
         private final ParserConfig parserConfig;
 
         private final String[] locations;
 
         public FileSource(final boolean parallelize, final boolean preserveBNodes,
                 @Nullable final String baseIRI, @Nullable final ParserConfig parserConfig,
+                final boolean skipBadStatements, final boolean dumpBadStatements,
                 final String... locations) {
 
             this.parallelize = parallelize;
             this.preserveBNodes = preserveBNodes;
             this.base = baseIRI != null ? baseIRI : "";
-            this.parserConfig = parserConfig != null ? parserConfig
-                    : RDFSources.DEFAULT_PARSER_CONFIG;
+            this.skipBadStatements = skipBadStatements;
+            this.dumpBadStatements = dumpBadStatements;
+            this.skippedStatements = new AtomicLong();
+            this.parserConfig = parserConfig;
             this.locations = locations;
         }
 
@@ -416,6 +440,10 @@ public final class RDFSources {
                 for (int i = 0; i < passes; ++i) {
                     sink.startRDF();
                     this.parse(wrappedSink);
+                    if (this.skippedStatements.get() > 0) {
+                        FileSource.LOGGER.info("{} triples skipped", this.skippedStatements);
+                        this.skippedStatements.set(0);
+                    }
                     sink.endRDF();
                 }
             } catch (RuntimeException | Error ex) {
@@ -529,25 +557,49 @@ public final class RDFSources {
             }
         }
 
-        private class ParseJob {
+        private class ParseJob extends AbstractRDFHandlerWrapper implements ParseErrorListener {
 
             private final Map<String, InputStream> streams;
 
             private final String location;
 
-            private final RDFHandler handler;
+            private final String locationAbbreviated;
+
+            private final ParserConfig config;
 
             private volatile boolean closed;
 
             private Closeable in;
 
+            private String errorMessage;
+
+            private Resource errorSubject;
+
+            private RDFHandler errorWriter;
+
             ParseJob(final Map<String, InputStream> streams, final String location,
                     final RDFHandler handler) {
+
+                super(FileSource.this.preserveBNodes ? handler
+                        : RDFSources.rewriteBNodes(handler, Hash.murmur3(location).toString()));
+
+                final int index = location.lastIndexOf('/');
+                final String locationAbbreviated = index < 0 ? location
+                        : location.substring(index + 1);
+
+                final ParserConfig config = FileSource.this.parserConfig != null
+                        ? FileSource.this.parserConfig : new ParserConfig();
+
                 this.streams = streams;
                 this.location = location;
-                this.handler = handler;
+                this.locationAbbreviated = locationAbbreviated;
+                this.config = config;
                 this.closed = false;
                 this.in = null;
+
+                this.errorMessage = null;
+                this.errorSubject = null;
+                this.errorWriter = null;
             }
 
             void cancel() {
@@ -595,13 +647,12 @@ public final class RDFSources {
                 }
 
                 try {
-                    final RDFHandler handler = FileSource.this.preserveBNodes ? this.handler //
-                            : RDFSources.rewriteBNodes(this.handler,
-                                    Hash.murmur3(this.location).toString());
+                    RDFSources.configureParser(this.config, true);
                     final RDFParser parser = Rio.createParser(format);
-                    parser.setParserConfig(FileSource.this.parserConfig);
+                    parser.setParserConfig(this.config);
                     parser.setValueFactory(Statements.VALUE_FACTORY);
-                    parser.setRDFHandler(handler);
+                    parser.setRDFHandler(this);
+                    parser.setParseErrorListener(this);
                     if (this.in instanceof InputStream) {
                         parser.parse((InputStream) this.in, FileSource.this.base);
                     } else {
@@ -621,6 +672,91 @@ public final class RDFSources {
                         IO.closeQuietly(this.in);
                         this.in = null;
                         this.streams.put(this.location, null); // ensure stream is not read again
+                    }
+                }
+            }
+
+            @Override
+            public void handleStatement(final Statement stmt) throws RDFHandlerException {
+
+                if (this.errorMessage != null) {
+                    if (this.errorSubject == null) {
+                        this.errorSubject = stmt.getSubject();
+                    }
+                    if (this.errorSubject == stmt.getSubject()) {
+                        FileSource.LOGGER
+                                .warn(this.errorMessage.replace("\\s+", " ") + ":  "
+                                        + Statements.formatValue(stmt.getSubject(), null) + " "
+                                        + Statements.formatValue(stmt.getPredicate(), null) + " "
+                                        + Statements.formatValue(stmt.getObject(), null)
+                                        + (stmt.getContext() == null ? ""
+                                                : Statements.formatValue(stmt.getContext(), null))
+                                        + " .");
+                        if (FileSource.this.dumpBadStatements) {
+                            if (this.errorWriter == null) {
+                                final String ext = IO.extractExtension(this.location);
+                                final String loc = this.location.substring(0,
+                                        this.location.length() - ext.length()) + ".error" + ext;
+                                this.errorWriter = RDFHandlers.write(null, 1, loc);
+                                this.errorWriter.startRDF();
+                            }
+                            this.errorWriter.handleStatement(stmt);
+                        }
+                        if (FileSource.this.skipBadStatements) {
+                            FileSource.this.skippedStatements.incrementAndGet();
+                            return;
+                        }
+
+                    } else {
+                        this.errorSubject = null;
+                        this.errorMessage = null;
+                        RDFSources.configureParser(this.config, true);
+                    }
+                }
+
+                super.handleStatement(stmt);
+            }
+
+            @Override
+            public void endRDF() throws RDFHandlerException {
+                if (this.errorWriter != null) {
+                    this.errorWriter.endRDF();
+                }
+                super.endRDF();
+            }
+
+            @Override
+            public void close() {
+                IO.closeQuietly(this.errorWriter);
+                super.close();
+            }
+
+            @Override
+            public void warning(final String msg, final long line, final long col) {
+                this.handleError(msg, line, col);
+            }
+
+            @Override
+            public void error(final String msg, final long line, final long col) {
+                this.handleError(msg, line, col);
+            }
+
+            @Override
+            public void fatalError(final String msg, final long line, final long col) {
+                this.handleError(msg, line, col);
+            }
+
+            private void handleError(final String msg, final long line, final long col) {
+                if (this.errorMessage != null) {
+                    this.errorMessage += "; " + msg;
+                } else {
+                    this.errorMessage = " PARSE ERROR [" + this.locationAbbreviated + ":" + line
+                            + (col >= 0 ? "," + col : "") + "] " + msg;
+                    if (FileSource.this.parserConfig == null) {
+                        RDFSources.configureParser(this.config, false);
+                    } else {
+                        FileSource.LOGGER.warn(this.errorMessage);
+                        this.errorMessage = null;
                     }
                 }
             }
