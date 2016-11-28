@@ -273,16 +273,18 @@ public final class RDFSources {
      * @param dumpBadStatements
      *            true if statements affected by errors in read RDF data should be written on disk
      *            in a file named as the input file but with a ".error" qualifier
+     * @param quiet
+     *            true if warnings related to errors in read RDF data should not be emitted
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFSource}
      */
     public static RDFSource read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseIRI, @Nullable final ParserConfig config,
-            final boolean skipBadStatements, final boolean dumpBadStatements,
+            final boolean skipBadStatements, final boolean dumpBadStatements, boolean quiet,
             final String... locations) {
         return new FileSource(parallelize, preserveBNodes, baseIRI, config, skipBadStatements,
-                dumpBadStatements, locations);
+                dumpBadStatements, quiet, locations);
     }
 
     /**
@@ -401,6 +403,8 @@ public final class RDFSources {
 
         private final boolean dumpBadStatements;
 
+        private final boolean quiet;
+
         private final AtomicLong skippedStatements;
 
         private final ParserConfig parserConfig;
@@ -410,13 +414,14 @@ public final class RDFSources {
         public FileSource(final boolean parallelize, final boolean preserveBNodes,
                 @Nullable final String baseIRI, @Nullable final ParserConfig parserConfig,
                 final boolean skipBadStatements, final boolean dumpBadStatements,
-                final String... locations) {
+                final boolean quiet, final String... locations) {
 
             this.parallelize = parallelize;
             this.preserveBNodes = preserveBNodes;
             this.base = baseIRI != null ? baseIRI : "";
             this.skipBadStatements = skipBadStatements;
             this.dumpBadStatements = dumpBadStatements;
+            this.quiet = quiet;
             this.skippedStatements = new AtomicLong();
             this.parserConfig = parserConfig;
             this.locations = locations;
@@ -684,14 +689,15 @@ public final class RDFSources {
                         this.errorSubject = stmt.getSubject();
                     }
                     if (this.errorSubject == stmt.getSubject()) {
-                        FileSource.LOGGER
-                                .warn(this.errorMessage.replace("\\s+", " ") + ":  "
-                                        + Statements.formatValue(stmt.getSubject(), null) + " "
-                                        + Statements.formatValue(stmt.getPredicate(), null) + " "
-                                        + Statements.formatValue(stmt.getObject(), null)
-                                        + (stmt.getContext() == null ? ""
-                                                : Statements.formatValue(stmt.getContext(), null))
-                                        + " .");
+                        if (!FileSource.this.quiet) {
+                            FileSource.LOGGER.warn(this.errorMessage.replace("\\s+", " ") + ":  "
+                                    + Statements.formatValue(stmt.getSubject(), null) + " "
+                                    + Statements.formatValue(stmt.getPredicate(), null) + " "
+                                    + Statements.formatValue(stmt.getObject(), null)
+                                    + (stmt.getContext() == null ? ""
+                                            : Statements.formatValue(stmt.getContext(), null))
+                                    + " .");
+                        }
                         if (FileSource.this.dumpBadStatements) {
                             if (this.errorWriter == null) {
                                 final String ext = IO.extractExtension(this.location);
@@ -755,7 +761,9 @@ public final class RDFSources {
                     if (FileSource.this.parserConfig == null) {
                         RDFSources.configureParser(this.config, false);
                     } else {
-                        FileSource.LOGGER.warn(this.errorMessage);
+                        if (!FileSource.this.quiet) {
+                            FileSource.LOGGER.warn(this.errorMessage);
+                        }
                         this.errorMessage = null;
                     }
                 }

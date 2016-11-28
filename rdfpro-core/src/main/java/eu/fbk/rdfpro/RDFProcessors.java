@@ -144,16 +144,17 @@ public final class RDFProcessors {
         switch (name) {
         case "r":
         case "read": {
-            final Options options = Options.parse("b!|w|s|d|+", args);
+            final Options options = Options.parse("b!|w|s|d|q|+", args);
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
             final boolean skipBadStatements = options.hasOption("s");
             final boolean dumpBadStatements = options.hasOption("d");
+            final boolean quiet = options.hasOption("q");
             final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
             return RDFProcessors.read(true, preserveBNodes,
                     base == null ? null : base.stringValue(), null, skipBadStatements,
-                    dumpBadStatements, fileSpecs);
+                    dumpBadStatements, quiet, fileSpecs);
         }
 
         case "w":
@@ -289,7 +290,7 @@ public final class RDFProcessors {
                             "%d TBox triples read (%d tr/s avg)", //
                             "%d TBox triples read (%d tr/s, %d tr/s avg)"))
                     .wrap(RDFSources.read(true, preserveBNodes,
-                            base == null ? null : base.stringValue(), null, false, false,
+                            base == null ? null : base.stringValue(), null, false, false, false,
                             fileSpecs));
             final boolean decomposeOWLAxioms = options.hasOption("d");
             final boolean dropBNodeTypes = options.hasOption("t");
@@ -735,19 +736,21 @@ public final class RDFProcessors {
      * @param dumpBadStatements
      *            true if statements affected by errors in read RDF data should be written on disk
      *            in a file named as the input file but with a ".error" qualifier
+     * @param quiet
+     *            true if warnings related to errors in read RDF data should not be emitted
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFProcessor}
      */
     public static RDFProcessor read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseIRI, @Nullable final ParserConfig config,
-            final boolean skipBadStatements, final boolean dumpBadStatements,
+            final boolean skipBadStatements, final boolean dumpBadStatements, final boolean quiet,
             final String... locations) {
         final RDFProcessor tracker = RDFProcessors
                 .track(new Tracker(RDFProcessors.LOGGER, null, "%d triples read (%d tr/s avg)", //
                         "%d triples read (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseIRI, config,
-                skipBadStatements, dumpBadStatements, locations);
+                skipBadStatements, dumpBadStatements, quiet, locations);
         return RDFProcessors.inject(tracker.wrap(source));
     }
 
