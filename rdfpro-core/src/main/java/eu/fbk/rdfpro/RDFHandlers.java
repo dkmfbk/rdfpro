@@ -102,7 +102,13 @@ public final class RDFHandlers {
 
     static {
         final WriterConfig config = new WriterConfig();
-        config.set(BasicWriterSettings.PRETTY_PRINT, true);
+
+        // TODO: we have to disable pretty printing as this would require indexing all data prior
+        // to (reordering and) emitting it for the Turtle and TriG formats. We will address this
+        // issue implementing a moving window buffer that performs a partial reordering of
+        // statements prior to their writing.
+        config.set(BasicWriterSettings.PRETTY_PRINT, false);
+
         config.set(BasicWriterSettings.RDF_LANGSTRING_TO_LANG_LITERAL, true);
         config.set(BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL, true);
         DEFAULT_WRITER_CONFIG = config;
