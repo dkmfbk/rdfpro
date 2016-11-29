@@ -35,6 +35,7 @@ import org.eclipse.rdf4j.model.vocabulary.SESAME;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.helpers.NTriplesParserSettings;
@@ -347,6 +348,11 @@ public class TQLParser extends AbstractRDFParser {
             case EOF:
                 this.throwEOFException();
                 break;
+            case ' ':
+                throwParseException("IRI includes an unencoded space: '" + c + "'",
+                        BasicParserSettings.VERIFY_URI_SYNTAX);
+                this.builder.append((char) c);
+                break;
             case '\\':
                 c = this.read();
                 if (c == TQLParser.EOF) {
@@ -354,17 +360,21 @@ public class TQLParser extends AbstractRDFParser {
                 } else if (c == 'u' || c == 'U') {
                     this.parseUChar(c);
                 } else {
+                    throwParseException("IRI includes string escapes: '\\" + c + "'",
+                            BasicParserSettings.VERIFY_URI_SYNTAX);
                     this.builder.append((char) c); // accept \> and \\ plus others
                 }
+                break;
+            case ':':
+                relative = false;
+                this.builder.append((char) c);
                 break;
             default:
                 if (c < 32) {
                     // discard control chars but accept other chars forbidden by W3C
                     // rec, for compatibility with previous Turtle specification
-                    this.throwParseException("Expected valid IRI char, found: " + (char) c);
-                }
-                if (c == ':') {
-                    relative = false;
+                    this.throwParseException("Expected valid IRI char, found: " + (char) c,
+                            BasicParserSettings.VERIFY_URI_SYNTAX);
                 }
                 this.builder.append((char) c);
                 break;
@@ -504,7 +514,8 @@ public class TQLParser extends AbstractRDFParser {
                 c = this.read();
             }
             if (this.builder.charAt(this.builder.length() - 1) == '-') {
-                this.throwParseException("Invalid lang tag: " + this.builder.toString());
+                this.throwParseException("Invalid lang tag: " + this.builder.toString(),
+                        BasicParserSettings.VERIFY_LANGUAGE_TAGS);
             }
             final String language = this.builder.toString();
             this.value = this.createLiteral(label, language, null, this.lineNo, -1);
@@ -560,6 +571,13 @@ public class TQLParser extends AbstractRDFParser {
 
     private void throwEOFException() throws RDFParseException {
         throw new RDFParseException("Unexpected end of file", this.lineNo, -1);
+    }
+
+    private void throwParseException(final String message, RioSetting<Boolean> setting)
+            throws RDFParseException {
+        if (getParserConfig().get(setting)) {
+            throw new RDFParseException(message, this.lineNo, -1);
+        }
     }
 
     private void throwParseException(final String message) throws RDFParseException {
