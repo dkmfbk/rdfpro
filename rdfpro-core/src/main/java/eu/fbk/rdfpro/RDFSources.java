@@ -766,7 +766,7 @@ public final class RDFSources {
                 this.streams = null;
 
                 // Dump bad lines, if recorded (in this case we assume text format)
-                if (!this.errorLines.isEmpty()) {
+                if (!this.errorLines.isEmpty() && FileSource.this.errorWriterSupplier != null) {
                     try {
                         // Get the writer where to emit bad lines. Abort if no writer returned
                         final Writer writer = FileSource.this.errorWriterSupplier

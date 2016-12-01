@@ -18,10 +18,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
@@ -54,6 +58,8 @@ public class TQLParser extends AbstractRDFParser {
     private StringBuilder builder;
 
     private Value value;
+
+    private Map<String, String> namespaces;
 
     /**
      * Creates a new TQLParser that will use a {@link SimpleValueFactory} to create RDF model
@@ -101,8 +107,16 @@ public class TQLParser extends AbstractRDFParser {
         this.lineNo = 1;
         this.builder = new StringBuilder(1024);
         this.value = null;
+        this.namespaces = Maps.newHashMap();
 
         this.setBaseURI(Strings.nullToEmpty(baseIRI));
+
+        final Set<Namespace> ns = this.getParserConfig().get(BasicParserSettings.NAMESPACES);
+        if (ns != null) {
+            for (final Namespace n : ns) {
+                this.namespaces.put(n.getPrefix(), n.getName());
+            }
+        }
 
         this.reportLocation(this.lineNo, 1);
 
@@ -187,23 +201,23 @@ public class TQLParser extends AbstractRDFParser {
             }
             final String prefix = this.builder.toString();
             if (c != ':') {
-                this.reportError("Expected ':', found: " + (char) c);
+                this.reportError(true, "Expected ':', found: '" + (char) c + "'");
             }
             c = this.skipWhitespace(this.read());
             c = this.parseIRIString(c);
-            final String iri = this.value.stringValue();
-            this.setNamespace(prefix, iri);
+            final String uri = this.value.stringValue();
+            this.namespaces.put(prefix, uri);
             if (this.rdfHandler != null && !this.lineInvalid) {
-                this.rdfHandler.handleNamespace(prefix, iri);
+                this.rdfHandler.handleNamespace(prefix, uri);
             }
         }
         c = this.skipWhitespace(c);
         if (c != '.') {
-            this.reportError("Expected '.', found: " + (char) c);
+            this.reportError(true, "Expected '.', found: '" + (char) c + "'");
         }
         c = this.skipWhitespace(this.read());
         if (c != TQLParser.EOF && c != '\r' && c != '\n') {
-            this.reportError("Content after '.' is not allowed");
+            this.reportError(true, "Content after '.' is not allowed");
         }
         c = this.skipLine(c);
         return c;
@@ -214,59 +228,64 @@ public class TQLParser extends AbstractRDFParser {
 
         int c = ch;
 
-        c = this.parseResource(c);
-        boolean periodConsumed = (c & 0x80000000) != 0;
-        final Resource subject = (Resource) this.value;
-        if (periodConsumed) {
-            this.reportError("Found unexpected '.' " + (char) c);
-        }
+        try {
+            c = this.parseResource(c);
+            boolean periodConsumed = (c & 0x80000000) != 0;
+            final Resource subject = (Resource) this.value;
+            if (periodConsumed) {
+                this.reportError(true, "Found unexpected '.'");
+            }
 
-        c = this.skipWhitespace(c);
-        c = this.parseIRI(c);
-        periodConsumed = (c & 0x80000000) != 0;
-        final IRI predicate = (IRI) this.value;
-        if (periodConsumed) {
-            this.reportError("Found unexpected '.' " + (char) c);
-        }
-
-        c = this.skipWhitespace(c);
-        c = this.parseValue(c);
-        periodConsumed = (c & 0x80000000) != 0;
-        final Value object = this.value;
-
-        Resource context = null;
-        if (!periodConsumed) {
             c = this.skipWhitespace(c);
-            if (c != '.') {
-                c = this.parseResource(c);
-                periodConsumed = (c & 0x80000000) != 0;
-                context = (Resource) this.value;
-                if (!periodConsumed) {
-                    c = this.skipWhitespace(c);
+            c = this.parseIRI(c);
+            periodConsumed = (c & 0x80000000) != 0;
+            final IRI predicate = (IRI) this.value;
+            if (periodConsumed) {
+                this.reportError(true, "Found unexpected '.'");
+            }
+
+            c = this.skipWhitespace(c);
+            c = this.parseValue(c);
+            periodConsumed = (c & 0x80000000) != 0;
+            final Value object = this.value;
+
+            Resource context = null;
+            if (!periodConsumed) {
+                c = this.skipWhitespace(c);
+                if (c != '.') {
+                    c = this.parseResource(c);
+                    periodConsumed = (c & 0x80000000) != 0;
+                    context = (Resource) this.value;
+                    if (!periodConsumed) {
+                        c = this.skipWhitespace(c);
+                    }
                 }
             }
-        }
 
-        if (c == TQLParser.EOF) {
-            this.reportEOF();
-        } else if (c != '.' && !periodConsumed) {
-            this.reportError("Expected '.', found: " + (char) c);
-        }
-
-        c = periodConsumed ? c & 0x7FFFFFFF : this.read();
-        c = this.skipWhitespace(c);
-        if (c != TQLParser.EOF && c != '\r' && c != '\n') {
-            this.reportError("Content after '.' is not allowed");
-        }
-
-        if (this.rdfHandler != null && !this.lineInvalid) {
-            final Statement statement;
-            if (context == null || context.equals(SESAME.NIL)) {
-                statement = this.createStatement(subject, predicate, object);
-            } else {
-                statement = this.createStatement(subject, predicate, object, context);
+            if (c == TQLParser.EOF) {
+                this.reportEOF();
+            } else if (c != '.' && !periodConsumed) {
+                this.reportError(true, "Expected '.', found: '" + (char) c + "'");
             }
-            this.rdfHandler.handleStatement(statement);
+
+            c = periodConsumed ? c & 0x7FFFFFFF : this.read();
+            c = this.skipWhitespace(c);
+            if (c != TQLParser.EOF && c != '\r' && c != '\n') {
+                this.reportError(true, "Content after '.' is not allowed");
+            }
+
+            if (this.rdfHandler != null && !this.lineInvalid) {
+                final Statement statement;
+                if (context == null || context.equals(SESAME.NIL)) {
+                    statement = this.createStatement(subject, predicate, object);
+                } else {
+                    statement = this.createStatement(subject, predicate, object, context);
+                }
+                this.rdfHandler.handleStatement(statement);
+            }
+
+        } catch (final IllegalStateException ex) {
+            // Ignore, just skip line
         }
 
         c = this.skipLine(c);
@@ -279,10 +298,16 @@ public class TQLParser extends AbstractRDFParser {
             c = this.parseBNode(c);
         } else if (c == '"' || c == '\'') {
             c = this.parseLiteral(c);
-        } else if (c != TQLParser.EOF) {
-            c = this.parseIRI(c);
-        } else {
+        } else if (c == '<') {
+            c = this.parseIRIString(c);
+        } else if (c == ':' || TQL.isPN_CHARS(c)) {
+            c = this.parseIRIQName(c);
+        } else if (c == TQLParser.EOF) {
             this.reportEOF();
+        } else {
+            this.reportError(true,
+                    "Expected '_', '\"', '\'', '<', ':', or a valid prefix, found: '" + (char) c
+                            + "'");
         }
         return c;
     }
@@ -291,29 +316,37 @@ public class TQLParser extends AbstractRDFParser {
         int c = ch;
         if (c == '_') {
             c = this.parseBNode(c);
-        } else if (c != TQLParser.EOF) {
-            c = this.parseIRI(c);
-        } else {
+        } else if (c == '<') {
+            c = this.parseIRIString(c);
+        } else if (c == ':' || TQL.isPN_CHARS(c)) {
+            c = this.parseIRIQName(c);
+        } else if (c == TQLParser.EOF) {
             this.reportEOF();
+        } else {
+            this.reportError(true,
+                    "Expected '_', '<', ':', or a valid prefix, found: '" + (char) c + "'");
         }
         return c;
     }
 
     private int parseIRI(final int ch) throws IOException, RDFParseException {
-        final int c = ch;
+        int c = ch;
         if (c == '<') {
-            return this.parseIRIString(ch);
-        } else if (c != TQLParser.EOF) {
-            return this.parseIRIQName(ch);
-        } else {
+            c = this.parseIRIString(ch);
+        } else if (c == ':' || TQL.isPN_CHARS(c)) {
+            c = this.parseIRIQName(ch);
+        } else if (c == TQLParser.EOF) {
             this.reportEOF();
-            return c;
+        } else {
+            this.reportError(true,
+                    "Expected '<', ':', or a valid prefix, found: '" + (char) c + "'");
         }
+        return c;
     }
 
     private int parseIRIString(final int ch) throws IOException, RDFParseException {
         if (ch != '<') {
-            this.reportError("Expected '<', found: " + (char) ch);
+            this.reportError(true, "Expected '<', found: '" + (char) ch + "'");
         }
         this.builder.setLength(0);
         boolean relative = true;
@@ -324,7 +357,7 @@ public class TQLParser extends AbstractRDFParser {
                 this.reportEOF();
                 break;
             case ' ':
-                this.reportError("IRI includes an unencoded space: '" + c + "'",
+                this.reportError(false, "IRI includes an unencoded space: '" + c + "'",
                         BasicParserSettings.VERIFY_URI_SYNTAX);
                 this.builder.append((char) c);
                 break;
@@ -335,7 +368,7 @@ public class TQLParser extends AbstractRDFParser {
                 } else if (c == 'u' || c == 'U') {
                     this.parseUChar(c);
                 } else {
-                    this.reportError("IRI includes string escapes: '\\" + c + "'",
+                    this.reportError(false, "IRI includes string escapes: '\\" + c + "'",
                             BasicParserSettings.VERIFY_URI_SYNTAX);
                     this.builder.append((char) c); // accept \> and \\ plus others
                 }
@@ -348,7 +381,7 @@ public class TQLParser extends AbstractRDFParser {
                 if (c < 32) {
                     // discard control chars but accept other chars forbidden by W3C
                     // rec, for compatibility with previous Turtle specification
-                    this.reportError("Expected valid IRI char, found: " + (char) c,
+                    this.reportError(false, "Expected valid IRI char, found: '" + (char) c + "'",
                             BasicParserSettings.VERIFY_URI_SYNTAX);
                 }
                 this.builder.append((char) c);
@@ -372,12 +405,12 @@ public class TQLParser extends AbstractRDFParser {
         if (c == TQLParser.EOF) {
             this.reportEOF();
         } else if (c != ':') {
-            this.reportError("Expected ':', found: " + (char) c);
+            this.reportError(true, "Expected ':' or valid prefix, found: '" + (char) c + "'");
         }
         final String prefix = this.builder.toString();
-        final String ns = this.getNamespace(prefix);
+        final String ns = this.namespaces.get(prefix);
         if (ns == null) {
-            this.reportError("Unknown prefix '" + prefix + "'");
+            this.reportError(false, "Unknown prefix '" + prefix + "'");
         }
         this.builder.setLength(0);
         c = this.read();
@@ -386,7 +419,7 @@ public class TQLParser extends AbstractRDFParser {
             c = this.read();
         }
         final int last = this.builder.length() - 1;
-        if (this.builder.charAt(last) == '.') {
+        if (last >= 0 && this.builder.charAt(last) == '.') {
             this.builder.setLength(last); // remove trailing '.' and mark period found
             c = c | 0x80000000;
         }
@@ -398,19 +431,19 @@ public class TQLParser extends AbstractRDFParser {
     private int parseBNode(final int ch) throws IOException, RDFParseException {
         int c = ch;
         if (c != '_') {
-            this.reportError("Expected '_', found: " + c);
+            this.reportError(true, "Expected '_', found: '" + c + "'");
         }
         c = this.read();
         if (c == TQLParser.EOF) {
             this.reportEOF();
         } else if (c != ':') {
-            this.reportError("Expected ':', found: " + (char) c);
+            this.reportError(true, "Expected ':', found: '" + (char) c + "'");
         }
         c = this.read();
         if (c == TQLParser.EOF) {
             this.reportEOF();
         } else if (!TQL.isPN_CHARS_U(c) && !TQL.isNumber(c)) {
-            this.reportError("Invalid bnode character: " + (char) c);
+            this.reportError(false, "Invalid bnode character: " + (char) c);
         }
         this.builder.setLength(0);
         this.builder.append((char) c);
@@ -431,7 +464,7 @@ public class TQLParser extends AbstractRDFParser {
     private int parseLiteral(final int ch) throws IOException, RDFParseException {
         int c = ch;
         if (c != '"' && c != '\'') {
-            this.reportError("Expected '\"' or '\'', found: " + c);
+            this.reportError(true, "Expected '\"' or '\'', found: '" + c + "'");
         }
         final int delim = c;
         this.builder.setLength(0);
@@ -489,7 +522,7 @@ public class TQLParser extends AbstractRDFParser {
                 c = this.read();
             }
             if (this.builder.charAt(this.builder.length() - 1) == '-') {
-                this.reportError("Invalid lang tag: " + this.builder.toString(),
+                this.reportError(false, "Invalid lang tag: " + this.builder.toString(),
                         BasicParserSettings.VERIFY_LANGUAGE_TAGS);
             }
             final String language = this.builder.toString();
@@ -499,7 +532,7 @@ public class TQLParser extends AbstractRDFParser {
             if (c == TQLParser.EOF) {
                 this.reportEOF();
             } else if (c != '^') {
-                this.reportError("Expected '^', found: " + (char) c);
+                this.reportError(true, "Expected '^', found: '" + (char) c + "'");
             }
             c = this.read();
             if (c == TQLParser.EOF) {
@@ -522,7 +555,7 @@ public class TQLParser extends AbstractRDFParser {
         } else if (c == 'U') {
             count = 8;
         } else {
-            this.reportError("Expected 'u' or 'U', found: " + c);
+            this.reportError(false, "Expected 'u' or 'U', found: '" + (char) c + "'");
         }
         int code = 0;
         for (int i = 0; i < count; ++i) {
@@ -532,7 +565,7 @@ public class TQLParser extends AbstractRDFParser {
             } else {
                 final int digit = Character.digit(c, 16);
                 if (digit < 0) {
-                    this.reportError("Expected hex digit, found: " + (char) c);
+                    this.reportError(false, "Expected hex digit, found: '" + (char) c + "'");
                 }
                 code = code * 16 + digit;
             }
@@ -548,17 +581,19 @@ public class TQLParser extends AbstractRDFParser {
         this.reportFatalError("Unexpected end of file", this.lineNo, -1);
     }
 
-    protected void reportError(final String message) throws RDFParseException {
-        this.reportError(message, this.lineNo, -1,
+    private void reportError(final boolean skipParsingLine, final String message)
+            throws RDFParseException {
+        this.reportError(skipParsingLine, message,
                 NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES);
-        this.lineInvalid = true;
     }
 
-    @Override
-    protected void reportError(final String message, final RioSetting<Boolean> setting)
-            throws RDFParseException {
+    private void reportError(final boolean skipParsingLine, final String message,
+            final RioSetting<Boolean> setting) throws RDFParseException {
         this.reportError(message, this.lineNo, -1, setting);
         this.lineInvalid |= this.getParserConfig().get(setting);
+        if (skipParsingLine) {
+            throw new IllegalStateException();
+        }
     }
 
 }
