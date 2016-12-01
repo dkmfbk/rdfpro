@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.Writer;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -148,13 +150,24 @@ public final class RDFProcessors {
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
-            final boolean skipBadStatements = options.hasOption("s");
-            final boolean dumpBadStatements = options.hasOption("d");
+            final boolean sequential = options.hasOption("s");
+            final boolean dumpErrors = options.hasOption("d");
             final boolean quiet = options.hasOption("q");
             final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
-            return RDFProcessors.read(true, preserveBNodes,
-                    base == null ? null : base.stringValue(), null, skipBadStatements,
-                    dumpBadStatements, quiet, fileSpecs);
+            final Function<String, Writer> errorWriterSupplier = !dumpErrors ? null : loc -> {
+                try {
+                    final String origLoc = IO.extractURL(loc).toString();
+                    final String origExt = IO.extractExtension(origLoc);
+                    final String baseLoc = loc.substring(0, loc.length() - origExt.length());
+                    final String errLoc = baseLoc + ".error" + origExt;
+                    return IO.utf8Writer(IO.buffer(IO.write(errLoc)));
+                } catch (final Throwable ex) {
+                    throw new RuntimeException(ex);
+                }
+            };
+            return RDFProcessors.read(!sequential, preserveBNodes,
+                    base == null ? null : base.stringValue(), null, errorWriterSupplier, !quiet,
+                    fileSpecs);
         }
 
         case "w":
@@ -290,7 +303,7 @@ public final class RDFProcessors {
                             "%d TBox triples read (%d tr/s avg)", //
                             "%d TBox triples read (%d tr/s, %d tr/s avg)"))
                     .wrap(RDFSources.read(true, preserveBNodes,
-                            base == null ? null : base.stringValue(), null, false, false, false,
+                            base == null ? null : base.stringValue(), null, null, true,
                             fileSpecs));
             final boolean decomposeOWLAxioms = options.hasOption("d");
             final boolean dropBNodeTypes = options.hasOption("t");
@@ -744,13 +757,13 @@ public final class RDFProcessors {
      */
     public static RDFProcessor read(final boolean parallelize, final boolean preserveBNodes,
             @Nullable final String baseIRI, @Nullable final ParserConfig config,
-            final boolean skipBadStatements, final boolean dumpBadStatements, final boolean quiet,
-            final String... locations) {
+            @Nullable final Function<String, Writer> errorWriterSupplier,
+            final boolean errorLogged, final String... locations) {
         final RDFProcessor tracker = RDFProcessors
                 .track(new Tracker(RDFProcessors.LOGGER, null, "%d triples read (%d tr/s avg)", //
                         "%d triples read (%d tr/s, %d tr/s avg)"));
         final RDFSource source = RDFSources.read(parallelize, preserveBNodes, baseIRI, config,
-                skipBadStatements, dumpBadStatements, quiet, locations);
+                errorWriterSupplier, errorLogged, locations);
         return RDFProcessors.inject(tracker.wrap(source));
     }
 

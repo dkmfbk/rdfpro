@@ -92,9 +92,8 @@ final class ProcessorRules implements RDFProcessor {
         }
         Ruleset ruleset = null;
         if (!rdfRulesetURLs.isEmpty()) {
-            final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null,
-                    false, false, false,
-                    rdfRulesetURLs.toArray(new String[rdfRulesetURLs.size()]));
+            final RDFSource rulesetSource = RDFSources.read(true, preserveBNodes, base, null, null,
+                    true, rdfRulesetURLs.toArray(new String[rdfRulesetURLs.size()]));
             try {
                 ruleset = Ruleset.fromRDF(rulesetSource);
             } catch (final Throwable ex) {
@@ -170,8 +169,8 @@ final class ProcessorRules implements RDFProcessor {
                         .track(new Tracker(ProcessorRules.LOGGER, null,
                                 "%d TBox triples read (%d tr/s avg)", //
                                 "%d TBox triples read (%d tr/s, %d tr/s avg)"))
-                        .wrap(RDFSources.read(true, preserveBNodes, base, null, false, false,
-                                false, tboxSpecs));
+                        .wrap(RDFSources.read(true, preserveBNodes, base, null, null, true,
+                                tboxSpecs));
 
         // Read deduplicate flag
         final boolean deduplicate = options.hasOption("u");

@@ -32,7 +32,7 @@ public class RuleProcessorTest {
             }
         }
 
-        final RDFSource source = RDFSources.read(true, true, null, null, false, false, false,
+        final RDFSource source = RDFSources.read(true, true, null, null, null, true,
                 Arrays.copyOfRange(args, 0, index));
 
         final RDFProcessor processor = RDFProcessors.parse(true,
@@ -58,7 +58,7 @@ public class RuleProcessorTest {
             }
         }
 
-        RDFSource source = RDFSources.read(true, true, null, null, false, false, false,
+        RDFSource source = RDFSources.read(true, true, null, null, null, true,
                 Arrays.copyOfRange(args, 0, index));
 
         final List<Statement> statements = new ArrayList<>();

@@ -571,8 +571,7 @@ public final class Ruleset {
      */
     public static Ruleset fromRDF(final String location) {
         final String url = IO.extractURL(location).toString();
-        final RDFSource rulesetSource = RDFSources.read(true, true, null, null, false, false,
-                false, url);
+        final RDFSource rulesetSource = RDFSources.read(true, true, null, null, null, true, url);
         return Ruleset.fromRDF(rulesetSource);
     }
 
