@@ -15,6 +15,7 @@ package eu.fbk.rdfpro.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -25,8 +26,10 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -48,8 +51,16 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.ParserConfig;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.RioConfig;
+import org.eclipse.rdf4j.rio.RioSetting;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
+import org.eclipse.rdf4j.rio.helpers.NTriplesParserSettings;
+import org.eclipse.rdf4j.rio.helpers.RDFJSONParserSettings;
+import org.eclipse.rdf4j.rio.helpers.TriXParserSettings;
+import org.eclipse.rdf4j.rio.helpers.XMLParserSettings;
 
 public final class Statements {
 
@@ -281,6 +292,60 @@ public final class Statements {
             }
         }
         return false;
+    }
+
+    public static ParserConfig newParserConfig(boolean lenient) {
+
+        final ParserConfig config = new ParserConfig();
+
+        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
+        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
+        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
+        config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
+
+        for (final RioSetting<Boolean> setting : Arrays.asList(
+                BasicParserSettings.VERIFY_DATATYPE_VALUES,
+                BasicParserSettings.VERIFY_LANGUAGE_TAGS, //
+                BasicParserSettings.VERIFY_RELATIVE_URIS, //
+                BasicParserSettings.VERIFY_URI_SYNTAX,
+                BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES,
+                BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES,
+                NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_LANGUAGES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_TYPES,
+                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_VALUES,
+                RDFJSONParserSettings.FAIL_ON_UNKNOWN_PROPERTY,
+                TriXParserSettings.FAIL_ON_TRIX_INVALID_STATEMENT,
+                TriXParserSettings.FAIL_ON_TRIX_MISSING_DATATYPE,
+                XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID,
+                XMLParserSettings.FAIL_ON_INVALID_NCNAME, //
+                XMLParserSettings.FAIL_ON_INVALID_QNAME, //
+                XMLParserSettings.FAIL_ON_MISMATCHED_TAGS,
+                XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES,
+                XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS)) {
+            config.set(setting, !lenient); // report error and (possibly) skip data if not lenient
+            config.addNonFatalError(setting); // always try to proceed further
+        }
+
+        return config;
+    }
+
+    public static ParserConfig newParserConfig(final ParserConfig source) {
+        try {
+            final Field field = RioConfig.class.getDeclaredField("settings");
+            field.setAccessible(true);
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            final Map<RioSetting<Object>, Object> settings = (Map) field.get(source);
+            final ParserConfig config = new ParserConfig();
+            for (final Entry<RioSetting<Object>, Object> entry : settings.entrySet()) {
+                config.set(entry.getKey(), entry.getValue());
+            }
+            config.setNonFatalErrors(source.getNonFatalErrors());
+            return config;
+        } catch (final Throwable ex) {
+            throw new Error(ex);
+        }
     }
 
     public static Value shortenValue(final Value value, final int threshold) {

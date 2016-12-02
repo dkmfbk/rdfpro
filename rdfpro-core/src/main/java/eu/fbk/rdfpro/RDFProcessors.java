@@ -146,10 +146,11 @@ public final class RDFProcessors {
         switch (name) {
         case "r":
         case "read": {
-            final Options options = Options.parse("b!|w|s|d|q|+", args);
+            final Options options = Options.parse("b!|w|l|s|d|q|+", args);
             final String[] fileSpecs = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             final boolean preserveBNodes = !options.hasOption("w");
+            final boolean lenient = options.hasOption("l");
             final boolean sequential = options.hasOption("s");
             final boolean dumpErrors = options.hasOption("d");
             final boolean quiet = options.hasOption("q");
@@ -166,8 +167,8 @@ public final class RDFProcessors {
                 }
             };
             return RDFProcessors.read(!sequential, preserveBNodes,
-                    base == null ? null : base.stringValue(), null, errorWriterSupplier, !quiet,
-                    fileSpecs);
+                    base == null ? null : base.stringValue(), Statements.newParserConfig(lenient),
+                    errorWriterSupplier, !quiet, fileSpecs);
         }
 
         case "w":

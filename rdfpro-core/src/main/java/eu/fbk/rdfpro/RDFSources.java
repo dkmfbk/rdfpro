@@ -33,7 +33,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
@@ -48,7 +47,6 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -74,15 +72,9 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
-import org.eclipse.rdf4j.rio.RioConfig;
-import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
-import org.eclipse.rdf4j.rio.helpers.NTriplesParserSettings;
 import org.eclipse.rdf4j.rio.helpers.ParseErrorLogger;
-import org.eclipse.rdf4j.rio.helpers.RDFJSONParserSettings;
-import org.eclipse.rdf4j.rio.helpers.TriXParserSettings;
-import org.eclipse.rdf4j.rio.helpers.XMLParserSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,44 +90,6 @@ import eu.fbk.rdfpro.util.Statements;
 public final class RDFSources {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RDFSources.class);
-
-    private static final ParserConfig DEFAULT_CONFIG;
-
-    static {
-        final ParserConfig config = new ParserConfig();
-
-        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
-        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
-        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
-        config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
-
-        for (final RioSetting<Boolean> setting : Arrays.asList(
-                BasicParserSettings.VERIFY_DATATYPE_VALUES,
-                BasicParserSettings.VERIFY_LANGUAGE_TAGS, //
-                BasicParserSettings.VERIFY_RELATIVE_URIS, //
-                BasicParserSettings.VERIFY_URI_SYNTAX,
-                BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES,
-                BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES,
-                NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES,
-                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES,
-                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_LANGUAGES,
-                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_TYPES,
-                RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_VALUES,
-                RDFJSONParserSettings.FAIL_ON_UNKNOWN_PROPERTY,
-                TriXParserSettings.FAIL_ON_TRIX_INVALID_STATEMENT,
-                TriXParserSettings.FAIL_ON_TRIX_MISSING_DATATYPE,
-                XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID,
-                XMLParserSettings.FAIL_ON_INVALID_NCNAME, //
-                XMLParserSettings.FAIL_ON_INVALID_QNAME, //
-                XMLParserSettings.FAIL_ON_MISMATCHED_TAGS,
-                XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES,
-                XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS)) {
-            config.set(setting, true);
-            config.addNonFatalError(setting);
-        }
-
-        DEFAULT_CONFIG = config;
-    }
 
     /** The null {@code RDFSource} that returns no statements, namespaces and comments. */
     public static final RDFSource NIL = new RDFSource() {
@@ -423,23 +377,6 @@ public final class RDFSources {
         return fallback;
     }
 
-    private static ParserConfig createParserConfig(final ParserConfig source) {
-        try {
-            final Field field = RioConfig.class.getDeclaredField("settings");
-            field.setAccessible(true);
-            @SuppressWarnings({ "unchecked", "rawtypes" })
-            final Map<RioSetting<Object>, Object> settings = (Map) field.get(source);
-            final ParserConfig config = new ParserConfig();
-            for (final Entry<RioSetting<Object>, Object> entry : settings.entrySet()) {
-                config.set(entry.getKey(), entry.getValue());
-            }
-            config.setNonFatalErrors(source.getNonFatalErrors());
-            return config;
-        } catch (final Throwable ex) {
-            throw new Error(ex);
-        }
-    }
-
     private static class FileSource implements RDFSource {
 
         private final boolean parallelize;
@@ -469,7 +406,7 @@ public final class RDFSources {
             this.parallelize = parallelize;
             this.preserveBNodes = preserveBNodes;
             this.base = Strings.nullToEmpty(baseIRI);
-            this.config = MoreObjects.firstNonNull(config, RDFSources.DEFAULT_CONFIG);
+            this.config = config != null ? config : Statements.newParserConfig(false);
             this.errorWriterSupplier = errorWriterSupplier;
             this.errorLogged = errorLogged;
             this.errorCounter = new AtomicLong();
@@ -655,7 +592,7 @@ public final class RDFSources {
                                 // inject namespaces parsed by first thread into it
                                 ParserConfig config = FileSource.this.config;
                                 if (!firstThread) {
-                                    config = RDFSources.createParserConfig(config);
+                                    config = Statements.newParserConfig(config);
                                     config.set(BasicParserSettings.NAMESPACES, this.namespaces);
                                 }
 

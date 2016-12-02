@@ -32,9 +32,11 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.rio.ParseErrorListener;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
@@ -66,7 +68,7 @@ public class TQLParser extends AbstractRDFParser {
      * objects.
      */
     public TQLParser() {
-        super();
+        this(SimpleValueFactory.getInstance());
     }
 
     /**
@@ -78,11 +80,48 @@ public class TQLParser extends AbstractRDFParser {
      */
     public TQLParser(final ValueFactory valueFactory) {
         super(valueFactory);
+        this.setParseErrorListener(null);
     }
 
     @Override
     public RDFFormat getRDFFormat() {
         return TQL.FORMAT;
+    }
+
+    @Override
+    public RDFParser setParseErrorListener(final ParseErrorListener listener) {
+
+        // We wrap the error listener so to intercept errors notified by Sesame (e.g., for wrong
+        // literals) which unfortunately do not cause the affected RDF value / quad to be omitted
+        // from the output. This way we can mark the line as invalid and thus omit the affected
+        // quad.
+        super.setParseErrorListener(new ParseErrorListener() {
+
+            @Override
+            public void warning(final String msg, final long lineNo, final long colNo) {
+                if (listener != null) {
+                    listener.warning(msg, lineNo, colNo);
+                }
+            }
+
+            @Override
+            public void error(final String msg, final long lineNo, final long colNo) {
+                TQLParser.this.lineInvalid = true;
+                if (listener != null) {
+                    listener.error(msg, lineNo, colNo);
+                }
+            }
+
+            @Override
+            public void fatalError(final String msg, final long lineNo, final long colNo) {
+                TQLParser.this.lineInvalid = true;
+                if (listener != null) {
+                    listener.fatalError(msg, lineNo, colNo);
+                }
+            }
+
+        });
+        return this;
     }
 
     @Override
@@ -583,14 +622,21 @@ public class TQLParser extends AbstractRDFParser {
 
     private void reportError(final boolean skipParsingLine, final String message)
             throws RDFParseException {
-        this.reportError(skipParsingLine, message,
-                NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES);
+        if (this.getParseErrorListener() != null) {
+            this.getParseErrorListener().error(message, this.lineNo, -1);
+        }
+        if (!this.getParserConfig()
+                .isNonFatalError(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES)) {
+            throw new RDFParseException(message, this.lineNo, -1);
+        }
+        if (skipParsingLine) {
+            throw new IllegalStateException();
+        }
     }
 
     private void reportError(final boolean skipParsingLine, final String message,
             final RioSetting<Boolean> setting) throws RDFParseException {
         this.reportError(message, this.lineNo, -1, setting);
-        this.lineInvalid |= this.getParserConfig().get(setting);
         if (skipParsingLine) {
             throw new IllegalStateException();
         }
