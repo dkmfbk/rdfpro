@@ -27,9 +27,9 @@ import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -294,7 +294,7 @@ public final class Statements {
         return false;
     }
 
-    public static ParserConfig newParserConfig(boolean lenient) {
+    public static ParserConfig newParserConfig(final boolean lenient) {
 
         final ParserConfig config = new ParserConfig();
 
@@ -303,12 +303,13 @@ public final class Statements {
         config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
         config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
 
+        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
+
         for (final RioSetting<Boolean> setting : Arrays.asList(
                 BasicParserSettings.VERIFY_DATATYPE_VALUES,
                 BasicParserSettings.VERIFY_LANGUAGE_TAGS, //
                 BasicParserSettings.VERIFY_RELATIVE_URIS, //
                 BasicParserSettings.VERIFY_URI_SYNTAX,
-                BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES,
                 BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES,
                 NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES,
                 RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES,
