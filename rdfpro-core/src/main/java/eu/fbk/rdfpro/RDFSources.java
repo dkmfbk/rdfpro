@@ -596,6 +596,10 @@ public final class RDFSources {
                                     config.set(BasicParserSettings.NAMESPACES, this.namespaces);
                                 }
 
+                                // TODO: for Turtle and TriG, BNodes without an explicit id in the
+                                // file (i.e. []) do not produce the same BNode objects if the
+                                // file is read multiple time !!!
+
                                 // Build the RDF parser. Warning and errors are routed to the
                                 // FileJob object, while a special RDFHandler is needed for the
                                 // first thread in order to intercept namespaces and baseIri
@@ -604,6 +608,7 @@ public final class RDFSources {
                                 parser.setParserConfig(config);
                                 parser.setValueFactory(Statements.VALUE_FACTORY);
                                 parser.setParseErrorListener(this);
+                                parser.setPreserveBNodeIDs(true);
                                 parser.setRDFHandler(!firstThread ? wrappedHandler
                                         : new AbstractRDFHandlerWrapper(wrappedHandler) {
 
