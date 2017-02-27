@@ -333,8 +333,7 @@ final class HashValueFactory extends AbstractValueFactory {
                 if (this.languageOrDatatype instanceof String) {
                     hashCode = 31 * hashCode + this.languageOrDatatype.hashCode();
                 }
-                hashCode = 31 * hashCode + (this.languageOrDatatype instanceof IRI
-                        ? (IRI) this.languageOrDatatype : XMLSchema.STRING).hashCode();
+                hashCode = 31 * hashCode + getDatatype().hashCode();
                 this.hashCode = hashCode;
             }
             return this.hashCode;

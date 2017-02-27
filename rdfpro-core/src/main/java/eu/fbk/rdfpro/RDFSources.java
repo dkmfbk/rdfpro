@@ -564,7 +564,7 @@ public final class RDFSources {
 
                     // Log beginning of parse operation
                     if (RDFSources.LOGGER.isDebugEnabled()) {
-                        RDFSources.LOGGER.debug("Starting {} {} {} parsing for {}",
+                        RDFSources.LOGGER.debug("Starting {} {} parsing for {}",
                                 this.streams.size() == 1 ? "sequential" : "parallel",
                                 this.streams.get(0) instanceof InputStream ? "binary" : "text",
                                 this.location);

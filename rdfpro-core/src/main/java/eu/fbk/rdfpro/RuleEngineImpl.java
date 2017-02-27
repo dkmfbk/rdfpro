@@ -101,10 +101,15 @@ final class RuleEngineImpl extends RuleEngine {
         final QuadModel quadModel = model instanceof QuadModel ? (QuadModel) model //
                 : QuadModel.create(model);
         for (final Phase phase : this.phases) {
-            phase.normalize(quadModel.getValueNormalizer()).eval(quadModel);
+            if (phase.isModelSupported()) {
+                phase.normalize(quadModel.getValueNormalizer()).eval(quadModel);
+            } else {
+                RDFSources.wrap(Lists.newArrayList(quadModel))
+                        .emit(phase.eval(RDFHandlers.wrap(quadModel), false), 1);
+            }
         }
         if (model != quadModel) {
-            if (this.getRuleset().isDeletePossible() || !(model instanceof Set<?>)) {
+            if (getRuleset().isDeletePossible() || !(model instanceof Set<?>)) {
                 model.clear();
             }
             model.addAll(quadModel);
@@ -582,26 +587,24 @@ final class RuleEngineImpl extends RuleEngine {
         @Override
         public void eval(final QuadModel model) {
 
-            StatementDeduplicator deleteDeduplicator = this.canDelete ? this.newDeduplicator()
-                    : null;
-            StatementDeduplicator insertDeduplicator = this.canInsert ? this.newDeduplicator()
-                    : null;
+            StatementDeduplicator deleteDeduplicator = this.canDelete ? newDeduplicator() : null;
+            StatementDeduplicator insertDeduplicator = this.canInsert ? newDeduplicator() : null;
 
             if (!this.fixpoint) {
                 // (1) One-shot evaluation
-                this.evalRules(deleteDeduplicator, insertDeduplicator, model);
+                evalRules(deleteDeduplicator, insertDeduplicator, model);
 
             } else {
                 // (2) Naive fixpoint evaluation
                 while (true) {
-                    final boolean modified = this.evalRules(deleteDeduplicator, insertDeduplicator,
+                    final boolean modified = evalRules(deleteDeduplicator, insertDeduplicator,
                             model);
                     if (!modified) {
                         break; // fixpoint reached
                     }
                     if (this.canInsert && this.canDelete) {
-                        deleteDeduplicator = this.newDeduplicator();
-                        insertDeduplicator = this.newDeduplicator();
+                        deleteDeduplicator = newDeduplicator();
+                        insertDeduplicator = newDeduplicator();
                     }
                 }
             }
@@ -803,17 +806,17 @@ final class RuleEngineImpl extends RuleEngine {
             // Handle three case
             if (!this.fixpoint) {
                 // (1) Single iteration of both join and stream rules
-                this.evalJoinStreamIteration(deduplicator, model);
+                evalJoinStreamIteration(deduplicator, model);
 
             } else {
                 // (2) Semi-naive fixpoint evaluation. Expand the model evaluating stream
                 // rules first, then evaluate join rules + stream rules in fixpoint
                 if (this.joinRules.size() < this.allRules.size()) {
-                    this.evalStreamFixpoint(deduplicator, model);
+                    evalStreamFixpoint(deduplicator, model);
                 }
                 QuadModel delta = null;
                 while (true) {
-                    delta = this.evalJoinIterationStreamFixpoint(deduplicator, model, delta, null);
+                    delta = evalJoinIterationStreamFixpoint(deduplicator, model, delta, null);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }
@@ -832,7 +835,7 @@ final class RuleEngineImpl extends RuleEngine {
 
             // Evaluate stream rules, including axioms, single iteration (no fixpoint)
             buffer.addAll(Arrays.asList(this.axioms));
-            this.applyStreamRules(deduplicator, model, buffer, false);
+            applyStreamRules(deduplicator, model, buffer, false);
 
             // Evaluate join rules, single iteration (no fixpoint)
             final int numVariants = Rule.evaluate(SemiNaivePhase.this.joinRules, model, null, null,
@@ -949,8 +952,8 @@ final class RuleEngineImpl extends RuleEngine {
             // Allocate a buffer where to accumulate the result of rule evaluation
             final StatementBuffer buffer = new StatementBuffer();
             buffer.addAll(Arrays.asList(this.axioms));
-            this.applyStreamRules(deduplicator,
-                    Iterables.concat(Arrays.asList(this.axioms), model), buffer, true);
+            applyStreamRules(deduplicator, Iterables.concat(Arrays.asList(this.axioms), model),
+                    buffer, true);
 
             // Take a timestamp before modifying the model
             final long ts1 = System.currentTimeMillis();
@@ -1049,7 +1052,7 @@ final class RuleEngineImpl extends RuleEngine {
 
                 // Emit axioms
                 for (final Statement axiom : SemiNaivePhase.this.axioms) {
-                    this.handleStatement(axiom);
+                    handleStatement(axiom);
                 }
             }
 
@@ -1068,8 +1071,8 @@ final class RuleEngineImpl extends RuleEngine {
                 // Semi-naive fixpoint evaluation
                 QuadModel delta = null;
                 while (true) {
-                    delta = SemiNaivePhase.this.evalJoinIterationStreamFixpoint(this.deduplicator,
-                            this.joinModel, delta, this.handler);
+                    delta = evalJoinIterationStreamFixpoint(this.deduplicator, this.joinModel,
+                            delta, this.handler);
                     if (delta.isEmpty()) {
                         break; // fixpoint reached
                     }

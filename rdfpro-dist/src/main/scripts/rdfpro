@@ -44,4 +44,4 @@ fi
 export RDFPRO_ANSI_ENABLED=true
 
 # Execute the program
-exec $_JAVA $JAVA_OPTS -cp "$RDFPRO_CLASSPATH:$_BASEDIR/etc:$_BASEDIR/lib/*" eu.fbk.rdfpro.tool.Main "$@"
+exec $_JAVA $JAVA_OPTS -Djdk.xml.entityExpansionLimit=0 -cp "$RDFPRO_CLASSPATH:$_BASEDIR/etc:$_BASEDIR/lib/*" eu.fbk.rdfpro.tool.Main "$@"
