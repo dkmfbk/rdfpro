@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
@@ -50,8 +51,8 @@ import javax.xml.stream.XMLStreamReader;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import org.eclipse.rdf4j.model.BNode;
@@ -332,10 +333,10 @@ public final class RDFSources {
                         || statement.getObject() instanceof BNode
                         || statement.getContext() instanceof BNode) {
 
-                    final Resource s = (Resource) this.rewrite(statement.getSubject());
+                    final Resource s = (Resource) rewrite(statement.getSubject());
                     final IRI p = statement.getPredicate();
-                    final Value o = this.rewrite(statement.getObject());
-                    final Resource c = (Resource) this.rewrite(statement.getContext());
+                    final Value o = rewrite(statement.getObject());
+                    final Resource c = (Resource) rewrite(statement.getContext());
 
                     final ValueFactory vf = Statements.VALUE_FACTORY;
                     if (c == null) {
@@ -431,7 +432,7 @@ public final class RDFSources {
             try {
                 for (int i = 0; i < passes; ++i) {
                     sink.startRDF();
-                    this.parse(wrappedSink);
+                    parse(wrappedSink);
                     if (this.errorCounter.get() > 0) {
                         RDFSources.LOGGER.info("{} lines with parse errors/warnings ({} total)",
                                 this.errorLinesCounter, this.errorCounter);
@@ -486,13 +487,32 @@ public final class RDFSources {
 
             // Get runnable tasks for each job lazily, and execute them using multiple threads
             try {
-                Environment.run(FluentIterable.from(fileJobs)
-                        .transformAndConcat(job -> job.start(handler)));
+                final Map<Long, Runnable> runnables = Maps.newTreeMap();
+                final int delta = 2 * Environment.getCores();
+                int i = 0;
+                for (final FileJob fileJob : fileJobs) {
+                    int j = 0;
+                    for (final Runnable runnable : fileJob.start(handler)) {
+                        final long priority = (long) (i + j * delta) << 32 | i;
+                        final Runnable old = runnables.put(priority, runnable);
+                        Preconditions.checkState(old == null); // safety measure
+                        ++j;
+                    }
+                    ++i;
+                }
+                Environment.run(runnables.values());
             } finally {
                 for (final FileJob fileJob : fileJobs) {
                     fileJob.stop();
                 }
             }
+        }
+
+        @FunctionalInterface
+        private interface StreamSupplier {
+
+            Closeable get() throws Throwable;
+
         }
 
         private final class FileJob implements ParseErrorListener {
@@ -509,7 +529,10 @@ public final class RDFSources {
             private String baseIri;
 
             @Nullable
-            private List<Closeable> streams;
+            private List<StreamSupplier> streamSuppliers;
+
+            @Nullable
+            private Set<Closeable> openStreams;
 
             @Nullable
             private final Set<Long> errorLines;
@@ -531,7 +554,8 @@ public final class RDFSources {
                 this.locationAbbreviated = locationAbbreviated;
                 this.format = format;
                 this.namespaces = Sets.newHashSet();
-                this.streams = null;
+                this.streamSuppliers = null;
+                this.openStreams = null;
                 this.baseIri = null;
                 this.errorLines = Sets.newHashSet();
             }
@@ -540,7 +564,7 @@ public final class RDFSources {
 
                 // Check argument and state
                 Preconditions.checkNotNull(handler);
-                Preconditions.checkState(this.streams == null);
+                Preconditions.checkState(this.streamSuppliers == null);
 
                 // Wrap the supplied handler to rewrite BNodes at a per-file level, if requested
                 final RDFHandler wrappedHandler = FileSource.this.preserveBNodes ? handler
@@ -549,24 +573,41 @@ public final class RDFSources {
 
                 try {
                     // Open streams
-                    this.streams = Lists.newArrayList();
+                    this.streamSuppliers = Lists.newArrayList();
+                    this.openStreams = Sets.newIdentityHashSet();
                     if (!Statements.isRDFFormatTextBased(this.format)) {
-                        this.streams.add(IO.buffer(IO.read(this.location)));
+                        this.streamSuppliers.add(() -> IO.buffer(IO.read(this.location)));
                     } else if (!FileSource.this.parallelize
                             || !Statements.isRDFFormatLineBased(this.format)) {
-                        this.streams.add(IO.utf8Reader(IO.buffer(IO.read(this.location))));
+                        this.streamSuppliers
+                                .add(() -> IO.utf8Reader(IO.buffer(IO.read(this.location))));
                     } else {
-                        final InputStream s = IO.read(this.location);
+                        final AtomicReference<List<Reader>> holder = new AtomicReference<>();
                         for (int i = 0; i < Environment.getCores(); ++i) {
-                            this.streams.add(IO.utf8Reader(IO.parallelBuffer(s, (byte) '\n')));
+                            this.streamSuppliers.add(() -> {
+                                synchronized (holder) {
+                                    List<Reader> readers = holder.get();
+                                    if (readers == null) {
+                                        readers = Lists.newArrayList();
+                                        final InputStream s = IO.read(this.location);
+                                        for (int j = 0; j < Environment.getCores(); ++j) {
+                                            readers.add(IO.utf8Reader(
+                                                    IO.parallelBuffer(s, (byte) '\n')));
+                                        }
+                                        holder.set(readers);
+                                    }
+                                    return readers.remove(0);
+                                }
+                            });
                         }
                     }
 
                     // Log beginning of parse operation
                     if (RDFSources.LOGGER.isDebugEnabled()) {
                         RDFSources.LOGGER.debug("Starting {} {} parsing for {}",
-                                this.streams.size() == 1 ? "sequential" : "parallel",
-                                this.streams.get(0) instanceof InputStream ? "binary" : "text",
+                                this.streamSuppliers.size() == 1 ? "sequential" : "parallel",
+                                this.streamSuppliers.get(0) instanceof InputStream ? "binary"
+                                        : "text",
                                 this.location);
                     }
 
@@ -575,7 +616,7 @@ public final class RDFSources {
 
                     // Create runnable parse tasks
                     final List<Runnable> parseJobs = new ArrayList<>();
-                    for (final Closeable stream : this.streams) {
+                    for (final StreamSupplier streamSupplier : this.streamSuppliers) {
                         parseJobs.add(() -> {
 
                             // Acquire a lock to check if we are the first thread parsing the file
@@ -586,6 +627,7 @@ public final class RDFSources {
                                 lock.unlock();
                             }
 
+                            Closeable stream = null;
                             try {
                                 // Get the parser config. The first thread may use the supplied
                                 // config unchanged, while other threads have to clone it and
@@ -646,6 +688,8 @@ public final class RDFSources {
                                 }
 
                                 // Perform parsing
+                                stream = streamSupplier.get();
+                                this.openStreams.add(stream);
                                 if (stream instanceof InputStream) {
                                     parser.parse((InputStream) stream, this.baseIri);
                                 } else {
@@ -655,7 +699,7 @@ public final class RDFSources {
                             } catch (final Throwable ex) {
                                 // Wrap and propagate only if the FileJob is not being stopped
                                 synchronized (FileJob.this) {
-                                    if (this.streams != null) {
+                                    if (this.streamSuppliers != null) {
                                         final String m = "Parsing of " + this.location + " failed";
                                         if (ex instanceof RDFHandlerException) {
                                             throw new RDFHandlerException(m, ex);
@@ -674,10 +718,11 @@ public final class RDFSources {
                                 // Close the stream and remove it from the list of pending
                                 // streams. If empty, close the job (nothing else to do)
                                 IO.closeQuietly(stream);
+                                this.openStreams.remove(stream);
                                 synchronized (FileJob.this) {
-                                    this.streams.remove(stream);
-                                    if (this.streams.size() == 0) {
-                                        this.stop();
+                                    this.streamSuppliers.remove(streamSupplier);
+                                    if (this.streamSuppliers.size() == 0) {
+                                        stop();
                                     }
                                 }
                             }
@@ -688,7 +733,7 @@ public final class RDFSources {
 
                 } catch (final Throwable ex) {
                     // On failure, close everything, wrap if necessary and propagate
-                    this.stop();
+                    stop();
                     Throwables.throwIfUnchecked(ex);
                     throw new RuntimeException(ex);
                 }
@@ -697,15 +742,16 @@ public final class RDFSources {
             synchronized void stop() {
 
                 // Abort if already closed
-                if (this.streams == null) {
+                if (this.streamSuppliers == null) {
                     return;
                 }
 
                 // Close all opened streams and mark the object as closed
-                for (final Closeable stream : this.streams) {
+                for (final Closeable stream : this.openStreams) {
                     IO.closeQuietly(stream);
                 }
-                this.streams = null;
+                this.openStreams = null;
+                this.streamSuppliers = null;
 
                 // Dump bad lines, if recorded (in this case we assume text format)
                 if (!this.errorLines.isEmpty() && FileSource.this.errorWriterSupplier != null) {
@@ -766,25 +812,25 @@ public final class RDFSources {
 
             @Override
             public void warning(final String msg, final long line, final long col) {
-                this.recordError(line);
+                recordError(line);
                 if (FileSource.this.errorLogged) {
-                    RDFSources.LOGGER.warn(this.errorMessageFor(msg, line, col));
+                    RDFSources.LOGGER.warn(errorMessageFor(msg, line, col));
                 }
             }
 
             @Override
             public void error(final String msg, final long line, final long col) {
-                this.recordError(line);
+                recordError(line);
                 if (FileSource.this.errorLogged) {
-                    RDFSources.LOGGER.error(this.errorMessageFor(msg, line, col));
+                    RDFSources.LOGGER.error(errorMessageFor(msg, line, col));
                 }
             }
 
             @Override
             public void fatalError(final String msg, final long line, final long col) {
-                this.recordError(line);
+                recordError(line);
                 if (FileSource.this.errorLogged) {
-                    RDFSources.LOGGER.error(this.errorMessageFor(msg, line, col) + " (fatal)");
+                    RDFSources.LOGGER.error(errorMessageFor(msg, line, col) + " (fatal)");
                 }
             }
 
@@ -852,7 +898,7 @@ public final class RDFSources {
             try {
                 for (int i = 0; i < passes; ++i) {
                     actualHandler.startRDF();
-                    this.sendQuery(actualHandler);
+                    sendQuery(actualHandler);
                     actualHandler.endRDF();
                 }
             } catch (RuntimeException | Error ex) {
@@ -900,9 +946,9 @@ public final class RDFSources {
 
                 try (InputStream in = connection.getInputStream()) {
                     if (this.isSelect) {
-                        this.parseTupleResult(in, handler);
+                        parseTupleResult(in, handler);
                     } else {
-                        this.parseTripleResult(in, handler);
+                        parseTripleResult(in, handler);
                     }
                 }
 
