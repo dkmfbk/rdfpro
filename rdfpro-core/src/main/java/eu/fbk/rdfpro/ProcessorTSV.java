@@ -165,18 +165,6 @@ final class ProcessorTSV implements RDFProcessor {
         public void reduce(final Value key, final Statement[] statements, final RDFHandler handler)
                 throws RDFHandlerException {
 
-            // TODO
-            boolean found = false;
-            for (Statement statement : statements) {
-                if (statement.getPredicate().stringValue().equals("ex:type")) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return;
-            }
-
             final QuadModel model = QuadModel.create();
             model.addAll(Arrays.asList(statements));
             evaluateQuery(model);
