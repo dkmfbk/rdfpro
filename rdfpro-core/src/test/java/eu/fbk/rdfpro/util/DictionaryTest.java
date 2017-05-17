@@ -18,6 +18,9 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+
 import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.RDFSources;
 
@@ -40,8 +43,8 @@ public class DictionaryTest {
         final int codes[] = new int[values.size()];
         final Dictionary d = Dictionary.newMemoryDictionary();
         for (int i = 0; i < values.size(); ++i) {
-            System.out.println(values.get(i));
             codes[i] = d.encode(values.get(i));
+            System.out.println(values.get(i) + " --> " + codes[i]);
         }
         for (int i = 0; i < values.size(); ++i) {
             System.out.println(Integer.toHexString(codes[i]));
@@ -55,46 +58,47 @@ public class DictionaryTest {
         final Set<Value> set = new HashSet<>();
         final Dictionary d = Dictionary.newMemoryDictionary();
         final long ts = System.currentTimeMillis();
-        RDFSources.read(true, true, null, null, null, true, "/mnt/data/pikes/data/abox10m.tql.gz")
-                .emit(new AbstractRDFHandler() {
+        // String path = "/mnt/data/pikes/data/abox10m.tql.gz";
+        final String path = "/tmp/uris.tql.gz";
+        RDFSources.read(true, true, null, null, null, true, path).emit(new AbstractRDFHandler() {
 
-                    private final AtomicInteger counter = new AtomicInteger(0);
+            private final AtomicInteger counter = new AtomicInteger(0);
 
-                    @Override
-                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
-                        final int counter = this.counter.incrementAndGet();
-                        if (counter % 10000 == 0) {
-                            System.out.println(counter);
-                        }
-                        final int sc = d.encode(stmt.getSubject());
-                        final int pc = d.encode(stmt.getPredicate());
-                        final int oc = d.encode(stmt.getObject());
-                        final int cc = d.encode(stmt.getContext());
-                        final Resource sv = (Resource) d.decode(sc);
-                        final IRI pv = (IRI) d.decode(pc);
-                        final Value ov = d.decode(oc);
-                        final Resource cv = (Resource) d.decode(cc);
-                        Assert.assertEquals(stmt.getSubject(), sv);
-                        Assert.assertEquals(stmt.getPredicate(), pv);
-                        Assert.assertEquals(stmt.getObject(), ov);
-                        Assert.assertEquals(stmt.getContext(), cv);
-                        // add(stmt.getSubject());
-                        // add(stmt.getPredicate());
-                        // add(stmt.getObject());
-                        // set.add(stmt.getContext());
+            @Override
+            public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                final int counter = this.counter.incrementAndGet();
+                if (counter % 10000 == 0) {
+                    System.out.println(counter);
+                }
+                final int sc = d.encode(stmt.getSubject());
+                final int pc = d.encode(stmt.getPredicate());
+                final int oc = d.encode(stmt.getObject());
+                final int cc = d.encode(stmt.getContext());
+                final Resource sv = (Resource) d.decode(sc);
+                final IRI pv = (IRI) d.decode(pc);
+                final Value ov = d.decode(oc);
+                final Resource cv = (Resource) d.decode(cc);
+                Assert.assertEquals(stmt.getSubject(), sv);
+                Assert.assertEquals(stmt.getPredicate(), pv);
+                Assert.assertEquals(stmt.getObject(), ov);
+                Assert.assertEquals(stmt.getContext(), cv);
+                // add(stmt.getSubject());
+                // add(stmt.getPredicate());
+                // add(stmt.getObject());
+                // set.add(stmt.getContext());
+            }
+
+            private void add(final Value value) {
+                set.add(value);
+                if (value instanceof IRI) {
+                    final IRI uri = (IRI) value;
+                    if (uri.getLocalName().length() > 0) {
+                        set.add(Statements.VALUE_FACTORY.createIRI(uri.getNamespace()));
                     }
+                }
+            }
 
-                    private void add(final Value value) {
-                        set.add(value);
-                        if (value instanceof IRI) {
-                            final IRI uri = (IRI) value;
-                            if (uri.getLocalName().length() > 0) {
-                                set.add(Statements.VALUE_FACTORY.createIRI(uri.getNamespace()));
-                            }
-                        }
-                    }
-
-                }, 1);
+        }, 1);
         System.out.println(System.currentTimeMillis() - ts);
         System.out.println(d);
         System.out.println(set.size());

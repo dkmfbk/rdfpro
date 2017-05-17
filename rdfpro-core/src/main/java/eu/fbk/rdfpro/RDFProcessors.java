@@ -32,10 +32,13 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.SESAME;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.rio.ParserConfig;
@@ -48,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import eu.fbk.rdfpro.util.Algebra;
 import eu.fbk.rdfpro.util.Environment;
 import eu.fbk.rdfpro.util.IO;
+import eu.fbk.rdfpro.util.KeyQuadIndex;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Options;
 import eu.fbk.rdfpro.util.Scripting;
@@ -231,9 +235,23 @@ public final class RDFProcessors {
         }
 
         case "smush": {
-            final Options options = Options.parse("x|*", args);
+            final Options options = Options.parse("x|s|c!|b!|w|*", args);
             final String[] namespaces = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
+            RDFSource sameAsSource = null;
+            final boolean emitSameAs = !options.hasOption("s");
+            if (options.hasOption("c")) {
+                final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
+                final boolean preserveBNodes = !options.hasOption("w");
+                final String fileSpec = options.getOptionArg("c", String.class);
+                sameAsSource = RDFProcessors
+                        .track(new Tracker(RDFProcessors.LOGGER, null,
+                                "%d smush triples read (%d tr/s avg)", //
+                                "%d smush triples read (%d tr/s, %d tr/s avg)"))
+                        .wrap(RDFSources.read(true, preserveBNodes,
+                                base == null ? null : base.stringValue(), null, null, true,
+                                fileSpec));
+            }
             final boolean hasSmushEasterEgg = options.hasOption("x");
             if (hasSmushEasterEgg) {
                 // Below you can find one of the most important contributions by Alessio :-)
@@ -285,7 +303,7 @@ public final class RDFProcessors {
             for (int i = 0; i < namespaces.length; ++i) {
                 namespaces[i] = RDFProcessors.parseIRI(namespaces[i]).stringValue();
             }
-            return RDFProcessors.smush(namespaces);
+            return RDFProcessors.smush(sameAsSource, emitSameAs, namespaces);
         }
 
         case "tbox": {
@@ -399,6 +417,35 @@ public final class RDFProcessors {
                 mapper = Mapper.bypass(mapper, bypassPred);
             }
             return RDFProcessors.mapReduce(mapper, reducer, deduplicate);
+        }
+
+        case "kvread": {
+            final Options options = Options.parse("m!|r!|!", args);
+            final File file = new File(options.getPositionalArg(0, String.class));
+            final Mapper mapper = Mapper.parse(options.getOptionArg("m", String.class, "s"));
+            Predicate<Value> recurseMatcher = null;
+            if (options.hasOption("r")) {
+                final String[] nss = options.getOptionArg("r", String.class, "").split("[\\s,;]+");
+                recurseMatcher = v -> {
+                    if (v instanceof IRI) {
+                        final String s = v.stringValue();
+                        for (final String ns : nss) {
+                            if (s.startsWith(ns)) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+            }
+            return RDFProcessors.kvread(file, mapper, recurseMatcher);
+        }
+
+        case "kvwrite": {
+            final Options options = Options.parse("m!|!", args);
+            final File file = new File(options.getPositionalArg(0, String.class));
+            final Mapper mapper = Mapper.parse(options.getOptionArg("m", String.class, "s"));
+            return RDFProcessors.kvwrite(file, mapper);
         }
 
         default:
@@ -605,14 +652,25 @@ public final class RDFProcessors {
      * Creates an {@code RDFProcessor} performing {@code owl:sameAs} smushing. A ranked list of
      * namespaces controls the selection of the canonical IRI for each coreferring IRI cluster.
      * {@code owl:sameAs} statements are emitted in output linking the selected canonical IRI to
-     * the other entity aliases.
+     * the other entity aliases. An optional {@code RDFSource} parameter may be supplied to
+     * provide access to the {@code owl:sameAs} statements resulting from a previous smush
+     * operation (i.e, statements mapping canonical IRIs to all their possible aliases); if such
+     * source is supplied, sameAs statements in the input stream will be ignored and only the
+     * {@code owl:sameAs} information in the source will be used for smushing.
      *
+     * @param sameAsSource
+     *            an optional {@code RDFSource} providing access to the {@code owl:sameAs}
+     *            statements from a previous smush operation
+     * @param emitSameAs
+     *            true if an {@code owl:sameAs} statement has to be emitted for each node being
+     *            canonicalized
      * @param rankedNamespaces
      *            the ranked list of namespaces used to select canonical IRIs
      * @return the created {@code RDFProcessor}
      */
-    public static RDFProcessor smush(final String... rankedNamespaces) {
-        return new ProcessorSmush(rankedNamespaces);
+    public static RDFProcessor smush(@Nullable final RDFSource sameAsSource,
+            final boolean emitSameAs, final String... rankedNamespaces) {
+        return new ProcessorSmush2(sameAsSource, emitSameAs, rankedNamespaces);
     }
 
     /**
@@ -981,6 +1039,78 @@ public final class RDFProcessors {
                 tboxContext);
     }
 
+    public static RDFProcessor kvread(final File file, final Mapper mapper,
+            @Nullable final Predicate<Value> recurseMatcher) {
+
+        Objects.requireNonNull(file);
+        Objects.requireNonNull(mapper);
+
+        return new RDFProcessor() {
+
+            @Override
+            public RDFHandler wrap(final RDFHandler handler) {
+
+                final Value[] cache = new Value[32 * 1024];
+
+                final Object[] locks = new Object[32];
+                for (int i = 0; i < locks.length; ++i) {
+                    locks[i] = new Object();
+                }
+
+                return new AbstractRDFHandlerWrapper(handler) {
+
+                    private final KeyQuadIndex index = new KeyQuadIndex(file);
+
+                    @Override
+                    public void handleStatement(final Statement stmt) throws RDFHandlerException {
+                        super.handleStatement(stmt);
+                        for (final Value key : mapper.map(stmt)) {
+                            enrich(key);
+                        }
+                    }
+
+                    private void enrich(final Value key) {
+                        final int hash = Math.abs(key.hashCode());
+                        final int cacheIndex = hash % cache.length;
+                        final int lockIndex = hash % locks.length;
+                        synchronized (locks[lockIndex]) {
+                            if (key.equals(cache[cacheIndex])) {
+                                return;
+                            }
+                            cache[cacheIndex] = key;
+                        }
+                        if (recurseMatcher == null) {
+                            this.index.get(key, this.handler);
+                        } else {
+                            this.index.getRecursive(ImmutableList.of(key), recurseMatcher,
+                                    this.handler);
+                        }
+                    }
+
+                    @Override
+                    public void close() {
+                        this.index.close();
+                    }
+
+                };
+            }
+
+        };
+    }
+
+    public static RDFProcessor kvwrite(final File file, final Mapper mapper) {
+        Objects.requireNonNull(file);
+        Objects.requireNonNull(mapper);
+        return new RDFProcessor() {
+
+            @Override
+            public RDFHandler wrap(final RDFHandler handler) {
+                return RDFHandlers.dispatchAll(handler, KeyQuadIndex.indexer(file, mapper));
+            }
+
+        };
+    }
+
     private static class InjectSourceHandler extends AbstractRDFHandler {
 
         @Nullable
@@ -1025,20 +1155,20 @@ public final class RDFProcessors {
 
         @Override
         public void handleComment(final String comment) throws RDFHandlerException {
-            this.checkNotFailed();
+            checkNotFailed();
             this.handler.handleComment(comment);
         }
 
         @Override
         public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            this.checkNotFailed();
+            checkNotFailed();
             this.handler.handleNamespace(prefix, iri);
         }
 
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            this.checkNotFailed();
+            checkNotFailed();
             this.handler.handleStatement(statement);
         }
 
@@ -1051,7 +1181,7 @@ public final class RDFProcessors {
             } catch (final InterruptedException ex) {
                 this.exception = ex;
             }
-            this.checkNotFailed();
+            checkNotFailed();
             this.handler.endRDF();
         }
 
@@ -1139,13 +1269,13 @@ public final class RDFProcessors {
             this.type = 0;
             this.pos = 0;
 
-            this.next();
+            next();
         }
 
         RDFProcessor parse() {
-            final RDFProcessor processor = this.parseSequence();
+            final RDFProcessor processor = parseSequence();
             if (this.type != Parser.EOF) {
-                this.syntaxError("<EOF>");
+                syntaxError("<EOF>");
             }
             return processor;
         }
@@ -1154,11 +1284,11 @@ public final class RDFProcessors {
             final List<RDFProcessor> processors = new ArrayList<RDFProcessor>();
             do {
                 if (this.type == Parser.COMMAND) {
-                    processors.add(this.parseCommand());
+                    processors.add(parseCommand());
                 } else if (this.type == Parser.OPEN_BRACE) {
-                    processors.add(this.parseParallel());
+                    processors.add(parseParallel());
                 } else {
-                    this.syntaxError("'@command' or '{'");
+                    syntaxError("'@command' or '{'");
                 }
             } while (this.type == Parser.COMMAND || this.type == Parser.OPEN_BRACE);
             return RDFProcessors.sequence(processors.toArray(new RDFProcessor[processors.size()]));
@@ -1167,15 +1297,15 @@ public final class RDFProcessors {
         private RDFProcessor parseParallel() {
             final List<RDFProcessor> processors = new ArrayList<RDFProcessor>();
             do {
-                this.next();
-                processors.add(this.parseSequence());
+                next();
+                processors.add(parseSequence());
             } while (this.type == Parser.COMMA);
             if (this.type != Parser.CLOSE_BRACE) {
-                this.syntaxError("'}x'");
+                syntaxError("'}x'");
             }
             final String mod = this.token.length() == 1 ? "a" : this.token.substring(1);
             final SetOperator merging = SetOperator.valueOf(mod);
-            this.next();
+            next();
             return RDFProcessors.parallel(merging,
                     processors.toArray(new RDFProcessor[processors.size()]));
         }
@@ -1183,7 +1313,7 @@ public final class RDFProcessors {
         private RDFProcessor parseCommand() {
             final String command = this.token.substring(1).toLowerCase();
             final List<String> args = new ArrayList<String>();
-            while (this.next() == Parser.OPTION) {
+            while (next() == Parser.OPTION) {
                 args.add(this.token);
             }
             return Environment.newPlugin(RDFProcessor.class, command,

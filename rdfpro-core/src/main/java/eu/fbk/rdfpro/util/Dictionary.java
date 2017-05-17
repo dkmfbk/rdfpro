@@ -42,7 +42,7 @@ import eu.fbk.rdfpro.AbstractRDFHandler;
 // - from 0xC0000000 to 0xEFFFFFFF secondary buffer always used (3 GB, 384M values encodable)
 // codes from 0xF0000000 to 0xFFFFFFFF denote embedded values
 
-abstract class Dictionary implements AutoCloseable {
+public abstract class Dictionary implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Dictionary.class);
 
@@ -161,7 +161,7 @@ abstract class Dictionary implements AutoCloseable {
         this.decodeIndexedCounter = new AtomicLong();
     }
 
-    abstract int doEncode(int type, int index, String string);
+    abstract int doEncode(int type, int index, String string, boolean allocate);
 
     abstract Value doDecode(int code);
 
@@ -249,6 +249,10 @@ abstract class Dictionary implements AutoCloseable {
     }
 
     public final int encode(@Nullable final Value value) {
+        return encode(value, true);
+    }
+
+    public final int encode(@Nullable final Value value, final boolean allocate) {
 
         // Handle default context
         if (value == null) {
@@ -259,7 +263,7 @@ abstract class Dictionary implements AutoCloseable {
         int index = 0;
         if (value instanceof Literal) {
             final Literal l = (Literal) value;
-            if (l.getLanguage().isPresent()) {
+            if (!l.getLanguage().isPresent()) {
                 index = this.datatypeIndex.encode(l.getDatatype());
                 if (index < Dictionary.PACKING_TYPES.length) {
                     final int v = Dictionary.pack(Dictionary.PACKING_TYPES[index], l);
@@ -313,9 +317,11 @@ abstract class Dictionary implements AutoCloseable {
         }
 
         // Delegate and cache the result
-        final int code = this.doEncode(type, index, string);
-        this.encodeCache[slotIndex] = new EncodeCacheEntry(code, hash, value);
-        this.encodeIndexedCounter.incrementAndGet();
+        final int code = doEncode(type, index, string, allocate);
+        if (code != 0) {
+            this.encodeCache[slotIndex] = new EncodeCacheEntry(code, hash, value);
+            this.encodeIndexedCounter.incrementAndGet();
+        }
         return code;
     }
 
@@ -379,7 +385,7 @@ abstract class Dictionary implements AutoCloseable {
         }
 
         // Delegate and cache the result
-        final Value value = this.doDecode(code);
+        final Value value = doDecode(code);
         this.decodeCache[slotIndex] = new DecodeCacheEntry(code, value);
         this.decodeIndexedCounter.incrementAndGet();
         return value;
@@ -390,24 +396,24 @@ abstract class Dictionary implements AutoCloseable {
     }
 
     public final boolean isResource(final int code) {
-        return this.doType(code) <= Dictionary.TYPE_BNODE;
+        return doType(code) <= Dictionary.TYPE_BNODE;
     }
 
     public final boolean isIRI(final int code) {
-        return this.doType(code) <= Dictionary.TYPE_IRI_NAME;
+        return doType(code) <= Dictionary.TYPE_IRI_NAME;
     }
 
     public final boolean isBNode(final int code) {
-        return this.doType(code) == Dictionary.TYPE_BNODE;
+        return doType(code) == Dictionary.TYPE_BNODE;
     }
 
     public final boolean isLiteral(final int code) {
-        return this.doType(code) >= Dictionary.TYPE_LITERAL_PLAIN;
+        return doType(code) >= Dictionary.TYPE_LITERAL_PLAIN;
     }
 
     @Override
     public final void close() {
-        this.doClose();
+        doClose();
     }
 
     @Override
@@ -415,15 +421,15 @@ abstract class Dictionary implements AutoCloseable {
         final StringBuilder builder = new StringBuilder(this.getClass().getSimpleName())
                 .append(": ");
         final int oldLength = builder.length();
-        this.doToString(builder);
+        doToString(builder);
         builder.append(builder.length() > oldLength ? ", " : "");
         builder.append(this.namespaceIndex.size()).append(" namespaces, ")
                 .append(this.datatypeIndex.size()).append(" datatypes, ")
                 .append(this.languageIndex.size()).append(" languages, ");
-        this.toStringHelper(builder, "encode", this.encodeEmbeddedCounter.get(),
+        toStringHelper(builder, "encode", this.encodeEmbeddedCounter.get(),
                 this.encodeCacheCounter.get(), this.encodeIndexedCounter.get());
         builder.append(", ");
-        this.toStringHelper(builder, "decode", this.decodeEmbeddedCounter.get(),
+        toStringHelper(builder, "decode", this.decodeEmbeddedCounter.get(),
                 this.decodeCacheCounter.get(), this.decodeIndexedCounter.get());
         return builder.toString();
     }
@@ -736,10 +742,12 @@ abstract class Dictionary implements AutoCloseable {
 
             // Write dummy byte just to avoid starting at offset 0
             this.primaryBuffer.write(0, (byte) 0);
+            ++this.primaryOffset;
         }
 
         @Override
-        int doEncode(final int type, final int index, final String string) {
+        int doEncode(final int type, final int index, final String string,
+                final boolean allocate) {
 
             final int hash = type * 6661 + index * 661 + string.hashCode() & 0x7FFFFFFF;
 
@@ -749,15 +757,17 @@ abstract class Dictionary implements AutoCloseable {
             for (int slot = hash & mask;; slot = slot + 1 & mask) {
                 final long cell = table[slot];
                 if (cell == 0L) {
+                    if (!allocate) {
+                        return 0;
+                    }
                     final Buffer buffer = Buffer.newFixedBuffer(new byte[string.length() * 3 + 6]);
                     final int bufferLength = buffer.writeString(4, string);
                     synchronized (this) {
                         if (table == this.table && table[slot] == 0L) {
                             if (this.size > this.table.length / 3 * 2) {
-                                this.rehash(); // enforce load factor < .66
+                                rehash(); // enforce load factor < .66
                             } else {
-                                final long offset = this.append(type, index, buffer, 4,
-                                        bufferLength);
+                                final long offset = append(type, index, buffer, 4, bufferLength);
                                 final int code = MemoryDictionary.offsetToCode(offset);
                                 table[slot] = (long) code << 32 | hash & 0xFFFFFFFFL;
                                 ++this.size;
@@ -765,20 +775,22 @@ abstract class Dictionary implements AutoCloseable {
                             }
                         }
                     }
-                    return this.doEncode(type, index, string); // retry on rehash and concurrent
-                                                               // change
+                    return doEncode(type, index, string, allocate); // retry on rehash and
+                                                                    // concurrent change
                 }
                 if ((int) cell == hash) {
-                    final long offset = MemoryDictionary.codeToOffset((int) (cell >>> 32));
+                    final int code = (int) (cell >>> 32);
+                    final long offset = MemoryDictionary.codeToOffset(code);
                     if (this.equals(offset, type, index, string)) {
-                        return (int) (offset >>> 2);
+                        return code;
                     }
                 }
             }
         }
 
         @SuppressWarnings("unused")
-        int doEncode2(final int type, final int index, final String string) {
+        int doEncode2(final int type, final int index, final String string,
+                final boolean allocate) {
 
             final int hash = type * 6661 + index * 661 + string.hashCode() & 0x7FFFFFFF;
 
@@ -788,6 +800,9 @@ abstract class Dictionary implements AutoCloseable {
             for (int slot = hash & mask;; slot = slot + 1 & mask) {
                 final long cell = table[slot];
                 if (cell == 0L) {
+                    if (!allocate) {
+                        return 0;
+                    }
                     final Buffer buffer = Buffer.newFixedBuffer(new byte[string.length() * 3]);
                     final int bufferLength = buffer.writeString(0, string);
                     boolean proceed = false;
@@ -795,14 +810,14 @@ abstract class Dictionary implements AutoCloseable {
                         synchronized (this) {
                             if (table == this.table && table[slot] == 0L) {
                                 if (this.size > this.table.length / 3 * 2) {
-                                    this.rehash(); // enforce load factor < .66
+                                    rehash(); // enforce load factor < .66
                                 } else {
                                     proceed = true;
                                 }
                             }
                         }
                         if (proceed) {
-                            final long offset = this.append2(type, index, buffer, bufferLength);
+                            final long offset = append2(type, index, buffer, bufferLength);
                             final int code = MemoryDictionary.offsetToCode(offset);
                             synchronized (this) {
                                 if (table != this.table || table[slot] != 0L) {
@@ -819,13 +834,14 @@ abstract class Dictionary implements AutoCloseable {
                             return code;
                         }
                     }
-                    return this.doEncode(type, index, string); // retry on rehash and concurrent
-                                                               // change
+                    return doEncode2(type, index, string, allocate); // retry on rehash and
+                                                                     // concurrent change
                 }
                 if ((int) cell == hash) {
-                    final long offset = MemoryDictionary.codeToOffset((int) (cell >>> 32));
+                    final int code = (int) (cell >>> 32);
+                    final long offset = MemoryDictionary.codeToOffset(code);
                     if (this.equals(offset, type, index, string)) {
-                        return (int) (offset >>> 2);
+                        return code;
                     }
                 }
             }
@@ -866,7 +882,7 @@ abstract class Dictionary implements AutoCloseable {
                 index = this.primaryBuffer.readShort(offset) & 0xFFFF;
             }
 
-            return this.valueFor(type, index, string);
+            return valueFor(type, index, string);
         }
 
         @Override
@@ -879,7 +895,7 @@ abstract class Dictionary implements AutoCloseable {
         void doToString(final StringBuilder builder) {
             final long primary = this.primaryOffset;
             final long secondary = this.secondaryOffset;
-            final long hash = this.table.length * 8;
+            final long hash = this.table.length * 8L;
             final long total = primary + secondary + hash;
             builder.append(this.size).append(" values, ").append(total).append(" bytes (")
                     .append(hash).append(" hash table, ").append(primary)

@@ -102,6 +102,11 @@
 			<artifactId>guava</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>eu.fbk.rdfpro</groupId>
+			<artifactId>rdfpro-fastutil</artifactId>
+			<version>0.7-SNAPSHOT</version>
+		</dependency>
+		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
@@ -120,6 +125,11 @@
 		<dependency>
 			<groupId>org.eclipse.rdf4j</groupId>
 			<artifactId>rdf4j-queryrender</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>com.spotify.sparkey</groupId>
+			<artifactId>sparkey</artifactId>
 			<optional>true</optional>
 		</dependency>
 

@@ -141,6 +141,11 @@
 			<artifactId>rdf4j-query</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.spotify.sparkey</groupId>
+			<artifactId>sparkey</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 		</dependency>

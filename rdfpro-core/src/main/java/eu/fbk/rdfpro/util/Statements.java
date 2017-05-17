@@ -127,10 +127,10 @@ public final class Statements {
                     OWL.SOMEVALUESFROM, OWL.UNIONOF, OWL.VERSIONIRI,
                     Statements.VALUE_FACTORY.createIRI(OWL.NAMESPACE, "withRestrictions"))));
 
-    private static final Comparator<Value> DEFAULT_VALUE_ORDERING = new ValueComparator();
+    private static final Comparator<Value> DEFAULT_VALUE_ORDERING = new ValueComparator(false);
 
     private static final Comparator<Statement> DEFAULT_STATEMENT_ORDERING = new StatementComparator(
-            "spoc", new ValueComparator(RDF.NAMESPACE));
+            "spoc", new ValueComparator(false, RDF.NAMESPACE));
 
     static {
         try {
@@ -143,8 +143,14 @@ public final class Statements {
     private static final Hash NIL_HASH = Hash.murmur3("\u0001");
 
     public static Comparator<Value> valueComparator(final String... rankedNamespaces) {
-        return rankedNamespaces == null || rankedNamespaces.length == 0
-                ? Statements.DEFAULT_VALUE_ORDERING : new ValueComparator(rankedNamespaces);
+        return valueComparator(false, rankedNamespaces);
+    }
+
+    public static Comparator<Value> valueComparator(final boolean shortestFirst,
+            final String... rankedNamespaces) {
+        return !shortestFirst && (rankedNamespaces == null || rankedNamespaces.length == 0)
+                ? Statements.DEFAULT_VALUE_ORDERING
+                : new ValueComparator(shortestFirst, rankedNamespaces);
     }
 
     public static Comparator<Statement> statementComparator(@Nullable final String components,
@@ -1306,9 +1312,13 @@ public final class Statements {
 
     private static final class ValueComparator implements Comparator<Value> {
 
+        private final boolean shortestFirst;
+
         private final List<String> rankedNamespaces;
 
-        public ValueComparator(@Nullable final String... rankedNamespaces) {
+        public ValueComparator(final boolean shortestFirst,
+                @Nullable final String... rankedNamespaces) {
+            this.shortestFirst = shortestFirst;
             this.rankedNamespaces = Arrays.asList(rankedNamespaces);
         }
 
@@ -1316,8 +1326,8 @@ public final class Statements {
         public int compare(final Value v1, final Value v2) {
             if (v1 instanceof IRI) {
                 if (v2 instanceof IRI) {
-                    final int rank1 = this.rankOf(((IRI) v1).getNamespace());
-                    final int rank2 = this.rankOf(((IRI) v2).getNamespace());
+                    final int rank1 = rankOf(((IRI) v1).getNamespace());
+                    final int rank2 = rankOf(((IRI) v2).getNamespace());
                     if (rank1 >= 0 && (rank1 < rank2 || rank2 < 0)) {
                         return -1;
                     } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
@@ -1325,13 +1335,15 @@ public final class Statements {
                     }
                     final String string1 = Statements.formatValue(v1, Namespaces.DEFAULT);
                     final String string2 = Statements.formatValue(v2, Namespaces.DEFAULT);
-                    return string1.compareTo(string2);
+                    return compareStrings(string1, string2);
                 } else {
                     return -1;
                 }
             } else if (v1 instanceof BNode) {
                 if (v2 instanceof BNode) {
-                    return ((BNode) v1).getID().compareTo(((BNode) v2).getID());
+                    final String id1 = ((BNode) v1).getID();
+                    final String id2 = ((BNode) v2).getID();
+                    return compareStrings(id1, id2);
                 } else if (v2 instanceof IRI) {
                     return 1;
                 } else {
@@ -1339,7 +1351,9 @@ public final class Statements {
                 }
             } else if (v1 instanceof Literal) {
                 if (v2 instanceof Literal) {
-                    return ((Literal) v1).getLabel().compareTo(((Literal) v2).getLabel());
+                    final String label1 = ((Literal) v1).getLabel();
+                    final String label2 = ((Literal) v2).getLabel();
+                    return compareStrings(label1, label2);
                 } else if (v2 instanceof Resource) {
                     return 1;
                 } else {
@@ -1352,6 +1366,17 @@ public final class Statements {
                     return 1;
                 }
             }
+        }
+
+        private int compareStrings(final String s1, final String s2) {
+            if (this.shortestFirst) {
+                final int len1 = s1.length();
+                final int len2 = s2.length();
+                if (len1 != len2) {
+                    return len1 - len2;
+                }
+            }
+            return s1.compareTo(s2);
         }
 
         private int rankOf(final String ns) {
@@ -1387,8 +1412,8 @@ public final class Statements {
         public int compare(final Statement s1, final Statement s2) {
             for (int i = 0; i < this.components.length(); ++i) {
                 final char c = this.components.charAt(i);
-                final Value v1 = this.getValue(s1, c);
-                final Value v2 = this.getValue(s2, c);
+                final Value v1 = getValue(s1, c);
+                final Value v2 = getValue(s2, c);
                 final int result = this.valueComparator.compare(v1, v2);
                 if (result != 0) {
                     return result;
@@ -1599,7 +1624,7 @@ public final class Statements {
             }
 
             boolean match(final Value value) {
-                final boolean matched = this.matchHelper(value);
+                final boolean matched = matchHelper(value);
                 return this.include == matched;
             }
 

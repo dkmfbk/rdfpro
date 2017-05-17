@@ -38,6 +38,8 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Sorter;
+import eu.fbk.rdfpro.util.StatementDeduplicator;
+import eu.fbk.rdfpro.util.StatementDeduplicator.ComparisonMethod;
 import eu.fbk.rdfpro.util.Statements;
 
 final class ProcessorUnique implements RDFProcessor {
@@ -397,17 +399,22 @@ final class ProcessorUnique implements RDFProcessor {
 
         private final boolean parallelize;
 
+        private StatementDeduplicator deduplicator;
+
         private Sorter<Statement> sorter;
 
         Handler(final RDFHandler handler, final boolean parallelize) {
             super(handler);
             this.parallelize = parallelize;
+            this.deduplicator = null;
             this.sorter = null;
         }
 
         @Override
         public void startRDF() throws RDFHandlerException {
             super.startRDF();
+            this.deduplicator = StatementDeduplicator
+                    .newPartialDeduplicator(ComparisonMethod.EQUALS, 64 * 1024 - 1);
             this.sorter = Sorter.newStatementSorter(true);
             try {
                 this.sorter.start(true);
@@ -419,7 +426,9 @@ final class ProcessorUnique implements RDFProcessor {
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
             try {
-                this.sorter.emit(statement);
+                if (this.deduplicator.add(statement)) {
+                    this.sorter.emit(statement);
+                }
             } catch (final Throwable ex) {
                 throw new RDFHandlerException(ex);
             }
@@ -428,6 +437,7 @@ final class ProcessorUnique implements RDFProcessor {
         @Override
         public void endRDF() throws RDFHandlerException {
             try {
+                this.deduplicator = null;
                 this.sorter.end(this.parallelize, new Consumer<Statement>() {
 
                     @Override
@@ -442,7 +452,7 @@ final class ProcessorUnique implements RDFProcessor {
                 });
                 this.sorter.close();
                 this.sorter = null;
-                this.handleEndRDF();
+                handleEndRDF();
             } catch (final IOException ex) {
                 throw new RDFHandlerException(ex);
             }
@@ -540,7 +550,7 @@ final class ProcessorUnique implements RDFProcessor {
                 }
 
             } else {
-                this.flush();
+                flush();
                 this.statement = statement;
                 this.statementSubj = subj;
                 this.statementPred = pred;
@@ -552,7 +562,7 @@ final class ProcessorUnique implements RDFProcessor {
 
         @Override
         void handleEndRDF() throws RDFHandlerException {
-            this.flush();
+            flush();
             for (final List<Statement> statements : this.contextsStatements.values()) {
                 for (final Statement statement : statements) {
                     this.handler.handleStatement(statement);
@@ -581,7 +591,7 @@ final class ProcessorUnique implements RDFProcessor {
                 if (this.statementCtx == null || this.statementContexts.size() <= 1) {
                     statement = this.statement;
                 } else {
-                    final Resource mergedContext = this.mergeContexts(this.statementContexts);
+                    final Resource mergedContext = mergeContexts(this.statementContexts);
                     statement = mergedContext.equals(this.statement.getContext()) ? this.statement
                             : Statements.VALUE_FACTORY.createStatement(this.statementSubj,
                                     this.statementPred, this.statementObj, mergedContext);
