@@ -789,8 +789,8 @@ public final class RDFProcessors {
      * Creates an {@code RDFProcessor} that reads data from the files specified and inject it in
      * the RDF stream at each pass. This is a utility method that relies on
      * {@link #inject(RDFSource)}, on
-     * {@link RDFSources#read(boolean, boolean, String, ParserConfig, String...)} and on
-     * {@link #track(Tracker)} for providing progress information on loaded statements.
+     * {@link RDFSources#read(boolean, boolean, String, ParserConfig, Function, boolean, String...)}
+     * and on {@link #track(Tracker)} for providing progress information on loaded statements.
      *
      * @param parallelize
      *            false if files should be parsed sequentially using only one thread
@@ -802,14 +802,11 @@ public final class RDFProcessors {
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
-     * @param skipBadStatements
-     *            true if statements affected by errors in read RDF data (e.g., syntactically
-     *            invalid URIs) have not to be injected in the output stream of the processor
-     * @param dumpBadStatements
-     *            true if statements affected by errors in read RDF data should be written on disk
-     *            in a file named as the input file but with a ".error" qualifier
-     * @param quiet
-     *            true if warnings related to errors in read RDF data should not be emitted
+     * @param errorWriterSupplier
+     *            an optional function that maps a file location to a {@link Writer} where to emit
+     *            malformed lines detected when reading that file
+     * @param errorLogged
+     *            false if errors in input files should be silently ignored
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFProcessor}

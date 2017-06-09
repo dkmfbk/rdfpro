@@ -33,7 +33,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.model.Graph;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
@@ -56,7 +55,7 @@ import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 
 @SuppressWarnings("deprecation")
 public abstract class QuadModel extends AbstractCollection<Statement>
-        implements Graph, Serializable {
+        implements org.eclipse.rdf4j.model.Graph, Serializable {
 
     protected final static Resource[] CTX_ANY = new Resource[0];
 
@@ -765,8 +764,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
             public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
                     final Resource subj, final IRI pred, final Value obj,
                     final Resource... contexts) throws QueryEvaluationException {
-                return Iterators
-                        .toIteration(QuadModel.this.doIterator(subj, pred, obj, contexts));
+                return Iterators.toIteration(QuadModel.this.doIterator(subj, pred, obj, contexts));
             }
 
         };

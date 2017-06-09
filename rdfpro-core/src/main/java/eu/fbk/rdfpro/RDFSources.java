@@ -275,14 +275,11 @@ public final class RDFSources {
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
-     * @param skipBadStatements
-     *            true if statements affected by errors in read RDF data (e.g., syntactically
-     *            invalid URIs) have not to be injected in the output stream of the processor
-     * @param dumpBadStatements
-     *            true if statements affected by errors in read RDF data should be written on disk
-     *            in a file named as the input file but with a ".error" qualifier
-     * @param quiet
-     *            true if warnings related to errors in read RDF data should not be emitted
+     * @param errorWriterSupplier
+     *            an optional function that maps a file location to a {@link Writer} where to emit
+     *            malformed lines detected when reading that file
+     * @param errorLogged
+     *            false if errors in input files should be silently ignored
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFSource}

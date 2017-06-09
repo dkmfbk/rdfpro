@@ -20,11 +20,8 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 /**
  * Constants for the Turtle Quads (TQL) format.
  * <p>
- * The Turtle Quads {@link RDFFormat} is defined by constant {@link #FORMAT}. As this constant is
- * not part of the predefined set of formats in {@link RDFFormat}, it is necessary to register it.
- * This can be done either via {@link RDFFormat#register(RDFFormat)}, or by simply calling method
- * {@link #register()} on this class, which ensures that multiple calls will result in a single
- * registration.
+ * The Turtle Quads {@link RDFFormat} is defined by constant {@link #FORMAT}, which is not part of
+ * the predefined set of formats in {@link RDFFormat}.
  * </p>
  */
 public final class TQL {

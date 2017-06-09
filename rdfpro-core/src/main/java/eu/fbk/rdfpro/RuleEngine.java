@@ -39,7 +39,8 @@ import eu.fbk.rdfpro.util.QuadModel;
  * Rule engine abstraction.
  * <p>
  * Implementation note: concrete rule engine implementations should extend this abstract class and
- * implement one or both methods {@link #doEval(QuadModel)} and {@link #doEval(RDFHandler)}.
+ * implement one or both methods {@link #doEval(Collection)} and
+ * {@link #doEval(RDFHandler, boolean)}.
  * </p>
  */
 public abstract class RuleEngine {
@@ -233,8 +234,8 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(QuadModel)}. Its base implementation delegates to
-     * {@link #doEval(RDFHandler)}.
+     * Internal method called by {@link #eval(Collection)}. Its base implementation delegates to
+     * {@link #doEval(RDFHandler, boolean)}.
      *
      * @param model
      *            the model to operate on
@@ -291,8 +292,8 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(RDFHandler)}. Its base implementation delegates to
-     * {@link #doEval(QuadModel)}.
+     * Internal method called by {@link #eval(RDFHandler, boolean)}. Its base implementation
+     * delegates to {@link #doEval(Collection)}.
      *
      * @param handler
      *            the handler where to emit resulting statements
