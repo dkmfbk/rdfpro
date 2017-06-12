@@ -101,11 +101,11 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>eu.fbk.rdfpro</groupId>
-			<artifactId>rdfpro-fastutil</artifactId>
-			<version>0.7-SNAPSHOT</version>
-		</dependency>
+		<!-- <dependency> -->
+		<!-- <groupId>eu.fbk.rdfpro</groupId> -->
+		<!-- <artifactId>rdfpro-fastutil</artifactId> -->
+		<!-- <version>0.7-SNAPSHOT</version> -->
+		<!-- </dependency> -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>

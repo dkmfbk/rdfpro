@@ -10,8 +10,11 @@ public class SmushProcessorTest {
         // "@read /home/corcoglio/sameas.tql.gz @smush @write /tmp/sameas.unique.tql.gz");
         // p.apply(RDFSources.NIL, RDFHandlers.NIL, 1);
 
-        run("@read /tmp/in.ttl @smush '<http://fm.fbk.eu/testing#>' @transform '+p owl:sameAs' @write /tmp/sameas.ttl");
-        run("@read /tmp/in2.ttl @smush -s -c /tmp/sameas.ttl @write /tmp/out2.ttl");
+        run("@read /home/corcoglio/sameas1m.tql.gz @smush @write /tmp/sameas.unique.tql.gz");
+
+        // run("@read /tmp/in.ttl @smush '<http://fm.fbk.eu/testing#>' @transform '+p owl:sameAs'
+        // @write /tmp/sameas.ttl");
+        // run("@read /tmp/in2.ttl @smush -s -c /tmp/sameas.ttl @write /tmp/out2.ttl");
     }
 
     private static void run(final String command) {

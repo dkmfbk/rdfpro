@@ -18,9 +18,6 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-
 import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.RDFSources;
 
