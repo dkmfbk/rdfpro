@@ -88,7 +88,7 @@ final class HashValueFactory extends AbstractValueFactory {
 
     @Override
     public IRI createIRI(final String iri) {
-        if (this.isPossibleW3CIRI(iri)) {
+        if (isPossibleW3CIRI(iri)) {
             final IRI i = this.w3cIRIs.get(iri);
             if (i != null) {
                 return i;
@@ -100,7 +100,7 @@ final class HashValueFactory extends AbstractValueFactory {
     @Override
     public IRI createIRI(final String namespace, final String localName) {
         final String iri = namespace + localName;
-        if (this.isPossibleW3CIRI(iri)) {
+        if (isPossibleW3CIRI(iri)) {
             final IRI i = this.w3cIRIs.get(iri);
             if (i != null) {
                 return i;
@@ -199,7 +199,7 @@ final class HashValueFactory extends AbstractValueFactory {
         }
 
         final boolean sameHash(final HashValue other) {
-            this.initHash();
+            initHash();
             other.initHash();
             return this.hashLo == other.hashLo && this.hashHi == other.hashHi;
         }
@@ -310,7 +310,7 @@ final class HashValueFactory extends AbstractValueFactory {
                 return true;
             } else if (object instanceof HashLiteral) {
                 final HashLiteral other = (HashLiteral) object;
-                return this.hasHash() && other.hasHash() ? this.sameHash(other)
+                return hasHash() && other.hasHash() ? sameHash(other)
                         : this.label.equals(other.label) && Objects.equals(this.languageOrDatatype,
                                 other.languageOrDatatype);
             } else if (object instanceof Literal) {
@@ -329,11 +329,11 @@ final class HashValueFactory extends AbstractValueFactory {
         @Override
         public int hashCode() {
             if (this.hashCode == 0) {
-                int hashCode = this.label.hashCode();
-                if (this.languageOrDatatype instanceof String) {
-                    hashCode = 31 * hashCode + this.languageOrDatatype.hashCode();
-                }
-                hashCode = 31 * hashCode + getDatatype().hashCode();
+                final int hashCode = this.label.hashCode();
+                // if (this.languageOrDatatype instanceof String) {
+                // hashCode = 31 * hashCode + this.languageOrDatatype.hashCode();
+                // }
+                // hashCode = 31 * hashCode + getDatatype().hashCode();
                 this.hashCode = hashCode;
             }
             return this.hashCode;
@@ -348,9 +348,10 @@ final class HashValueFactory extends AbstractValueFactory {
             if (this.languageOrDatatype instanceof String) {
                 sb.append('@');
                 sb.append(this.languageOrDatatype);
-            } else if (this.languageOrDatatype instanceof IRI) {
+            } else {
                 sb.append("^^<");
-                sb.append(((IRI) this.languageOrDatatype).stringValue());
+                sb.append((this.languageOrDatatype instanceof IRI ? (IRI) this.languageOrDatatype
+                        : XMLSchema.STRING).stringValue());
                 sb.append(">");
             }
             return sb.toString();
@@ -384,8 +385,7 @@ final class HashValueFactory extends AbstractValueFactory {
                 return true;
             } else if (object instanceof HashBNode) {
                 final HashBNode other = (HashBNode) object;
-                return this.hasHash() && other.hasHash() ? this.sameHash(other)
-                        : this.id.equals(other.id);
+                return hasHash() && other.hasHash() ? sameHash(other) : this.id.equals(other.id);
             } else if (object instanceof BNode) {
                 final BNode other = (BNode) object;
                 return this.id.equals(other.getID());
@@ -442,7 +442,7 @@ final class HashValueFactory extends AbstractValueFactory {
         @Override
         public String getNamespace() {
             if (this.namespace == null) {
-                this.splitIRI();
+                splitIRI();
             }
             return this.namespace;
         }
@@ -450,7 +450,7 @@ final class HashValueFactory extends AbstractValueFactory {
         @Override
         public String getLocalName() {
             if (this.localName == null) {
-                this.splitIRI();
+                splitIRI();
             }
             return this.localName;
         }
@@ -466,8 +466,7 @@ final class HashValueFactory extends AbstractValueFactory {
                 return true;
             } else if (object instanceof HashIRI) {
                 final HashIRI other = (HashIRI) object;
-                return this.hasHash() && other.hasHash() ? this.sameHash(other)
-                        : this.iri.equals(other.iri);
+                return hasHash() && other.hasHash() ? sameHash(other) : this.iri.equals(other.iri);
             } else if (object instanceof IRI) {
                 return this.iri.equals(((IRI) object).stringValue());
             } else {

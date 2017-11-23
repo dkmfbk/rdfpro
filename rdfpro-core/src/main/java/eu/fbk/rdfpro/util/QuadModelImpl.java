@@ -101,8 +101,8 @@ final class QuadModelImpl extends QuadModel {
         this.statementCount = 0;
         this.statementSlots = 0;
         this.statementZombies = 0;
-        this.valueNil = (ModelIRI) this.lookupValue(SESAME.NIL, true);
-        this.valueLang = (ModelIRI) this.lookupValue(RDF.LANGSTRING, true);
+        this.valueNil = (ModelIRI) lookupValue(SESAME.NIL, true);
+        this.valueLang = (ModelIRI) lookupValue(RDF.LANGSTRING, true);
     }
 
     // NAMESPACE HANDLING
@@ -142,9 +142,9 @@ final class QuadModelImpl extends QuadModel {
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
-        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
-        final ModelValue mobj = this.lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) lookupValue(pred, false);
+        final ModelValue mobj = lookupValue(obj, false);
 
         // If one of SPO is missing in the table, then no statements can exist for that component
         if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
@@ -162,7 +162,7 @@ final class QuadModelImpl extends QuadModel {
             int size = 0;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) this.lookupValue(ctx, false);
+                        : (ModelResource) lookupValue(ctx, false);
                 size += mctx == QuadModelImpl.NULL_VALUE ? 0
                         : this.doSize(msubj, mpred, mobj, mctx);
             }
@@ -175,10 +175,10 @@ final class QuadModelImpl extends QuadModel {
             @Nullable final Value obj, @Nullable final Resource ctx) {
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
-        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
-        final ModelValue mobj = this.lookupValue(obj, false);
-        final ModelResource mctx = (ModelResource) this.lookupValue(ctx, false);
+        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) lookupValue(pred, false);
+        final ModelValue mobj = lookupValue(obj, false);
+        final ModelResource mctx = (ModelResource) lookupValue(ctx, false);
 
         // If one of SPOC is missing in the table, then no statements can exist for that component
         if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
@@ -198,9 +198,9 @@ final class QuadModelImpl extends QuadModel {
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
-        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
-        final ModelValue mobj = this.lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) lookupValue(pred, false);
+        final ModelValue mobj = lookupValue(obj, false);
 
         // If any of SPO is missing in the table, then no statements can exist for that component
         if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
@@ -216,7 +216,7 @@ final class QuadModelImpl extends QuadModel {
         } else if (ctxs.length == 1) {
             // (2) Match exactly one context. If not defined, return an empty iterator
             final ModelResource mctx = ctxs[0] == null ? this.valueNil
-                    : (ModelResource) this.lookupValue(ctxs[0], false);
+                    : (ModelResource) lookupValue(ctxs[0], false);
             return mctx == QuadModelImpl.NULL_VALUE ? Collections.emptyIterator() //
                     : this.doIterator(msubj, mpred, mobj, mctx);
 
@@ -225,7 +225,7 @@ final class QuadModelImpl extends QuadModel {
             final Iterator<Resource> ctxIterator = Arrays.asList(ctxs).iterator();
             return Iterators.concat(Iterators.transform(ctxIterator, (final Resource ctx) -> {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) this.lookupValue(ctx, false);
+                        : (ModelResource) lookupValue(ctx, false);
                 return ctx == QuadModelImpl.NULL_VALUE ? Collections.emptyIterator() //
                         : this.doIterator(msubj, mpred, mobj, mctx);
             }));
@@ -243,9 +243,9 @@ final class QuadModelImpl extends QuadModel {
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO model values in the values hash table, creating them if necessary
-        final ModelResource msubj = (ModelResource) this.lookupValue(subj, true);
-        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, true);
-        final ModelValue mobj = this.lookupValue(obj, true);
+        final ModelResource msubj = (ModelResource) lookupValue(subj, true);
+        final ModelIRI mpred = (ModelIRI) lookupValue(pred, true);
+        final ModelValue mobj = lookupValue(obj, true);
 
         // Handle two cases based on the context array
         if (ctxs.length == 0) {
@@ -257,7 +257,7 @@ final class QuadModelImpl extends QuadModel {
             boolean modified = false;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) this.lookupValue(ctx, true);
+                        : (ModelResource) lookupValue(ctx, true);
                 final boolean isNew = this.doAdd(msubj, mpred, mobj, mctx);
                 modified |= isNew;
             }
@@ -273,9 +273,9 @@ final class QuadModelImpl extends QuadModel {
         Objects.requireNonNull(ctxs);
 
         // Lookup SPO in the values hash table
-        final ModelResource msubj = (ModelResource) this.lookupValue(subj, false);
-        final ModelIRI mpred = (ModelIRI) this.lookupValue(pred, false);
-        final ModelValue mobj = this.lookupValue(obj, false);
+        final ModelResource msubj = (ModelResource) lookupValue(subj, false);
+        final ModelIRI mpred = (ModelIRI) lookupValue(pred, false);
+        final ModelValue mobj = lookupValue(obj, false);
 
         // If any of SPO is missing in the table, then no statements can exist for that component
         if (msubj == QuadModelImpl.NULL_VALUE || mpred == QuadModelImpl.NULL_VALUE
@@ -293,7 +293,7 @@ final class QuadModelImpl extends QuadModel {
             boolean modified = false;
             for (final Resource ctx : ctxs) {
                 final ModelResource mctx = ctx == null ? this.valueNil
-                        : (ModelResource) this.lookupValue(ctx, false);
+                        : (ModelResource) lookupValue(ctx, false);
                 if (mctx != QuadModelImpl.NULL_VALUE) {
                     final boolean m = this.doRemove(msubj, mpred, mobj, mctx);
                     modified |= m;
@@ -305,7 +305,7 @@ final class QuadModelImpl extends QuadModel {
 
     @Override
     protected synchronized Value doNormalize(final Value value) {
-        return this.lookupValue(value, true);
+        return lookupValue(value, true);
     }
 
     // STATEMENT HANDLING - SINGLE CONTEXTS
@@ -387,7 +387,7 @@ final class QuadModelImpl extends QuadModel {
 
                 @Override
                 public Statement next() {
-                    if (!this.hasNext()) {
+                    if (!hasNext()) {
                         throw new NoSuchElementException();
                     }
                     this.last = this.next;
@@ -483,7 +483,7 @@ final class QuadModelImpl extends QuadModel {
                 if (isNull) {
                     ++this.statementSlots;
                     if (this.statementSlots * 2 >= this.statementTable.length) {
-                        this.rehashStatements();
+                        rehashStatements();
                     }
                 }
 
@@ -531,7 +531,7 @@ final class QuadModelImpl extends QuadModel {
 
         // Remove exactly one statement (at most) if all the components were supplied
         if (subj != null && pred != null && obj != null && ctx != null) {
-            return this.removeStatement(subj, pred, obj, ctx);
+            return removeStatement(subj, pred, obj, ctx);
         }
 
         // Select the SPOC component associated to the min number of statements
@@ -570,7 +570,7 @@ final class QuadModelImpl extends QuadModel {
         while (stmt != null) {
             final ModelStatement next = stmt.next(comp);
             if (stmt.match(subj, pred, obj, ctx)) {
-                final boolean m = this.removeStatement(stmt.subj, stmt.pred, stmt.obj, stmt.ctx);
+                final boolean m = removeStatement(stmt.subj, stmt.pred, stmt.obj, stmt.ctx);
                 modified |= m;
             }
             stmt = next;
@@ -613,7 +613,7 @@ final class QuadModelImpl extends QuadModel {
 
         // Remove zombie statements if too many
         if (this.statementZombies >= this.statementCount) {
-            this.cleanZombies();
+            cleanZombies();
         }
 
         // Signal that a statement was removed
@@ -660,7 +660,7 @@ final class QuadModelImpl extends QuadModel {
                             : lit.getDatatype() != null ? lit.getDatatype() : XMLSchema.STRING;
                     mv = new ModelLiteral(this, lit.getLabel(),
                             language == null ? null : language.intern(),
-                            (ModelIRI) this.lookupValue(datatype, true));
+                            (ModelIRI) lookupValue(datatype, true));
                 } else {
                     throw new Error(value.getClass().getName());
                 }
@@ -671,7 +671,7 @@ final class QuadModelImpl extends QuadModel {
                 if (isNull) {
                     ++this.valueSlots;
                     if (this.valueSlots * 2 >= this.valueTable.length) {
-                        this.rehashValues();
+                        rehashValues();
                     }
                 }
 
@@ -1011,7 +1011,7 @@ final class QuadModelImpl extends QuadModel {
         }
 
         private void writeObject(final ObjectOutputStream out) throws IOException {
-            final String string = this.getCachedString(true);
+            final String string = getCachedString(true);
             final Object oldCachedString = this.cachedString;
             this.cachedString = string;
             out.defaultWriteObject();
@@ -1042,7 +1042,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String stringValue() {
-            return this.getCachedString(true);
+            return getCachedString(true);
         }
 
         @Override
@@ -1056,7 +1056,7 @@ final class QuadModelImpl extends QuadModel {
             }
             if (object instanceof IRI) {
                 final String string = ((IRI) object).stringValue();
-                final String s = this.getCachedString(false);
+                final String s = getCachedString(false);
                 if (s != null) {
                     return s.equals(string);
                 } else {
@@ -1079,7 +1079,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String toString() {
-            return this.stringValue();
+            return stringValue();
         }
 
     }
@@ -1105,7 +1105,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String stringValue() {
-            return this.getID();
+            return getID();
         }
 
         @Override
@@ -1155,11 +1155,11 @@ final class QuadModelImpl extends QuadModel {
 
             super(model);
 
-            int hashCode = label.hashCode();
-            if (language != null) {
-                hashCode = 31 * hashCode + language.hashCode();
-            }
-            hashCode = 31 * hashCode + datatype.hashCode();
+            final int hashCode = label.hashCode();
+            // if (language != null) {
+            // hashCode = 31 * hashCode + language.hashCode();
+            // }
+            // hashCode = 31 * hashCode + datatype.hashCode();
 
             this.langOrDatatype = language == null ? datatype : language.intern();
             this.hash = hashCode;
@@ -1195,7 +1195,7 @@ final class QuadModelImpl extends QuadModel {
         }
 
         private void writeObject(final ObjectOutputStream out) throws IOException {
-            final String label = this.getCachedLabel(true);
+            final String label = getCachedLabel(true);
             final Object oldCachedLabel = this.cachedLabel;
             this.cachedLabel = label;
             out.defaultWriteObject();
@@ -1204,7 +1204,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String getLabel() {
-            return this.getCachedLabel(true);
+            return getCachedLabel(true);
         }
 
         @Override
@@ -1222,57 +1222,57 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String stringValue() {
-            return this.getLabel();
+            return getLabel();
         }
 
         @Override
         public boolean booleanValue() {
-            return XMLDatatypeUtil.parseBoolean(this.getLabel());
+            return XMLDatatypeUtil.parseBoolean(getLabel());
         }
 
         @Override
         public byte byteValue() {
-            return XMLDatatypeUtil.parseByte(this.getLabel());
+            return XMLDatatypeUtil.parseByte(getLabel());
         }
 
         @Override
         public short shortValue() {
-            return XMLDatatypeUtil.parseShort(this.getLabel());
+            return XMLDatatypeUtil.parseShort(getLabel());
         }
 
         @Override
         public int intValue() {
-            return XMLDatatypeUtil.parseInt(this.getLabel());
+            return XMLDatatypeUtil.parseInt(getLabel());
         }
 
         @Override
         public long longValue() {
-            return XMLDatatypeUtil.parseLong(this.getLabel());
+            return XMLDatatypeUtil.parseLong(getLabel());
         }
 
         @Override
         public float floatValue() {
-            return XMLDatatypeUtil.parseFloat(this.getLabel());
+            return XMLDatatypeUtil.parseFloat(getLabel());
         }
 
         @Override
         public double doubleValue() {
-            return XMLDatatypeUtil.parseDouble(this.getLabel());
+            return XMLDatatypeUtil.parseDouble(getLabel());
         }
 
         @Override
         public BigInteger integerValue() {
-            return XMLDatatypeUtil.parseInteger(this.getLabel());
+            return XMLDatatypeUtil.parseInteger(getLabel());
         }
 
         @Override
         public BigDecimal decimalValue() {
-            return XMLDatatypeUtil.parseDecimal(this.getLabel());
+            return XMLDatatypeUtil.parseDecimal(getLabel());
         }
 
         @Override
         public XMLGregorianCalendar calendarValue() {
-            return XMLDatatypeUtil.parseCalendar(this.getLabel());
+            return XMLDatatypeUtil.parseCalendar(getLabel());
         }
 
         @Override
@@ -1290,7 +1290,7 @@ final class QuadModelImpl extends QuadModel {
                         && this.langOrDatatype.equals(l.getLanguage().orElse(null)) //
                         || this.langOrDatatype instanceof IRI
                                 && this.langOrDatatype.equals(l.getDatatype())) {
-                    final String s = this.getCachedLabel(false);
+                    final String s = getCachedLabel(false);
                     return s != null ? s.equals(l.getLabel())
                             : this.model.stringIndex.equals(this.label, l.getLabel());
                 }
@@ -1305,7 +1305,7 @@ final class QuadModelImpl extends QuadModel {
 
         @Override
         public String toString() {
-            final String s = this.getCachedLabel(false);
+            final String s = getCachedLabel(false);
             final StringBuilder builder = new StringBuilder(256);
             builder.append('"');
             if (s != null) {
@@ -1357,7 +1357,9 @@ final class QuadModelImpl extends QuadModel {
         ModelStatement(final ModelResource subj, final ModelIRI pred, final ModelValue obj,
                 final ModelResource ctx) {
 
-            final int cachedHash = 961 * subj.hashCode() + 31 * pred.hashCode() + obj.hashCode();
+            // final int cachedHash = 961 * subj.hashCode() + 31 * pred.hashCode() +
+            // obj.hashCode();
+            final int cachedHash = Objects.hash(subj, pred, obj, ctx);
 
             this.hash = cachedHash != ModelStatement.HASH_ZOMBIE ? cachedHash
                     : ModelStatement.HASH_UNCACHED;
@@ -1459,8 +1461,9 @@ final class QuadModelImpl extends QuadModel {
                     && this.hash != ModelStatement.HASH_UNCACHED) {
                 return this.hash;
             } else {
-                return 961 * this.subj.hashCode() + 31 * this.pred.hashCode()
-                        + this.obj.hashCode();
+                return Objects.hash(this.subj, this.pred, this.obj, this.ctx);
+                // return 961 * this.subj.hashCode() + 31 * this.pred.hashCode()
+                // + this.obj.hashCode();
             }
         }
 
