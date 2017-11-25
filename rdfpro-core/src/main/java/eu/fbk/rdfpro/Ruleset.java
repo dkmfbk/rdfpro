@@ -542,7 +542,14 @@ public final class Ruleset {
      *            the RDF statements, not null
      * @return the parsed ruleset
      */
-    public static Ruleset fromRDF(final Iterable<Statement> model) {
+    public static Ruleset fromRDF(Iterable<Statement> model) {
+
+        // If the model is an RDFSource (e.g., ext. file), read it once
+        if (model instanceof RDFSource) {
+            final QuadModel m = QuadModel.create();
+            ((RDFSource) model).emit(RDFHandlers.wrap(m), 1);
+            model = m;
+        }
 
         // Parse meta-vocabulary terms
         final List<IRI> metaVocabularyTerms = new ArrayList<>();
@@ -650,15 +657,15 @@ public final class Ruleset {
         public String toString() {
             final StringBuilder builder = new StringBuilder();
             builder.append("Splitting of rule ").append(this.rule.getID());
-            this.toStringHelper(builder, "\n  DELETE original: ", this.rule.getDeleteExpr());
-            this.toStringHelper(builder, "\n  DELETE tbox:     ", this.tboxDeleteExpr);
-            this.toStringHelper(builder, "\n  DELETE abox:     ", this.aboxDeleteExpr);
-            this.toStringHelper(builder, "\n  INSERT original: ", this.rule.getInsertExpr());
-            this.toStringHelper(builder, "\n  INSERT tbox:     ", this.tboxInsertExpr);
-            this.toStringHelper(builder, "\n  INSERT abox:     ", this.aboxInsertExpr);
-            this.toStringHelper(builder, "\n  WHERE  original: ", this.rule.getWhereExpr());
-            this.toStringHelper(builder, "\n  WHERE  tbox:     ", this.tboxWhereExpr);
-            this.toStringHelper(builder, "\n  WHERE  abox:     ", this.aboxWhereExpr);
+            toStringHelper(builder, "\n  DELETE original: ", this.rule.getDeleteExpr());
+            toStringHelper(builder, "\n  DELETE tbox:     ", this.tboxDeleteExpr);
+            toStringHelper(builder, "\n  DELETE abox:     ", this.aboxDeleteExpr);
+            toStringHelper(builder, "\n  INSERT original: ", this.rule.getInsertExpr());
+            toStringHelper(builder, "\n  INSERT tbox:     ", this.tboxInsertExpr);
+            toStringHelper(builder, "\n  INSERT abox:     ", this.aboxInsertExpr);
+            toStringHelper(builder, "\n  WHERE  original: ", this.rule.getWhereExpr());
+            toStringHelper(builder, "\n  WHERE  tbox:     ", this.tboxWhereExpr);
+            toStringHelper(builder, "\n  WHERE  abox:     ", this.aboxWhereExpr);
             return builder.toString();
         }
 
