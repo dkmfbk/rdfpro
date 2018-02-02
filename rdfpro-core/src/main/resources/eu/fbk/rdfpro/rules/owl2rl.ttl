@@ -268,7 +268,7 @@ sys:expandAllDisjointProperties a rr:MetaVocabularyTerm.
 #                              rdfs:label 'owl:Nothing violated';
 #                              rdfs:seeAlso ?x } """ ;
 #    rr:body """ ?x rdf:type owl:Nothing.
-#                BIND (ks:mint(sys:, owl:Nothing, ?x) AS ?b) """ .
+#                BIND (rr:mint(sys:, owl:Nothing, ?x) AS ?b) """ .
 
 
 # CLASS DISJOINTNESS
@@ -481,7 +481,7 @@ sys:expandAllDisjointProperties a rr:MetaVocabularyTerm.
                 ?u owl:propertyChainAxiom ?l2. """;
     rr:body """ ?p owl:propertyChainAxiom ?l1.
                 ?l1 rdf:first ?p1; rdf:rest ?l2. ?l2 rdf:rest ?l3.
-                FILTER (?l3 != rdf:nil) BIND (ks:mint(sys:, ?l2) AS ?u) """.
+                FILTER (?l3 != rdf:nil) BIND (rr:mint(sys:, ?l2) AS ?u) """.
 
 
 # INVERSE PROPERTY
@@ -580,7 +580,7 @@ sys:expandAllDisjointProperties a rr:MetaVocabularyTerm.
                 ?x rdf:type ?c; ?p1 ?v1; ?p2 ?v2; ?p3 ?v3.
                 ?y rdf:type ?c; ?p1 ?v1; ?p2 ?v2; ?p3 ?v3.
                 FILTER (?x != ?y && str(?x) <= str(?y))
-                BIND (ks:mint(sys:, ?x, ?y, ?l1) AS ?b) """.
+                BIND (rr:mint(sys:, ?x, ?y, ?l1) AS ?b) """.
 
 :prp-key-nr a rr:Rule;
     rr:head """ ?b sys:keyNnode ?l2. """;

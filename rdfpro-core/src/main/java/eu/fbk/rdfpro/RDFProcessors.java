@@ -33,6 +33,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
@@ -311,6 +312,16 @@ public final class RDFProcessors {
             return RDFProcessors.tbox();
         }
 
+        case "cbd": {
+            final Options options = Options.parse("n!|s|i|c", args);
+            final IRI namespace = RDFProcessors.parseIRI(options.getOptionArg("n", String.class));
+            final boolean symmetric = options.hasOption("s");
+            final boolean includeInstances = options.hasOption("i");
+            final boolean includeContexts = options.hasOption("c");
+            return RDFProcessors.cbd(namespace.stringValue(), symmetric, includeInstances,
+                    includeContexts);
+        }
+
         case "rdfs": {
             final Options options = Options.parse("d|e!|C|c!|b!|t|w|+", args);
             final IRI base = RDFProcessors.parseIRI(options.getOptionArg("b", String.class));
@@ -354,35 +365,38 @@ public final class RDFProcessors {
         case "download": {
             final Options options = Options.parse("w|q!|f!|!", args);
             final boolean preserveBNodes = !options.hasOption("w");
-            final String endpointURL = RDFProcessors
-                    .parseIRI(options.getPositionalArg(0, String.class)).stringValue();
+            final String endpointURL = options.getPositionalArg(0, String.class);
             String query = options.getOptionArg("q", String.class);
             if (query == null) {
                 final String source = options.getOptionArg("f", String.class);
-                try {
-                    final File file = new File(source);
-                    URL url;
-                    if (file.exists()) {
-                        url = file.toURI().toURL();
-                    } else {
-                        url = RDFProcessors.class.getClassLoader().getResource(source);
-                    }
-                    final BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(url.openStream()));
+                if (source == null) {
+                    query = "select ?s ?p ?o ?c { graph ?c { ?s ?p ?o } }";
+                } else {
                     try {
-                        final StringBuilder builder = new StringBuilder();
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            builder.append(line);
+                        final File file = new File(source);
+                        URL url;
+                        if (file.exists()) {
+                            url = file.toURI().toURL();
+                        } else {
+                            url = RDFProcessors.class.getClassLoader().getResource(source);
                         }
-                        query = builder.toString();
-                    } finally {
-                        IO.closeQuietly(reader);
+                        final BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(url.openStream()));
+                        try {
+                            final StringBuilder builder = new StringBuilder();
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                builder.append(line);
+                            }
+                            query = builder.toString();
+                        } finally {
+                            IO.closeQuietly(reader);
+                        }
+                    } catch (final Throwable ex) {
+                        throw new IllegalArgumentException(
+                                "Cannot load SPARQL query from " + source + ": " + ex.getMessage(),
+                                ex);
                     }
-                } catch (final Throwable ex) {
-                    throw new IllegalArgumentException(
-                            "Cannot load SPARQL query from " + source + ": " + ex.getMessage(),
-                            ex);
                 }
             }
             return RDFProcessors.download(true, preserveBNodes, endpointURL, query);
@@ -721,6 +735,26 @@ public final class RDFProcessors {
      */
     public static RDFProcessor tbox() {
         return ProcessorTBox.INSTANCE;
+    }
+
+    /**
+     * Returns a {@code RDFProcessor} that extracts the CBD of matched entities in the RDF stream.
+     * See https://www.w3.org/Submission/CBD/.
+     *
+     * @param namespace
+     *            the namespace of the entities to match
+     * @param symmetric
+     *            whether a symmetric CBD has to be emitted
+     * @param includeInstances
+     *            whether to include instances of matched entities
+     * @param includeContexts
+     *            whether to include quads whose context is a matched entity
+     * @return the created {@code RDFProcessor}
+     */
+    public static RDFProcessor cbd(final String namespace, final boolean symmetric,
+            final boolean includeInstances, final boolean includeContexts) {
+        return new ProcessorCBD(ImmutableSet.of(namespace), symmetric, includeInstances,
+                includeContexts);
     }
 
     /**

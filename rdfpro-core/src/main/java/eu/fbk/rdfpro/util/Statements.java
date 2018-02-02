@@ -1333,8 +1333,8 @@ public final class Statements {
                     } else if (rank2 >= 0 && (rank2 < rank1 || rank1 < 0)) {
                         return 1;
                     }
-                    final String string1 = Statements.formatValue(v1, Namespaces.DEFAULT);
-                    final String string2 = Statements.formatValue(v2, Namespaces.DEFAULT);
+                    final String string1 = v1.stringValue();
+                    final String string2 = v2.stringValue();
                     return compareStrings(string1, string2);
                 } else {
                     return -1;

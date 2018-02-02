@@ -983,16 +983,12 @@ public final class RDFSources {
 
             final XMLStreamReader in = XMLInputFactory.newInstance().createXMLStreamReader(stream);
 
-            while (in.nextTag() != XMLStreamConstants.START_ELEMENT
-                    || !in.getLocalName().equals("results")) {
-            }
-
-            while (SparqlSource.enterChild(in, "result")) {
-                while (SparqlSource.enterChild(in, "binding")) {
+            while (seek(in, "result", null)) {
+                while (seek(in, "binding", "result")) {
                     final String varName = in.getAttributeValue(null, "name");
                     final char var = Character.toLowerCase(varName.charAt(0));
                     final int index = var == 's' ? 0 : var == 'p' ? 1 : var == 'o' ? 2 : 3;
-                    if (!SparqlSource.enterChild(in, null)) {
+                    if (!seek(in, null, "binding")) {
                         throw new XMLStreamException("Empty <binding> element found");
                     }
                     final String tag = in.getLocalName();
@@ -1013,9 +1009,7 @@ public final class RDFSources {
                                 "Expected <bnode>, <uri> or <literal>, found <" + tag + ">");
                     }
                     values[index] = value;
-                    SparqlSource.leaveChild(in); // leave binding
                 }
-                SparqlSource.leaveChild(in); // leave result
 
                 if (values[0] instanceof Resource && values[1] instanceof IRI
                         && values[2] != null) {
@@ -1031,26 +1025,24 @@ public final class RDFSources {
                 }
                 Arrays.fill(values, null);
             }
-
-            while (in.nextTag() != XMLStreamConstants.END_DOCUMENT) {
-            }
         }
 
-        private static boolean enterChild(final XMLStreamReader in, @Nullable final String name)
-                throws XMLStreamException {
-            if (in.nextTag() == XMLStreamConstants.END_ELEMENT) {
-                return false;
-            }
-            if (name == null || name.equals(in.getLocalName())) {
-                return true;
-            }
-            final String childName = in.getLocalName();
-            throw new XMLStreamException("Expected <" + name + ">, found <" + childName + ">");
-        }
-
-        private static void leaveChild(final XMLStreamReader in) throws XMLStreamException {
-            if (in.nextTag() != XMLStreamConstants.END_ELEMENT) {
-                throw new XMLStreamException("Unexpected element <" + in.getLocalName() + ">");
+        private static boolean seek(final XMLStreamReader in, @Nullable final String soughtElement,
+                @Nullable final String withinElement) throws XMLStreamException {
+            while (true) {
+                if (in.getEventType() == XMLStreamConstants.END_DOCUMENT) {
+                    return false;
+                }
+                in.next();
+                if (in.getEventType() == XMLStreamConstants.START_ELEMENT) {
+                    if (soughtElement == null || soughtElement.equals(in.getLocalName())) {
+                        return true;
+                    }
+                } else if (in.getEventType() == XMLStreamConstants.END_ELEMENT) {
+                    if (withinElement != null && withinElement.equals(in.getLocalName())) {
+                        return false;
+                    }
+                }
             }
         }
 
