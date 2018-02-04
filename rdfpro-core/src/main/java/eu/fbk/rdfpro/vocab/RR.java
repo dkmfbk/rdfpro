@@ -73,6 +73,9 @@ public final class RR {
 
     // FUNCTIONS
 
+    /** Function rr:sid. */
+    public static final IRI SID = createIRI("sid");
+
     /** Function rr:mint. */
     public static final IRI MINT = createIRI("mint");
 
