@@ -525,7 +525,7 @@ public final class Algebra {
         expr = expr.clone();
         expr.setParentNode(null);
 
-        final Map<String, String> replacements = new HashMap<>();
+        final Map<String, Var> replacements = new HashMap<>();
         final List<Filter> filtersToDrop = new ArrayList<>();
         expr.visit(new AbstractQueryModelVisitor<RuntimeException>() {
 
@@ -536,10 +536,10 @@ public final class Algebra {
                     final Var leftVar = (Var) same.getLeftArg();
                     final Var rightVar = (Var) same.getRightArg();
                     if (leftVar.isAnonymous() || rightVar.isAnonymous()) {
-                        if (!rightVar.isAnonymous()) {
-                            replacements.put(leftVar.getName(), rightVar.getName());
+                        if (!rightVar.isAnonymous() || rightVar.hasValue()) {
+                            replacements.put(leftVar.getName(), rightVar);
                         } else {
-                            replacements.put(rightVar.getName(), leftVar.getName());
+                            replacements.put(rightVar.getName(), leftVar);
                         }
                         filtersToDrop.add((Filter) same.getParentNode());
                     }
@@ -552,9 +552,10 @@ public final class Algebra {
             @Override
             public void meet(final Var var) throws RuntimeException {
                 if (!var.hasValue()) {
-                    final String newName = replacements.get(var.getName());
-                    if (newName != null) {
-                        var.setName(newName);
+                    final Var newVar = replacements.get(var.getName());
+                    if (newVar != null) {
+                        var.setName(newVar.getName());
+                        var.setValue(newVar.getValue());
                     } else if (var.getName().startsWith("_const-")) {
                         if (var.getParentNode() instanceof StatementPattern) {
                             for (final Var var2 : ((StatementPattern) var.getParentNode())
