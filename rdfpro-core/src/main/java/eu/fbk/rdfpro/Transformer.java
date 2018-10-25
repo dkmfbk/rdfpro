@@ -15,6 +15,7 @@ package eu.fbk.rdfpro;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +24,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
@@ -33,9 +38,13 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.SESAME;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.impl.ListBindingSet;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.slf4j.LoggerFactory;
 
+import eu.fbk.rdfpro.util.Algebra;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
@@ -180,6 +189,164 @@ public interface Transformer {
                         && (this.skipObj || predicate.test(statement.getObject()))
                         && (this.skipCtx || predicate.test(statement.getContext()))) {
                     handler.handleStatement(statement);
+                }
+            }
+
+        };
+    }
+
+    /**
+     * Returns a {@code Transformer} that emits only statements matching the SPARQL condition
+     * supplied. The condition is a value expression (i.e., what can be used in the body of a
+     * SPARQL FILTER) that may reference the following variables:
+     * <ul>
+     * <li>{@code s} - statement subject</li>
+     * <li>{@code p} - statement predicate</li>
+     * <li>{@code o} - statement object</li>
+     * <li>{@code c} or {@code g} - statement context</li>
+     * <li>{@code e} - statement entities (resource subject/object)</li>
+     * <li>{@code i} - any IRI in the statement</li>
+     * <li>{@code l} - any literal in the statement</li>
+     * <li>{@code b} - any blank node in the statement</li>
+     * <li>{@code v} - any RDF value in the statement</li>
+     * </ul>
+     * Note that some variables accept multiple values (e.g., {@code v}), while some variables may
+     * not have values (e.g., {@code l}). The general behaviour is to evaluate the condition on
+     * any combination of values for all the variables referenced in it. If there are no
+     * combination the statement is discarded. If there are one or more combinations and for one
+     * of them the condition evaluates to {@code 'true'^^xsd:boolean}, then the statement is
+     * accepted.
+     * 
+     * @param condition
+     *            the condition to evaluate
+     * @return the created {@code Transformer}
+     */
+    static Transformer filter(final ValueExpr condition) {
+
+        Objects.requireNonNull(condition);
+
+        final List<String> vars = ImmutableList.copyOf(Algebra.extractVariables(condition, false));
+        final int size = vars.size();
+        final List<Function<Statement, Value[]>> extractors = Lists.newArrayListWithCapacity(size);
+
+        final Value[] emptyValues = new Value[0];
+        for (final String var : vars) {
+            switch (var) {
+            case "s":
+                extractors.add(s -> new Value[] { s.getSubject() });
+                break;
+            case "p":
+                extractors.add(s -> new Value[] { s.getPredicate() });
+                break;
+            case "o":
+                extractors.add(s -> new Value[] { s.getObject() });
+                break;
+            case "c":
+            case "g":
+                extractors.add(s -> new Value[] { s.getContext() });
+                break;
+            case "e":
+                extractors.add(s -> s.getObject() instanceof Resource
+                        ? new Value[] { s.getSubject(), s.getObject() }
+                        : new Value[] { s.getSubject() });
+                break;
+            case "i":
+                extractors.add(s -> {
+                    final Value[] values = new Value[1 //
+                            + (s.getSubject() instanceof IRI ? 1 : 0)
+                            + (s.getObject() instanceof IRI ? 1 : 0)
+                            + (s.getContext() instanceof IRI ? 1 : 0)];
+                    int index = 0;
+                    if (s.getSubject() instanceof IRI) {
+                        values[index++] = s.getSubject();
+                    }
+                    values[index++] = s.getPredicate();
+                    if (s.getObject() instanceof IRI) {
+                        values[index++] = s.getObject();
+                    }
+                    if (s.getContext() instanceof IRI) {
+                        values[index++] = s.getContext();
+                    }
+                    return values;
+                });
+                break;
+            case "l":
+                extractors.add(s -> s.getObject() instanceof Literal //
+                        ? new Value[] { s.getObject() }
+                        : emptyValues);
+                break;
+            case "b":
+                extractors.add(s -> {
+                    final Value[] values = new Value[0 //
+                            + (s.getSubject() instanceof BNode ? 1 : 0)
+                            + (s.getObject() instanceof BNode ? 1 : 0)
+                            + (s.getContext() instanceof BNode ? 1 : 0)];
+                    int index = 0;
+                    if (s.getSubject() instanceof BNode) {
+                        values[index++] = s.getSubject();
+                    }
+                    if (s.getObject() instanceof BNode) {
+                        values[index++] = s.getObject();
+                    }
+                    if (s.getContext() instanceof BNode) {
+                        values[index++] = s.getContext();
+                    }
+                    return values;
+                });
+                break;
+            case "v":
+                extractors.add(s -> new Value[] { s.getSubject(), s.getPredicate(), s.getObject(),
+                        s.getContext() != null ? s.getContext() : SESAME.NIL });
+                break;
+            default:
+                throw new IllegalArgumentException("Illegal variable " + var + " in " + condition);
+            }
+
+        }
+
+        return new Transformer() {
+
+            private volatile boolean errorsSuppressed = false;
+
+            @Override
+            public void transform(final Statement stmt, final RDFHandler handler)
+                    throws RDFHandlerException {
+
+                int combinations = 1;
+                final Value[][] values = new Value[size][];
+                for (int i = 0; i < size; ++i) {
+                    values[i] = extractors.get(i).apply(stmt);
+                    combinations *= values[i].length;
+                }
+
+                if (combinations == 0) {
+                    return;
+                }
+
+                final List<Value> tuple = Lists.newArrayList(Collections.nCopies(size, null));
+                final ListBindingSet bindings = new ListBindingSet(vars, tuple);
+
+                for (int c = 0; c < combinations; ++c) {
+                    int j = c;
+                    for (int i = size - 1; i >= 0; --i) {
+                        tuple.set(i, values[i][j % values[i].length]);
+                        j = j / values[i].length;
+                    }
+                    Value result = null;
+                    try {
+                        result = Algebra.evaluateValueExpr(condition, bindings);
+                    } catch (final Throwable ex) {
+                        if (!errorsSuppressed) {
+                            errorsSuppressed = true;
+                            LoggerFactory.getLogger(Transformer.class)
+                                    .error("Could not evaluate expression " + condition
+                                            + " (further errors suppressed)", ex);
+                        }
+                    }
+                    if (result instanceof Literal && ((Literal) result).booleanValue()) {
+                        handler.handleStatement(stmt);
+                        break;
+                    }
                 }
             }
 
@@ -520,13 +687,37 @@ public interface Transformer {
      */
     @Nullable
     static Transformer parse(@Nullable final String expression) {
+
         if (expression == null) {
             return null;
-        } else if (Scripting.isScript(expression)) {
-            return Scripting.compile(Transformer.class, expression, "q");
-        } else {
-            return Transformer.rules(expression);
         }
+
+        Throwable error = null;
+
+        try {
+            return Transformer.rules(expression);
+        } catch (final Throwable ex) {
+            error = ex;
+        }
+
+        try {
+            return Transformer
+                    .filter(Algebra.parseValueExpr(expression, null, Namespaces.DEFAULT.uriMap()));
+        } catch (final Throwable ex) {
+            error.addSuppressed(ex);
+        }
+
+        try {
+            if (Scripting.isScript(expression)) {
+                return Scripting.compile(Transformer.class, expression, "q", "h");
+            }
+        } catch (final Throwable ex) {
+            error.addSuppressed(ex);
+        }
+
+        error.printStackTrace();
+        Throwables.throwIfUnchecked(error);
+        throw new RuntimeException(error);
     }
 
     /**
@@ -792,7 +983,7 @@ final class RuleTransformer implements Transformer {
 
         @Nullable
         Value transform(final Value value) {
-            final boolean matched = this.match(value);
+            final boolean matched = match(value);
             return this.include && !matched || !this.include && matched ? null
                     : this.replacement == null ? value : this.replacement;
         }

@@ -198,9 +198,7 @@ public final class RDFProcessors {
         case "transform": {
             final Options options = Options.parse("+", args);
             final String spec = String.join(" ", options.getPositionalArgs(String.class));
-            final Transformer transformer = Scripting.isScript(spec)
-                    ? Scripting.compile(Transformer.class, spec, "q", "h")
-                    : Transformer.rules(spec);
+            final Transformer transformer = Transformer.parse(spec);
             return RDFProcessors.transform(transformer);
         }
 
