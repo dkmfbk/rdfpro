@@ -50,7 +50,6 @@ import javax.xml.stream.XMLStreamReader;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -80,6 +79,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.QuadModel;
@@ -577,7 +577,7 @@ public final class RDFSources {
                     } else if (!FileSource.this.parallelize
                             || !Statements.isRDFFormatLineBased(this.format)) {
                         this.streamSuppliers
-                                .add(() -> IO.utf8Reader(IO.buffer(IO.read(this.location))));
+                        .add(() -> IO.utf8Reader(IO.buffer(IO.read(this.location))));
                     } else {
                         final AtomicReference<List<Reader>> holder = new AtomicReference<>();
                         for (int i = 0; i < Environment.getCores(); ++i) {
@@ -603,9 +603,9 @@ public final class RDFSources {
                     if (RDFSources.LOGGER.isDebugEnabled()) {
                         RDFSources.LOGGER.debug("Starting {} {} parsing for {}",
                                 this.streamSuppliers.size() == 1 ? "sequential" : "parallel",
-                                this.streamSuppliers.get(0) instanceof InputStream ? "binary"
-                                        : "text",
-                                this.location);
+                                        this.streamSuppliers.get(0) instanceof InputStream ? "binary"
+                                                : "text",
+                                                this.location);
                     }
 
                     // Allocate a lock object used to synchronize concurrent parse threads
@@ -651,33 +651,33 @@ public final class RDFSources {
                                 parser.setRDFHandler(!firstThread ? wrappedHandler
                                         : new AbstractRDFHandlerWrapper(wrappedHandler) {
 
-                                            private boolean insidePreamble = true;
+                                    private boolean insidePreamble = true;
 
-                                            @Override
-                                            public void handleNamespace(final String prefix,
-                                                    final String uri) {
-                                                // Propagate and store namespace, if in preamble
-                                                super.handleNamespace(prefix, uri);
-                                                if (this.insidePreamble) {
-                                                    FileJob.this.namespaces
-                                                            .add(new SimpleNamespace(prefix, uri));
-                                                }
-                                            }
+                                    @Override
+                                    public void handleNamespace(final String prefix,
+                                            final String uri) {
+                                        // Propagate and store namespace, if in preamble
+                                        super.handleNamespace(prefix, uri);
+                                        if (this.insidePreamble) {
+                                            FileJob.this.namespaces
+                                            .add(new SimpleNamespace(prefix, uri));
+                                        }
+                                    }
 
-                                            @Override
-                                            public void handleStatement(final Statement stmt) {
-                                                // Propagate and, at first statement (= end of
-                                                // preamble) store baseIri and release lock
-                                                super.handleStatement(stmt);
-                                                if (this.insidePreamble) {
-                                                    this.insidePreamble = false;
-                                                    FileJob.this.baseIri = RDFSources.getBaseIri(
-                                                            parser, FileSource.this.base);
-                                                    lock.unlock();
-                                                }
-                                            }
+                                    @Override
+                                    public void handleStatement(final Statement stmt) {
+                                        // Propagate and, at first statement (= end of
+                                        // preamble) store baseIri and release lock
+                                        super.handleStatement(stmt);
+                                        if (this.insidePreamble) {
+                                            this.insidePreamble = false;
+                                            FileJob.this.baseIri = RDFSources.getBaseIri(
+                                                    parser, FileSource.this.base);
+                                            lock.unlock();
+                                        }
+                                    }
 
-                                        });
+                                });
 
                                 // Assign the initial value of the baseIri in the first thread
                                 if (firstThread) {
@@ -731,7 +731,7 @@ public final class RDFSources {
                 } catch (final Throwable ex) {
                     // On failure, close everything, wrap if necessary and propagate
                     stop();
-                    Throwables.throwIfUnchecked(ex);
+                    Exceptions.throwIfUnchecked(ex);
                     throw new RuntimeException(ex);
                 }
             }
@@ -913,45 +913,45 @@ public final class RDFSources {
             final List<String> acceptTypes;
             acceptTypes = this.isSelect
                     ? Arrays.asList("application/sparql-results+xml", "application/xml")
-                    : RDFFormat.RDFXML.getMIMETypes();
+                            : RDFFormat.RDFXML.getMIMETypes();
 
-            final byte[] requestBody = ("query=" + URLEncoder.encode(this.query, "UTF-8")
+                    final byte[] requestBody = ("query=" + URLEncoder.encode(this.query, "UTF-8")
                     + "&infer=true").getBytes(Charset.forName("UTF-8"));
 
-            final URL url = new URL(this.endpointURL);
-            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Accept", String.join(",", acceptTypes));
-            connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
-            connection.setRequestProperty("Content-Type",
-                    "application/x-www-form-urlencoded; charset=utf-8");
+                    final URL url = new URL(this.endpointURL);
+                    final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Accept", String.join(",", acceptTypes));
+                    connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
+                    connection.setRequestProperty("Content-Type",
+                            "application/x-www-form-urlencoded; charset=utf-8");
 
-            connection.connect();
+                    connection.connect();
 
-            try {
-                final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
-                out.write(requestBody);
-                out.close();
+                    try {
+                        final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+                        out.write(requestBody);
+                        out.close();
 
-                final int httpCode = connection.getResponseCode();
-                if (httpCode != HttpURLConnection.HTTP_OK) {
-                    throw new IOException("Download from '" + this.endpointURL + "' failed (HTTP "
-                            + httpCode + ")");
-                }
+                        final int httpCode = connection.getResponseCode();
+                        if (httpCode != HttpURLConnection.HTTP_OK) {
+                            throw new IOException("Download from '" + this.endpointURL + "' failed (HTTP "
+                                    + httpCode + ")");
+                        }
 
-                try (InputStream in = connection.getInputStream()) {
-                    if (this.isSelect) {
-                        parseTupleResult(in, handler);
-                    } else {
-                        parseTripleResult(in, handler);
+                        try (InputStream in = connection.getInputStream()) {
+                            if (this.isSelect) {
+                                parseTupleResult(in, handler);
+                            } else {
+                                parseTripleResult(in, handler);
+                            }
+                        }
+
+                    } finally {
+                        connection.disconnect();
                     }
-                }
-
-            } finally {
-                connection.disconnect();
-            }
         }
 
         private void parseTripleResult(final InputStream stream, final RDFHandler handler)

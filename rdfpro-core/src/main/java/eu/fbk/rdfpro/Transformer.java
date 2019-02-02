@@ -25,7 +25,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -45,6 +44,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Algebra;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
@@ -716,7 +716,7 @@ public interface Transformer {
         }
 
         error.printStackTrace();
-        Throwables.throwIfUnchecked(error);
+        Exceptions.throwIfUnchecked(error);
         throw new RuntimeException(error);
     }
 

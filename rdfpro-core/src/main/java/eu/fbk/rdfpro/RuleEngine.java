@@ -23,8 +23,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Throwables;
-
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
@@ -32,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.QuadModel;
 
@@ -113,7 +112,7 @@ public abstract class RuleEngine {
 
         } catch (final InvocationTargetException ex) {
             // Configuration is ok, but the RuleEngine cannot be created
-            Throwables.throwIfUnchecked(ex.getCause());
+            Exceptions.throwIfUnchecked(ex.getCause());
             throw new RuntimeException(ex.getCause());
         }
     }

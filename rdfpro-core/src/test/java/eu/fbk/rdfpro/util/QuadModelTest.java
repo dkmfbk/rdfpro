@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -118,7 +117,7 @@ public final class QuadModelTest {
                 throw new Error();
             }
         } catch (final Throwable ex) {
-            Throwables.throwIfUnchecked(ex);
+            Exceptions.throwIfUnchecked(ex);
             throw new RuntimeException(ex);
         }
     }
@@ -146,7 +145,7 @@ public final class QuadModelTest {
 
     @Test
     public final void testEmpty() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         try {
             Assert.assertEquals(0, model.size());
             Assert.assertEquals(null, model.objectValue());
@@ -155,13 +154,13 @@ public final class QuadModelTest {
             Assert.assertEquals(null, model.objectURI());
             Assert.assertEquals(null, model.objectString());
         } finally {
-            this.disposeModel(model);
+            disposeModel(model);
         }
     }
 
     @Test
     public final void testSingleLiteral() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         try {
             model.add(this.iri1, RDFS.LABEL, this.literal1, this.ctx1);
             Assert.assertEquals(1, model.size());
@@ -184,13 +183,13 @@ public final class QuadModelTest {
                 model.objectURI();
             });
         } finally {
-            this.disposeModel(model);
+            disposeModel(model);
         }
     }
 
     @Test
     public final void testSingleIRI() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         try {
             final Statement stmt = Statements.VALUE_FACTORY.createStatement(this.iri1, RDFS.LABEL,
                     this.iri2, this.ctx1);
@@ -207,13 +206,13 @@ public final class QuadModelTest {
                 model.objectLiteral();
             });
         } finally {
-            this.disposeModel(model);
+            disposeModel(model);
         }
     }
 
     @Test
     public final void testSingleBNode() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         try {
             model.add(this.iri1, RDFS.LABEL, this.bnode1, this.ctx1);
             Assert.assertEquals(1, model.size());
@@ -227,7 +226,7 @@ public final class QuadModelTest {
                 model.objectURI();
             });
         } finally {
-            this.disposeModel(model);
+            disposeModel(model);
         }
     }
 
@@ -235,7 +234,7 @@ public final class QuadModelTest {
     public final void testMultiple() {
         for (final Value obj1 : new Value[] { this.iri1, this.bnode1, this.literal1 }) {
             for (final Value obj2 : new Value[] { this.iri2, this.bnode2, this.literal2 }) {
-                final QuadModel model = this.newModel();
+                final QuadModel model = newModel();
                 try {
                     Assert.assertEquals(true, model.isEmpty());
                     Assert.assertEquals(0, model.size());
@@ -269,7 +268,7 @@ public final class QuadModelTest {
                     QuadModelTest.assertThrown(Throwable.class, () -> {
                         model.objectString();
                     });
-                    ValueFactory vf = Statements.VALUE_FACTORY;
+                    final ValueFactory vf = Statements.VALUE_FACTORY;
                     final Set<Statement> set = new HashSet<>();
                     set.add(vf.createStatement(this.iri1, RDFS.LABEL, obj1, this.ctx1));
                     set.add(vf.createStatement(this.iri1, RDFS.LABEL, obj2, this.ctx2));
@@ -286,7 +285,7 @@ public final class QuadModelTest {
                     model.clear();
                     Assert.assertEquals(0, model.size());
                 } finally {
-                    this.disposeModel(model);
+                    disposeModel(model);
                 }
             }
         }
@@ -294,7 +293,7 @@ public final class QuadModelTest {
 
     @Test
     public final void testNamespaces() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         Assert.assertEquals(0, model.getNamespaces().size());
         model.setNamespace("test", "urn:test");
         Assert.assertEquals(1, model.getNamespaces().size());
@@ -309,7 +308,7 @@ public final class QuadModelTest {
 
     @Test
     public final void testUnmodifiable() {
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         model.add(this.iri1, RDFS.LABEL, this.bnode1, this.ctx1);
         QuadModelTest.assertThrown(Throwable.class, () -> {
             model.unmodifiable().add(this.iri1, RDFS.LABEL, this.literal1, this.ctx2);
@@ -320,7 +319,7 @@ public final class QuadModelTest {
     public final void testEvaluate() throws MalformedQueryException {
         final String queryString = "SELECT ?s WHERE { GRAPH <" + this.ctx1 + "> { ?s ?p ?o } }";
         final TupleExpr expr = Algebra.parseTupleExpr(queryString, null, null);
-        final QuadModel model = this.newModel();
+        final QuadModel model = newModel();
         model.add(this.iri1, RDFS.LABEL, this.literal1, this.ctx1);
         model.add(this.iri1, RDFS.LABEL, this.literal2, this.ctx2);
         final Iterator<BindingSet> iterator = model.evaluate(expr, null,

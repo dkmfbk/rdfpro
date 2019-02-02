@@ -55,7 +55,6 @@ import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.KeyQuadIndex;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Options;
-import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
 import eu.fbk.rdfpro.util.Tracker;
 import eu.fbk.rdfpro.vocab.VOIDX;

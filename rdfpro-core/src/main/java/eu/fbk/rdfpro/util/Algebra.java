@@ -63,8 +63,8 @@ import org.eclipse.rdf4j.query.algebra.ValueExpr;
 import org.eclipse.rdf4j.query.algebra.Var;
 import org.eclipse.rdf4j.query.algebra.evaluation.EvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
+import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedService;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolver;
-import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolverImpl;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.BindingAssigner;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.CompareOptimizer;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.ConjunctiveConstraintSplitter;
@@ -113,39 +113,70 @@ public final class Algebra {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Algebra.class);
 
-    private static final EvaluationStatistics DEFAULT_EVALUATION_STATISTICS = new EvaluationStatistics();
+    private static final EvaluationStatistics DEFAULT_EVALUATION_STATISTICS;;
 
-    private static final FederatedServiceResolverImpl FEDERATED_SERVICE_RESOLVER = //
-            new FederatedServiceResolverImpl();
+    private static final FederatedServiceResolver FEDERATED_SERVICE_RESOLVER;
 
-    private static final TripleSource EMPTY_TRIPLE_SOURCE = new TripleSource() {
+    private static final TripleSource EMPTY_TRIPLE_SOURCE;
 
-        @Override
-        public ValueFactory getValueFactory() {
-            return Statements.VALUE_FACTORY;
-        }
-
-        @Override
-        public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
-                final Resource subj, final IRI pred, final Value obj, final Resource... contexts)
-                throws QueryEvaluationException {
-            return new EmptyIteration<Statement, QueryEvaluationException>();
-        }
-
-    };
-
-    private static final EvaluationStrategy EMPTY_EVALUATION_STRATEGY = new StrictEvaluationStrategy(
-            Algebra.EMPTY_TRIPLE_SOURCE, Algebra.FEDERATED_SERVICE_RESOLVER);
+    private static final EvaluationStrategy EMPTY_EVALUATION_STRATEGY;
 
     static {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
+        // Initialize evaluation statistics
+        DEFAULT_EVALUATION_STATISTICS = new EvaluationStatistics();
+
+        // Initialize service resolver, using SPARQLServiceResolver if available
+        FederatedServiceResolver resolver = null;
+        try {
+            final Class<?> clazz = Class.forName(
+                    "org.eclipse.rdf4j.repository.sparql.federation.SPARQLServiceResolver");
+            resolver = (FederatedServiceResolver) clazz.newInstance();
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+
+                @Override
+                public void run() {
+                    try {
+                        clazz.getMethod("shutDown").invoke(FEDERATED_SERVICE_RESOLVER);
+                    } catch (final Throwable ex) {
+                        LOGGER.error("Could not shutdown SPARQLServiceResolver", ex);
+                    }
+                }
+
+            });
+        } catch (final Throwable ex) {
+            resolver = new FederatedServiceResolver() {
+
+                @Override
+                public FederatedService getService(final String serviceUrl)
+                        throws QueryEvaluationException {
+                    throw new QueryEvaluationException(
+                            "org.eclipse.rdf4j:rdf4j-repository-sparql not in classpath: SERVICE invocation unsupported");
+                }
+
+            };
+        }
+        FEDERATED_SERVICE_RESOLVER = resolver;
+
+        // Initialize empty triple source
+        EMPTY_TRIPLE_SOURCE = new TripleSource() {
 
             @Override
-            public void run() {
-                Algebra.FEDERATED_SERVICE_RESOLVER.shutDown();
+            public ValueFactory getValueFactory() {
+                return Statements.VALUE_FACTORY;
             }
 
-        });
+            @Override
+            public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(
+                    final Resource subj, final IRI pred, final Value obj,
+                    final Resource... contexts) throws QueryEvaluationException {
+                return new EmptyIteration<Statement, QueryEvaluationException>();
+            }
+
+        };
+
+        // Initialize empty evaluation strategy
+        EMPTY_EVALUATION_STRATEGY = new StrictEvaluationStrategy(EMPTY_TRIPLE_SOURCE,
+                FEDERATED_SERVICE_RESOLVER);
     }
 
     public static FederatedServiceResolver getFederatedServiceResolver() {
@@ -739,7 +770,7 @@ public final class Algebra {
                                     : new Extension(join.getLeftArg());
                             join.setLeftArg(newArg);
                         } else if (join.getRightArg().getAssuredBindingNames()
-                                .contains(elemVars)) {
+                                .containsAll(elemVars)) {
                             newArg = join.getRightArg() instanceof Extension
                                     ? (Extension) join.getRightArg()
                                     : new Extension(join.getRightArg());
@@ -942,7 +973,7 @@ public final class Algebra {
             if (namespace == null) {
                 throw new VisitorException("QName '" + qname + "' uses an undefined prefix");
             }
-            localName = this.processEscapesAndHex(localName);
+            localName = processEscapesAndHex(localName);
             final ASTIRI iriNode = new ASTIRI(SyntaxTreeBuilderTreeConstants.JJTIRI);
             iriNode.setValue(namespace + localName);
             qnameNode.jjtReplaceWith(iriNode);

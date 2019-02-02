@@ -1,9 +1,5 @@
 package eu.fbk.rdfpro.util;
 
-import java.util.Arrays;
-
-import org.eclipse.rdf4j.query.algebra.ValueExpr;
-import org.eclipse.rdf4j.query.impl.ListBindingSet;
 import org.junit.Test;
 
 import eu.fbk.rdfpro.Ruleset;

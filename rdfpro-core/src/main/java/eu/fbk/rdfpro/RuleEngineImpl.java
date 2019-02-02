@@ -656,7 +656,7 @@ final class RuleEngineImpl extends RuleEngine {
             } else if (size0 == size1) {
                 result = false;
             } else {
-                result = insertBuffer.contains(deleteBuffer);
+                result = insertBuffer.containsAll(deleteBuffer);
             }
 
             // Take a final timestamp and log relevant statistics if enabled

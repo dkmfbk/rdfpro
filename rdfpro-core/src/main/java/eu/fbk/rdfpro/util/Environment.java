@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -227,7 +226,7 @@ public final class Environment {
                 throw exception.get();
             }
         } catch (final Throwable ex) {
-            Throwables.throwIfUnchecked(ex);
+            Exceptions.throwIfUnchecked(ex);
             throw new RuntimeException(ex);
         }
     }

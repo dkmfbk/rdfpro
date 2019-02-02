@@ -132,9 +132,9 @@ public abstract class QuadModel extends AbstractCollection<Statement>
             @Nullable final Dataset dataset, @Nullable final BindingSet bindings) {
 
         return Algebra.evaluateTupleExpr(expr, dataset, bindings,
-                new StrictEvaluationStrategy(this.getTripleSource(), dataset,
+                new StrictEvaluationStrategy(getTripleSource(), dataset,
                         Algebra.getFederatedServiceResolver()),
-                this.getEvaluationStatistics(), this.getValueNormalizer());
+                getEvaluationStatistics(), getValueNormalizer());
     }
 
     protected Value doNormalize(@Nullable final Value value) {
@@ -151,7 +151,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      * @return the namespaces
      */
     public final Set<Namespace> getNamespaces() {
-        return this.doGetNamespaces();
+        return doGetNamespaces();
     }
 
     /**
@@ -163,7 +163,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final Namespace getNamespace(final String prefix) {
-        return this.doGetNamespace(prefix);
+        return doGetNamespace(prefix);
     }
 
     /**
@@ -176,7 +176,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      * @return the {@link Namespace} object for the given namespace
      */
     public final Namespace setNamespace(final String prefix, final String name) {
-        this.doSetNamespace(Objects.requireNonNull(prefix), Objects.requireNonNull(name));
+        doSetNamespace(Objects.requireNonNull(prefix), Objects.requireNonNull(name));
         return new SimpleNamespace(prefix, name);
     }
 
@@ -187,7 +187,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      *            a {@link Namespace} object to use in this Model.
      */
     public final void setNamespace(final Namespace namespace) {
-        this.doSetNamespace(namespace.getPrefix(), namespace.getName());
+        doSetNamespace(namespace.getPrefix(), namespace.getName());
     }
 
     /**
@@ -199,12 +199,12 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final Namespace removeNamespace(final String prefix) {
-        return this.doSetNamespace(Objects.requireNonNull(prefix), null);
+        return doSetNamespace(Objects.requireNonNull(prefix), null);
     }
 
     @Override
     public final boolean isEmpty() {
-        final Iterator<Statement> iterator = this.doIterator(null, null, null, QuadModel.CTX_ANY);
+        final Iterator<Statement> iterator = doIterator(null, null, null, QuadModel.CTX_ANY);
         try {
             return !iterator.hasNext();
         } finally {
@@ -214,27 +214,27 @@ public abstract class QuadModel extends AbstractCollection<Statement>
 
     @Override
     public final int size() {
-        return this.doSize(null, null, null, QuadModel.CTX_ANY);
+        return doSize(null, null, null, QuadModel.CTX_ANY);
     }
 
     public final int size(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
-        return this.doSize(subj, pred, obj, QuadModel.CTX_ANY);
+        return doSize(subj, pred, obj, QuadModel.CTX_ANY);
     }
 
     public final int size(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... contexts) {
-        return this.doSize(subj, pred, obj, contexts);
+        return doSize(subj, pred, obj, contexts);
     }
 
     public final int sizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... contexts) {
         if (contexts.length == 0) {
-            return this.doSizeEstimate(subj, pred, obj, null);
+            return doSizeEstimate(subj, pred, obj, null);
         } else {
             int estimate = 0;
             for (final Resource ctx : contexts) {
-                final int delta = this.doSizeEstimate(subj, pred, obj, ctx);
+                final int delta = doSizeEstimate(subj, pred, obj, ctx);
                 if (ctx == null) {
                     return delta;
                 }
@@ -246,22 +246,22 @@ public abstract class QuadModel extends AbstractCollection<Statement>
 
     @Override
     public final Iterator<Statement> iterator() {
-        return this.doIterator(null, null, null, QuadModel.CTX_ANY);
+        return doIterator(null, null, null, QuadModel.CTX_ANY);
     }
 
     public final Iterator<Statement> iterator(@Nullable final Resource subj,
             @Nullable final IRI pred, @Nullable final Value obj) {
-        return this.doIterator(subj, pred, obj, QuadModel.CTX_ANY);
+        return doIterator(subj, pred, obj, QuadModel.CTX_ANY);
     }
 
     public final Iterator<Statement> iterator(@Nullable final Resource subj,
             @Nullable final IRI pred, @Nullable final Value obj, final Resource... contexts) {
-        return this.doIterator(subj, pred, obj, contexts);
+        return doIterator(subj, pred, obj, contexts);
     }
 
     public final Iterator<BindingSet> evaluate(final TupleExpr expr,
             @Nullable final Dataset dataset, @Nullable final BindingSet bindings) {
-        return this.doEvaluate(Objects.requireNonNull(expr), dataset, bindings);
+        return doEvaluate(Objects.requireNonNull(expr), dataset, bindings);
     }
 
     @Override
@@ -300,7 +300,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     public final boolean contains(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
-        final Iterator<Statement> iterator = this.doIterator(subj, pred, obj, ctxs);
+        final Iterator<Statement> iterator = doIterator(subj, pred, obj, ctxs);
         try {
             return iterator.hasNext();
         } finally {
@@ -310,13 +310,13 @@ public abstract class QuadModel extends AbstractCollection<Statement>
 
     @Override
     public final boolean add(final Statement stmt) {
-        return this.doAdd(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+        return doAdd(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                 new Resource[] { stmt.getContext() });
     }
 
     public final boolean add(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
-        return this.doAdd(subj, pred, obj, QuadModel.CTX_ANY);
+        return doAdd(subj, pred, obj, QuadModel.CTX_ANY);
     }
 
     /**
@@ -344,12 +344,12 @@ public abstract class QuadModel extends AbstractCollection<Statement>
     @Override
     public final boolean add(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
-        return this.doAdd(subj, pred, obj, ctxs);
+        return doAdd(subj, pred, obj, ctxs);
     }
 
     @Override
     public final void clear() {
-        this.doRemove(null, null, null, QuadModel.CTX_ANY);
+        doRemove(null, null, null, QuadModel.CTX_ANY);
     }
 
     /**
@@ -360,14 +360,14 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      * @return true, if one or more statements have been removed.
      */
     public final boolean clear(final Resource... contexts) {
-        return this.doRemove(null, null, null, contexts);
+        return doRemove(null, null, null, contexts);
     }
 
     @Override
     public final boolean remove(@Nullable final Object object) {
         if (object instanceof Statement) {
             final Statement stmt = (Statement) object;
-            return this.doRemove(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+            return doRemove(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                     new Resource[] { stmt.getContext() });
         }
         return false;
@@ -375,7 +375,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
 
     public final boolean remove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
-        return this.doRemove(subj, pred, obj, QuadModel.CTX_ANY);
+        return doRemove(subj, pred, obj, QuadModel.CTX_ANY);
     }
 
     /**
@@ -399,7 +399,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     public final boolean remove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource... ctxs) {
-        return this.doRemove(subj, pred, obj, ctxs);
+        return doRemove(subj, pred, obj, ctxs);
     }
 
     @Override
@@ -651,7 +651,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final Value objectValue() throws ModelException {
-        final Iterator<Value> iter = this.objects().iterator();
+        final Iterator<Value> iter = objects().iterator();
         if (iter.hasNext()) {
             final Value obj = iter.next();
             if (iter.hasNext()) {
@@ -672,7 +672,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final Literal objectLiteral() throws ModelException {
-        final Value obj = this.objectValue();
+        final Value obj = objectValue();
         if (obj == null) {
             return null;
         }
@@ -692,7 +692,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final Resource objectResource() throws ModelException {
-        final Value obj = this.objectValue();
+        final Value obj = objectValue();
         if (obj == null) {
             return null;
         }
@@ -712,7 +712,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final IRI objectURI() throws ModelException {
-        final Value obj = this.objectValue();
+        final Value obj = objectValue();
         if (obj == null) {
             return null;
         }
@@ -732,7 +732,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
      */
     @Nullable
     public final String objectString() throws ModelException {
-        final Value obj = this.objectValue();
+        final Value obj = objectValue();
         if (obj == null) {
             return null;
         }
@@ -787,7 +787,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
             final Resource c = cv == null || !(cv.getValue() instanceof Resource) ? null
                     : (Resource) cv.getValue();
 
-            return this.doSizeEstimate(s, p, o, c);
+            return doSizeEstimate(s, p, o, c);
 
         });
     }
@@ -805,7 +805,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
 
     @SuppressWarnings("unchecked")
     public <T extends Value> T normalize(final T value) {
-        return (T) this.doNormalize(value);
+        return (T) doNormalize(value);
     }
 
     private abstract class ValueSet<V extends Value> extends AbstractSet<V> {
@@ -882,7 +882,7 @@ public abstract class QuadModel extends AbstractCollection<Statement>
                 if (this.current == null) {
                     throw new IllegalStateException();
                 }
-                ValueSet.this.remove(this.current);
+                QuadModel.this.remove(this.current);
                 this.current = null;
             }
 
@@ -1218,8 +1218,9 @@ public abstract class QuadModel extends AbstractCollection<Statement>
                             }
                         }
                     }
-                    return index == 0 ? null : index == ctxs.length ? ctxs //
-                            : Arrays.copyOfRange(ctxs, 0, index);
+                    return index == 0 ? null
+                            : index == ctxs.length ? ctxs //
+                                    : Arrays.copyOfRange(ctxs, 0, index);
                 }
                 return inputCtxs;
             }

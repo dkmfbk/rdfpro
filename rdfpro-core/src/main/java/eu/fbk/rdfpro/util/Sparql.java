@@ -16,7 +16,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
@@ -53,7 +52,6 @@ import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.AbstractFederatedServiceResolver;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedService;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolver;
-import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolverImpl;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.ExtendedEvaluationStrategyFactory;
 import org.eclipse.rdf4j.query.parser.ParsedBooleanQuery;
@@ -136,9 +134,10 @@ public final class Sparql {
         // Initialize FEDERATED_SERVICE_RESOLVER
         FederatedServiceResolver resolver = null;
         try {
-            Class.forName("org.apache.http.client.HttpClient");
-            resolver = new FederatedServiceResolverImpl();
-            LOGGER.trace("Using FederatedServiceResolverImpl");
+            final Class<?> clazz = Class.forName(
+                    "org.eclipse.rdf4j.repository.sparql.federation.SPARQLServiceResolver");
+            resolver = (FederatedServiceResolver) clazz.newInstance();
+            LOGGER.trace("Using SPARQLServiceResolver");
         } catch (final Throwable ex) {
             resolver = new AbstractFederatedServiceResolver() {
 
@@ -146,7 +145,7 @@ public final class Sparql {
                 protected FederatedService createService(final String serviceUrl)
                         throws QueryEvaluationException {
                     throw new QueryEvaluationException(
-                            "Apache HttpClient not in classpath: SERVICE invocation unsupported");
+                            "org.eclipse.rdf4j:rdf4j-repository-sparql not in classpath: SERVICE invocation unsupported");
                 }
 
             };
@@ -208,7 +207,7 @@ public final class Sparql {
                 } catch (final Throwable ex2) {
                     ex.addSuppressed(ex2);
                 }
-                Throwables.throwIfUnchecked(ex);
+                Exceptions.throwIfUnchecked(ex);
                 throw new RuntimeException(ex);
             }
 
@@ -331,10 +330,11 @@ public final class Sparql {
                 final Value o = pattern.getObjectVar().getValue();
                 final Resource c = (Resource) pattern.getContextVar().getValue();
                 try (CloseableIteration<?, QueryEvaluationException> i = c == null
-                        ? source.getStatements(s, p, o) : source.getStatements(s, p, o, c)) {
+                        ? source.getStatements(s, p, o)
+                        : source.getStatements(s, p, o, c)) {
                     return !i.hasNext() ? 0.0 : -1; // either set to 0 or default cardinality
                 } catch (final Throwable ex) {
-                    Throwables.throwIfUnchecked(ex);
+                    Exceptions.throwIfUnchecked(ex);
                     throw new RuntimeException(ex);
                 }
             });

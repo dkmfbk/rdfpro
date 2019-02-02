@@ -10,8 +10,6 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
@@ -40,6 +38,7 @@ import eu.fbk.rdfpro.AbstractRDFHandler;
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
 import eu.fbk.rdfpro.util.Algebra;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Statements;
@@ -81,7 +80,7 @@ public class FunctionIn implements Function {
         try {
             set = CACHE.get(key, () -> load(file, selector));
         } catch (final ExecutionException ex) {
-            Throwables.throwIfUnchecked(ex.getCause());
+            Exceptions.throwIfUnchecked(ex.getCause());
             throw new RuntimeException(ex);
         }
 
@@ -95,7 +94,7 @@ public class FunctionIn implements Function {
         // Build a value predicate based on the optional selector
         final Predicate<Value> predicate;
         if (selector == null) {
-            predicate = Predicates.alwaysTrue();
+            predicate = v -> true;
         } else {
             final ValueExpr expr = Algebra.parseValueExpr(selector.stringValue(), null,
                     Namespaces.DEFAULT.uriMap());
@@ -106,7 +105,7 @@ public class FunctionIn implements Function {
             } else if (vars.size() == 0) {
                 final Value r = Algebra.evaluateValueExpr(expr, new EmptyBindingSet());
                 predicate = r instanceof Literal && ((Literal) r).booleanValue() ? null
-                        : Predicates.alwaysFalse();
+                        : v -> false;
             } else {
                 final String var = Iterables.getFirst(vars, null);
                 final Class<? extends Value> type = var.equals("i") ? IRI.class

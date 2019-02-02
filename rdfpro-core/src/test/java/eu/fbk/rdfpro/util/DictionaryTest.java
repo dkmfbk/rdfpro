@@ -85,6 +85,7 @@ public class DictionaryTest {
                 // set.add(stmt.getContext());
             }
 
+            @SuppressWarnings("unused")
             private void add(final Value value) {
                 set.add(value);
                 if (value instanceof IRI) {

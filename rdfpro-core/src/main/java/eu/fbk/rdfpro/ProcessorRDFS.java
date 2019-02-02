@@ -46,6 +46,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Statements;
 
+@SuppressWarnings("deprecation")
 final class ProcessorRDFS implements RDFProcessor {
 
     private static final Map<IRI, IRI> VOC;
@@ -138,7 +139,8 @@ final class ProcessorRDFS implements RDFProcessor {
         });
         database.commit();
         final Ruleset ruleset = excludedRules == null || excludedRules.length == 0
-                ? Ruleset.DEFAULT : new Ruleset(excludedRules);
+                ? Ruleset.DEFAULT
+                : new Ruleset(excludedRules);
 
         new TBoxInferencer(decomposeOWLAxioms, ruleset, database).infer();
 

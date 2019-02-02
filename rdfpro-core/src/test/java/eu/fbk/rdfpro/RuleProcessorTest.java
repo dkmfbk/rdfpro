@@ -49,6 +49,7 @@ public class RuleProcessorTest {
         System.out.println("Average: " + (System.currentTimeMillis() - ts) / (n - 5));
     }
 
+    @SuppressWarnings("unused")
     private static void mainTemplate(final String... args) throws Throwable {
 
         int index = 0;
@@ -103,6 +104,7 @@ public class RuleProcessorTest {
         out[offset++] = OWL.THING;
     }
 
+    @SuppressWarnings("unused")
     private static void method2(final Resource s, final IRI p, final Value o, final Resource c,
             final QuadHandler handler) {
         handler.handle(s, OWL.SAMEAS, s, OWL.THING);
@@ -114,6 +116,7 @@ public class RuleProcessorTest {
 
     }
 
+    @SuppressWarnings("unused")
     private static Statement method3(final Statement s) {
         return Statements.VALUE_FACTORY.createStatement(s.getSubject(), OWL.SAMEAS, s.getSubject(),
                 OWL.THING);

@@ -44,6 +44,7 @@ final class HashValueFactory extends AbstractValueFactory {
 
     private final Map<String, IRI> w3cIRIs;
 
+    @SuppressWarnings("deprecation")
     private HashValueFactory() {
         this.w3cIRIs = new HashMap<>(1024);
         for (final IRI iri : new IRI[] { XMLSchema.DECIMAL, XMLSchema.INTEGER,
@@ -235,7 +236,8 @@ final class HashValueFactory extends AbstractValueFactory {
         @Override
         public Optional<String> getLanguage() {
             return this.languageOrDatatype instanceof String
-                    ? Optional.of((String) this.languageOrDatatype) : Optional.empty();
+                    ? Optional.of((String) this.languageOrDatatype)
+                    : Optional.empty();
         }
 
         @Override
