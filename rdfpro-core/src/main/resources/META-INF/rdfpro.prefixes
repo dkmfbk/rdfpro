@@ -597,6 +597,7 @@ http://rdf.ontology2.com/vocab# vocab
 http://rdf123.umbc.edu/ns/ rdf123
 http://rdflivenews.aksw.org/ontology/ rlno
 http://rdflivenews.aksw.org/resource/ rlnr
+http://rdfpro.fbk.eu/ontologies/rules# rr
 http://rdfs.org/ns/void# void
 http://rdfs.org/sioc/actions# sioca
 http://rdfs.org/sioc/argument# arg
@@ -1016,7 +1017,7 @@ http://www.w3.org/ns/org# org
 http://www.w3.org/ns/people# gldp
 http://www.w3.org/ns/person# person
 http://www.w3.org/ns/prov# prov
-http://www.w3.org/ns/r2rml# r2rml rr
+http://www.w3.org/ns/r2rml# r2rml
 http://www.w3.org/ns/rad# rad
 http://www.w3.org/ns/radion# radion
 http://www.w3.org/ns/rdfa# rdfa

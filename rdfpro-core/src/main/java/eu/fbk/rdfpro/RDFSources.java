@@ -1,25 +1,27 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 package eu.fbk.rdfpro;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Writer;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -28,16 +30,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.xml.stream.XMLInputFactory;
@@ -45,32 +48,38 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Model;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.rio.ParserConfig;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFParseException;
-import org.openrdf.rio.RDFParser;
-import org.openrdf.rio.Rio;
-import org.openrdf.rio.helpers.BasicParserSettings;
-import org.openrdf.rio.helpers.NTriplesParserSettings;
-import org.openrdf.rio.helpers.ParseErrorLogger;
-import org.openrdf.rio.helpers.RDFJSONParserSettings;
-import org.openrdf.rio.helpers.TriXParserSettings;
-import org.openrdf.rio.helpers.XMLParserSettings;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.rio.ParseErrorListener;
+import org.eclipse.rdf4j.rio.ParserConfig;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RDFParser;
+import org.eclipse.rdf4j.rio.RDFWriter;
+import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
+import org.eclipse.rdf4j.rio.helpers.ParseErrorLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.Hash;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.QuadModel;
@@ -81,42 +90,14 @@ import eu.fbk.rdfpro.util.Statements;
  */
 public final class RDFSources {
 
-    private static final ParserConfig DEFAULT_PARSER_CONFIG;
-
-    static {
-        final ParserConfig config = new ParserConfig();
-        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
-        config.set(BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES, false);
-        config.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, false);
-        config.set(BasicParserSettings.VERIFY_LANGUAGE_TAGS, false);
-        config.set(BasicParserSettings.VERIFY_RELATIVE_URIS, false);
-        config.set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, false);
-        config.set(BasicParserSettings.NORMALIZE_LANGUAGE_TAGS, true);
-        config.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
-        config.set(NTriplesParserSettings.FAIL_ON_NTRIPLES_INVALID_LINES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_DATATYPES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_LANGUAGES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_TYPES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_MULTIPLE_OBJECT_VALUES, false);
-        config.set(RDFJSONParserSettings.FAIL_ON_UNKNOWN_PROPERTY, false);
-        config.set(RDFJSONParserSettings.SUPPORT_GRAPHS_EXTENSION, true);
-        config.set(TriXParserSettings.FAIL_ON_TRIX_INVALID_STATEMENT, false);
-        config.set(TriXParserSettings.FAIL_ON_TRIX_MISSING_DATATYPE, false);
-        config.set(XMLParserSettings.FAIL_ON_DUPLICATE_RDF_ID, false);
-        config.set(XMLParserSettings.FAIL_ON_INVALID_NCNAME, false);
-        config.set(XMLParserSettings.FAIL_ON_INVALID_QNAME, false);
-        config.set(XMLParserSettings.FAIL_ON_MISMATCHED_TAGS, false);
-        config.set(XMLParserSettings.FAIL_ON_NON_STANDARD_ATTRIBUTES, false);
-        config.set(XMLParserSettings.FAIL_ON_SAX_NON_FATAL_ERRORS, false);
-        DEFAULT_PARSER_CONFIG = config;
-    }
+    private static final Logger LOGGER = LoggerFactory.getLogger(RDFSources.class);
 
     /** The null {@code RDFSource} that returns no statements, namespaces and comments. */
     public static final RDFSource NIL = new RDFSource() {
 
         @Override
-        public void emit(final RDFHandler handler, final int passes) throws RDFSourceException,
-                RDFHandlerException {
+        public void emit(final RDFHandler handler, final int passes)
+                throws RDFSourceException, RDFHandlerException {
             Objects.requireNonNull(handler);
             try {
                 for (int i = 0; i < passes; ++i) {
@@ -150,11 +131,11 @@ public final class RDFSources {
      */
     public static RDFSource wrap(final Iterable<? extends Statement> statements) {
         if (statements instanceof Model) {
-            return wrap(statements, ((Model) statements).getNamespaces());
+            return RDFSources.wrap(statements, ((Model) statements).getNamespaces());
         } else if (statements instanceof QuadModel) {
-            return wrap(statements, ((QuadModel) statements).getNamespaces());
+            return RDFSources.wrap(statements, ((QuadModel) statements).getNamespaces());
         } else {
-            return wrap(statements, Collections.emptyList());
+            return RDFSources.wrap(statements, Collections.emptyList());
         }
     }
 
@@ -197,12 +178,13 @@ public final class RDFSources {
                         }
 
                         @Override
-                        public void handleComment(final String comment) throws RDFHandlerException {
+                        public void handleComment(final String comment)
+                                throws RDFHandlerException {
                             // discard
                         }
 
                         @Override
-                        public void handleNamespace(final String prefix, final String uri)
+                        public void handleNamespace(final String prefix, final String iri)
                                 throws RDFHandlerException {
                             // discard
                         }
@@ -266,11 +248,11 @@ public final class RDFSources {
         } else {
             list = new ArrayList<Namespace>(namespaces.size());
             for (final Map.Entry<String, String> entry : namespaces.entrySet()) {
-                list.add(new NamespaceImpl(entry.getKey(), entry.getValue()));
+                list.add(new SimpleNamespace(entry.getKey(), entry.getValue()));
             }
         }
 
-        return wrap(statements, list);
+        return RDFSources.wrap(statements, list);
     }
 
     /**
@@ -280,7 +262,7 @@ public final class RDFSources {
      * sequentially if {@code parallelize == false}, otherwise multiple files can be parsed in
      * parallel and files in a line-oriented RDF format can be parsed using multiple threads, in
      * both cases the effect being a greater throughput but no guarantee on the statements order,
-     * however. Arguments {@code preserveBNodes}, {@code baseURI} and {@code config} control the
+     * however. Arguments {@code preserveBNodes}, {@code baseIRI} and {@code config} control the
      * parsing process.
      *
      * @param parallelize
@@ -288,19 +270,26 @@ public final class RDFSources {
      * @param preserveBNodes
      *            true if BNodes in parsed files should be preserved, false if they should be
      *            rewritten on a per-file basis to avoid possible clashes
-     * @param baseURI
-     *            the base URI to be used for resolving relative URIs, possibly null
+     * @param baseIRI
+     *            the base IRI to be used for resolving relative IRIs, possibly null
      * @param config
      *            the optional {@code ParserConfig} for the fine tuning of the used RDF parser; if
      *            null a default, maximally permissive configuration will be used
+     * @param errorWriterSupplier
+     *            an optional function that maps a file location to a {@link Writer} where to emit
+     *            malformed lines detected when reading that file
+     * @param errorLogged
+     *            false if errors in input files should be silently ignored
      * @param locations
      *            the locations of the RDF files to be read
      * @return the created {@code RDFSource}
      */
     public static RDFSource read(final boolean parallelize, final boolean preserveBNodes,
-            @Nullable final String baseURI, @Nullable final ParserConfig config,
-            final String... locations) {
-        return new FileSource(parallelize, preserveBNodes, baseURI, config, locations);
+            @Nullable final String baseIRI, @Nullable final ParserConfig config,
+            @Nullable final Function<String, Writer> errorWriterSupplier,
+            final boolean errorLogged, final String... locations) {
+        return new FileSource(parallelize, preserveBNodes, baseIRI, config, errorWriterSupplier,
+                errorLogged, locations);
     }
 
     /**
@@ -342,7 +331,7 @@ public final class RDFSources {
                         || statement.getContext() instanceof BNode) {
 
                     final Resource s = (Resource) rewrite(statement.getSubject());
-                    final URI p = statement.getPredicate();
+                    final IRI p = statement.getPredicate();
                     final Value o = rewrite(statement.getObject());
                     final Resource c = (Resource) rewrite(statement.getContext());
 
@@ -371,9 +360,22 @@ public final class RDFSources {
         };
     }
 
-    private static class FileSource implements RDFSource {
+    @Nullable
+    private static String getBaseIri(final RDFParser parser, @Nullable final String fallback) {
+        Objects.requireNonNull(parser);
+        try {
+            final Field field = AbstractRDFParser.class.getDeclaredField("baseURI");
+            field.setAccessible(true);
+            final Object baseIri = field.get(parser);
+            return baseIri == null ? null : baseIri.toString();
+        } catch (final Throwable ex) {
+            RDFSources.LOGGER.error(
+                    "Could not extract base IRI from parser " + parser.getClass().getName(), ex);
+        }
+        return fallback;
+    }
 
-        private static final Logger LOGGER = LoggerFactory.getLogger(FileSource.class);
+    private static class FileSource implements RDFSource {
 
         private final boolean parallelize;
 
@@ -381,24 +383,38 @@ public final class RDFSources {
 
         private final String base;
 
-        private final ParserConfig parserConfig;
+        @Nullable
+        private final Function<String, Writer> errorWriterSupplier;
+
+        private final boolean errorLogged;
+
+        private final AtomicLong errorCounter;
+
+        private final AtomicLong errorLinesCounter;
+
+        private final ParserConfig config;
 
         private final String[] locations;
 
         public FileSource(final boolean parallelize, final boolean preserveBNodes,
-                @Nullable final String baseURI, @Nullable final ParserConfig parserConfig,
-                final String... locations) {
+                @Nullable final String baseIRI, @Nullable final ParserConfig config,
+                @Nullable final Function<String, Writer> errorWriterSupplier,
+                final boolean errorLogged, final String... locations) {
 
             this.parallelize = parallelize;
             this.preserveBNodes = preserveBNodes;
-            this.base = baseURI != null ? baseURI : "";
-            this.parserConfig = parserConfig != null ? parserConfig : DEFAULT_PARSER_CONFIG;
+            this.base = Strings.nullToEmpty(baseIRI);
+            this.config = config != null ? config : Statements.newParserConfig(false);
+            this.errorWriterSupplier = errorWriterSupplier;
+            this.errorLogged = errorLogged;
+            this.errorCounter = new AtomicLong();
+            this.errorLinesCounter = new AtomicLong();
             this.locations = locations;
         }
 
         @Override
-        public void emit(final RDFHandler handler, final int passes) throws RDFSourceException,
-                RDFHandlerException {
+        public void emit(final RDFHandler handler, final int passes)
+                throws RDFSourceException, RDFHandlerException {
 
             Objects.requireNonNull(handler);
 
@@ -414,9 +430,14 @@ public final class RDFSources {
                 for (int i = 0; i < passes; ++i) {
                     sink.startRDF();
                     parse(wrappedSink);
+                    if (this.errorCounter.get() > 0) {
+                        RDFSources.LOGGER.info("{} lines with parse errors/warnings ({} total)",
+                                this.errorLinesCounter, this.errorCounter);
+                        this.errorCounter.set(0);
+                    }
                     sink.endRDF();
                 }
-            } catch (RDFHandlerException | RuntimeException | Error ex) {
+            } catch (RuntimeException | Error ex) {
                 throw ex;
             } catch (final Throwable ex) {
                 throw new RDFSourceException(ex);
@@ -455,166 +476,376 @@ public final class RDFSources {
 
             });
 
-            final Map<String, InputStream> streams = new HashMap<String, InputStream>();
-
-            final List<ParseJob> jobs = new ArrayList<ParseJob>();
+            // Define file jobs
+            final List<FileJob> fileJobs = Lists.newArrayList();
             for (final String location : this.locations) {
-                final RDFFormat format = Rio.getParserFormatForFileName("test"
-                        + IO.extractExtension(location));
-                final int parallelism = !this.parallelize
-                        || !Statements.isRDFFormatLineBased(format) ? 1 : Environment.getCores();
-                for (int i = 0; i < parallelism; ++i) {
-                    jobs.add(new ParseJob(streams, location.toString(), handler));
-                }
+                fileJobs.add(new FileJob(location));
             }
 
-            final int parallelism = !this.parallelize ? 1 : Math.min(Environment.getCores(),
-                    jobs.size());
-
-            final CountDownLatch latch = new CountDownLatch(parallelism);
-            final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-            final AtomicInteger index = new AtomicInteger(0);
-
-            final List<Runnable> runnables = new ArrayList<Runnable>();
-            for (int i = 0; i < parallelism; ++i) {
-                runnables.add(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        try {
-                            while (true) {
-                                ParseJob currentJob;
-                                synchronized (jobs) {
-                                    final int i = index.getAndIncrement();
-                                    if (i >= jobs.size()) {
-                                        break;
-                                    }
-                                    currentJob = jobs.get(i);
-                                }
-                                currentJob.run();
-                            }
-                        } catch (final Throwable ex) {
-                            synchronized (jobs) {
-                                for (final ParseJob job : jobs) {
-                                    job.cancel();
-                                }
-                            }
-                            exception.set(ex);
-                        } finally {
-                            latch.countDown();
-                        }
-                    }
-
-                });
-            }
-
+            // Get runnable tasks for each job lazily, and execute them using multiple threads
             try {
-                for (int i = 1; i < parallelism; ++i) {
-                    Environment.getPool().execute(runnables.get(i));
+                final Map<Long, Runnable> runnables = Maps.newTreeMap();
+                final int delta = 2 * Environment.getCores();
+                int i = 0;
+                for (final FileJob fileJob : fileJobs) {
+                    int j = 0;
+                    for (final Runnable runnable : fileJob.start(handler)) {
+                        final long priority = (long) (i + j * delta) << 32 | i;
+                        final Runnable old = runnables.put(priority, runnable);
+                        Preconditions.checkState(old == null); // safety measure
+                        ++j;
+                    }
+                    ++i;
                 }
-                if (!runnables.isEmpty()) {
-                    runnables.get(0).run();
-                }
-                latch.await();
-                if (exception.get() != null) {
-                    throw exception.get();
-                }
+                Environment.run(runnables.values());
             } finally {
-                for (final InputStream stream : streams.values()) {
-                    IO.closeQuietly(stream);
+                for (final FileJob fileJob : fileJobs) {
+                    fileJob.stop();
                 }
             }
         }
 
-        private class ParseJob {
+        @FunctionalInterface
+        private interface StreamSupplier {
 
-            private final Map<String, InputStream> streams;
+            Closeable get() throws Throwable;
+
+        }
+
+        private final class FileJob implements ParseErrorListener {
 
             private final String location;
 
-            private final RDFHandler handler;
+            private final String locationAbbreviated;
 
-            private volatile boolean closed;
+            private final RDFFormat format;
 
-            private Closeable in;
+            private final Set<Namespace> namespaces;
 
-            ParseJob(final Map<String, InputStream> streams, final String location,
-                    final RDFHandler handler) {
-                this.streams = streams;
+            @Nullable
+            private String baseIri;
+
+            @Nullable
+            private List<StreamSupplier> streamSuppliers;
+
+            @Nullable
+            private Set<Closeable> openStreams;
+
+            @Nullable
+            private final Set<Long> errorLines;
+
+            FileJob(final String location) {
+
+                // Compute abbreviated location (filename only)
+                final int index = location.lastIndexOf('/');
+                final String locationAbbreviated = index < 0 ? location
+                        : location.substring(index + 1);
+
+                // Determine RDF format based on supplied location
+                final RDFFormat format = Rio
+                        .getParserFormatForFileName("test" + IO.extractExtension(location))
+                        .orElse(null);
+
+                // Initialize state
                 this.location = location;
-                this.handler = handler;
-                this.closed = false;
-                this.in = null;
+                this.locationAbbreviated = locationAbbreviated;
+                this.format = format;
+                this.namespaces = Sets.newHashSet();
+                this.streamSuppliers = null;
+                this.openStreams = null;
+                this.baseIri = null;
+                this.errorLines = Sets.newHashSet();
             }
 
-            void cancel() {
-                this.closed = true;
-                IO.closeQuietly(this.in);
+            synchronized List<Runnable> start(final RDFHandler handler) {
+
+                // Check argument and state
+                Preconditions.checkNotNull(handler);
+                Preconditions.checkState(this.streamSuppliers == null);
+
+                // Wrap the supplied handler to rewrite BNodes at a per-file level, if requested
+                final RDFHandler wrappedHandler = FileSource.this.preserveBNodes ? handler
+                        : RDFSources.rewriteBNodes(handler,
+                                Hash.murmur3(this.location).toString());
+
+                try {
+                    // Open streams
+                    this.streamSuppliers = Lists.newArrayList();
+                    this.openStreams = Sets.newIdentityHashSet();
+                    if (!Statements.isRDFFormatTextBased(this.format)) {
+                        this.streamSuppliers.add(() -> IO.buffer(IO.read(this.location)));
+                    } else if (!FileSource.this.parallelize
+                            || !Statements.isRDFFormatLineBased(this.format)) {
+                        this.streamSuppliers
+                        .add(() -> IO.utf8Reader(IO.buffer(IO.read(this.location))));
+                    } else {
+                        final AtomicReference<List<Reader>> holder = new AtomicReference<>();
+                        for (int i = 0; i < Environment.getCores(); ++i) {
+                            this.streamSuppliers.add(() -> {
+                                synchronized (holder) {
+                                    List<Reader> readers = holder.get();
+                                    if (readers == null) {
+                                        readers = Lists.newArrayList();
+                                        final InputStream s = IO.read(this.location);
+                                        for (int j = 0; j < Environment.getCores(); ++j) {
+                                            readers.add(IO.utf8Reader(
+                                                    IO.parallelBuffer(s, (byte) '\n')));
+                                        }
+                                        holder.set(readers);
+                                    }
+                                    return readers.remove(0);
+                                }
+                            });
+                        }
+                    }
+
+                    // Log beginning of parse operation
+                    if (RDFSources.LOGGER.isDebugEnabled()) {
+                        RDFSources.LOGGER.debug("Starting {} {} parsing for {}",
+                                this.streamSuppliers.size() == 1 ? "sequential" : "parallel",
+                                        this.streamSuppliers.get(0) instanceof InputStream ? "binary"
+                                                : "text",
+                                                this.location);
+                    }
+
+                    // Allocate a lock object used to synchronize concurrent parse threads
+                    final ReentrantLock lock = new ReentrantLock();
+
+                    // Create runnable parse tasks
+                    final List<Runnable> parseJobs = new ArrayList<>();
+                    for (final StreamSupplier streamSupplier : this.streamSuppliers) {
+                        parseJobs.add(() -> {
+
+                            // Acquire a lock to check if we are the first thread parsing the file
+                            // (check done on baseIri being assigned). If not, unlock immediately
+                            lock.lock();
+                            final boolean firstThread = this.baseIri == null;
+                            if (!firstThread) {
+                                lock.unlock();
+                            }
+
+                            Closeable stream = null;
+                            try {
+                                // Get the parser config. The first thread may use the supplied
+                                // config unchanged, while other threads have to clone it and
+                                // inject namespaces parsed by first thread into it
+                                ParserConfig config = FileSource.this.config;
+                                if (!firstThread) {
+                                    config = Statements.newParserConfig(config);
+                                    config.set(BasicParserSettings.NAMESPACES, this.namespaces);
+                                }
+
+                                // TODO: for Turtle and TriG, BNodes without an explicit id in the
+                                // file (i.e. []) do not produce the same BNode objects if the
+                                // file is read multiple time !!!
+
+                                // Build the RDF parser. Warning and errors are routed to the
+                                // FileJob object, while a special RDFHandler is needed for the
+                                // first thread in order to intercept namespaces and baseIri
+                                // changes in the preamble of the RDF file
+                                final RDFParser parser = Rio.createParser(this.format);
+                                parser.setParserConfig(config);
+                                parser.setValueFactory(Statements.VALUE_FACTORY);
+                                parser.setParseErrorListener(this);
+                                parser.setPreserveBNodeIDs(true);
+                                parser.setRDFHandler(!firstThread ? wrappedHandler
+                                        : new AbstractRDFHandlerWrapper(wrappedHandler) {
+
+                                    private boolean insidePreamble = true;
+
+                                    @Override
+                                    public void handleNamespace(final String prefix,
+                                            final String uri) {
+                                        // Propagate and store namespace, if in preamble
+                                        super.handleNamespace(prefix, uri);
+                                        if (this.insidePreamble) {
+                                            FileJob.this.namespaces
+                                            .add(new SimpleNamespace(prefix, uri));
+                                        }
+                                    }
+
+                                    @Override
+                                    public void handleStatement(final Statement stmt) {
+                                        // Propagate and, at first statement (= end of
+                                        // preamble) store baseIri and release lock
+                                        super.handleStatement(stmt);
+                                        if (this.insidePreamble) {
+                                            this.insidePreamble = false;
+                                            FileJob.this.baseIri = RDFSources.getBaseIri(
+                                                    parser, FileSource.this.base);
+                                            lock.unlock();
+                                        }
+                                    }
+
+                                });
+
+                                // Assign the initial value of the baseIri in the first thread
+                                if (firstThread) {
+                                    this.baseIri = FileSource.this.base;
+                                }
+
+                                // Perform parsing
+                                stream = streamSupplier.get();
+                                this.openStreams.add(stream);
+                                if (stream instanceof InputStream) {
+                                    parser.parse((InputStream) stream, this.baseIri);
+                                } else {
+                                    parser.parse((Reader) stream, this.baseIri);
+                                }
+
+                            } catch (final Throwable ex) {
+                                // Wrap and propagate only if the FileJob is not being stopped
+                                synchronized (FileJob.this) {
+                                    if (this.streamSuppliers != null) {
+                                        final String m = "Parsing of " + this.location + " failed";
+                                        if (ex instanceof RDFHandlerException) {
+                                            throw new RDFHandlerException(m, ex);
+                                        } else {
+                                            throw new RDFSourceException(m, ex);
+                                        }
+                                    }
+                                }
+
+                            } finally {
+                                // Make sure the lock is always released by this thread
+                                if (lock.isHeldByCurrentThread()) {
+                                    lock.unlock();
+                                }
+
+                                // Close the stream and remove it from the list of pending
+                                // streams. If empty, close the job (nothing else to do)
+                                IO.closeQuietly(stream);
+                                this.openStreams.remove(stream);
+                                synchronized (FileJob.this) {
+                                    this.streamSuppliers.remove(streamSupplier);
+                                    if (this.streamSuppliers.size() == 0) {
+                                        stop();
+                                    }
+                                }
+                            }
+
+                        });
+                    }
+                    return parseJobs;
+
+                } catch (final Throwable ex) {
+                    // On failure, close everything, wrap if necessary and propagate
+                    stop();
+                    Exceptions.throwIfUnchecked(ex);
+                    throw new RuntimeException(ex);
+                }
             }
 
-            void run() throws Throwable {
+            synchronized void stop() {
 
-                if (this.closed) {
+                // Abort if already closed
+                if (this.streamSuppliers == null) {
                     return;
                 }
 
-                final RDFFormat format = Rio.getParserFormatForFileName("test"
-                        + IO.extractExtension(this.location));
+                // Close all opened streams and mark the object as closed
+                for (final Closeable stream : this.openStreams) {
+                    IO.closeQuietly(stream);
+                }
+                this.openStreams = null;
+                this.streamSuppliers = null;
 
-                final String logMsg = "Starting {} {} {} parsing for {}";
-                if (!Statements.isRDFFormatTextBased(format)) {
-                    LOGGER.debug(logMsg, "sequential", "binary", format.getName(), this.location);
-                    this.in = IO.buffer(IO.read(this.location));
+                // Dump bad lines, if recorded (in this case we assume text format)
+                if (!this.errorLines.isEmpty() && FileSource.this.errorWriterSupplier != null) {
+                    try {
+                        // Get the writer where to emit bad lines. Abort if no writer returned
+                        final Writer writer = FileSource.this.errorWriterSupplier
+                                .apply(this.location);
+                        if (writer == null) {
+                            return;
+                        }
 
-                } else if (!FileSource.this.parallelize
-                        || !Statements.isRDFFormatLineBased(format)) {
-                    LOGGER.debug(logMsg, "sequential", "text", format.getName(), this.location);
-                    this.in = IO.buffer(new InputStreamReader(IO.read(this.location), Charset
-                            .forName("UTF-8")));
+                        // Emit the base IRI, if defined
+                        if (!Strings.isNullOrEmpty(this.baseIri)) {
+                            writer.write("@base ");
+                            Statements.formatValue(
+                                    Statements.VALUE_FACTORY.createIRI(this.baseIri), null,
+                                    writer);
+                            writer.write(" .\n\n");
+                        }
 
-                } else {
-                    LOGGER.debug(logMsg, "parallel", "text", format.getName(), this.location);
-                    synchronized (this.streams) {
-                        InputStream stream = this.streams.get(this.location);
-                        if (stream == null) {
-                            if (this.streams.containsKey(this.location)) {
-                                return; // read already completed for file at location
+                        // Emit namespaces, if defined
+                        if (!this.namespaces.isEmpty()) {
+                            final String originalLoc = IO.extractURL(this.location).toString();
+                            final RDFFormat format = Rio.getParserFormatForFileName(originalLoc)
+                                    .orElse(this.format);
+                            final RDFWriter rdfWriter = Rio.createWriter(format, writer);
+                            rdfWriter.startRDF();
+                            for (final Namespace ns : this.namespaces) {
+                                rdfWriter.handleNamespace(ns.getPrefix(), ns.getName());
                             }
-                            stream = IO.read(this.location);
-                            this.streams.put(this.location, stream);
+                            rdfWriter.endRDF();
+                            writer.write("\n");
                         }
-                        this.in = IO.utf8Reader(IO.parallelBuffer(stream, (byte) '\n'));
-                    }
-                }
 
-                try {
-                    final RDFHandler handler = FileSource.this.preserveBNodes ? this.handler //
-                            : rewriteBNodes(this.handler, Hash.murmur3(this.location).toString());
-                    final RDFParser parser = Rio.createParser(format);
-                    parser.setParserConfig(FileSource.this.parserConfig);
-                    parser.setValueFactory(Statements.VALUE_FACTORY);
-                    parser.setRDFHandler(handler);
-                    if (this.in instanceof InputStream) {
-                        parser.parse((InputStream) this.in, FileSource.this.base);
-                    } else {
-                        parser.parse((Reader) this.in, FileSource.this.base);
-                    }
-                } catch (final Throwable ex) {
-                    if (!this.closed) {
-                        final String exMsg = "Parsing of " + this.location + " failed";
-                        if (ex instanceof RDFHandlerException) {
-                            throw new RDFHandlerException(exMsg, ex);
-                        } else {
-                            throw new RDFSourceException(exMsg, ex);
+                        // Emit bad lines, retrieving them from the input file
+                        try (BufferedReader in = new BufferedReader(
+                                IO.utf8Reader(IO.buffer(IO.read(this.location))))) {
+                            long counter = 0;
+                            String line;
+                            while ((line = in.readLine()) != null) {
+                                ++counter;
+                                if (this.errorLines.contains(counter)) {
+                                    writer.write(line);
+                                    writer.write("\n");
+                                }
+                            }
+                        } finally {
+                            IO.closeQuietly(writer);
                         }
-                    }
-                } finally {
-                    synchronized (this.streams) {
-                        IO.closeQuietly(this.in);
-                        this.in = null;
-                        this.streams.put(this.location, null); // ensure stream is not read again
+
+                    } catch (final Throwable ex) {
+                        // On error, log and ignore
+                        RDFSources.LOGGER.error("Failed to dump bad lines for " + this.location,
+                                ex);
                     }
                 }
+            }
+
+            @Override
+            public void warning(final String msg, final long line, final long col) {
+                recordError(line);
+                if (FileSource.this.errorLogged) {
+                    RDFSources.LOGGER.warn(errorMessageFor(msg, line, col));
+                }
+            }
+
+            @Override
+            public void error(final String msg, final long line, final long col) {
+                recordError(line);
+                if (FileSource.this.errorLogged) {
+                    RDFSources.LOGGER.error(errorMessageFor(msg, line, col));
+                }
+            }
+
+            @Override
+            public void fatalError(final String msg, final long line, final long col) {
+                recordError(line);
+                if (FileSource.this.errorLogged) {
+                    RDFSources.LOGGER.error(errorMessageFor(msg, line, col) + " (fatal)");
+                }
+            }
+
+            private void recordError(final long line) {
+                FileSource.this.errorCounter.incrementAndGet();
+                if (line >= 0) {
+                    synchronized (this.errorLines) {
+                        final boolean added = this.errorLines.add(line);
+                        if (added) {
+                            FileSource.this.errorLinesCounter.incrementAndGet();
+                        }
+                    }
+                }
+            }
+
+            private String errorMessageFor(final String msg, final long line, final long col) {
+                return "PARSE ERROR [" + this.locationAbbreviated + ":" + line
+                        + (col >= 0 ? "," + col : "") + "] " + msg.replaceAll("\\s+", " ");
             }
 
         }
@@ -640,12 +871,12 @@ public final class RDFSources {
             this.preserveBNodes = preserveBNodes;
             this.endpointURL = Objects.requireNonNull(endpointURL);
             this.query = Objects.requireNonNull(query);
-            this.isSelect = isSelectQuery(query);
+            this.isSelect = SparqlSource.isSelectQuery(query);
         }
 
         @Override
-        public void emit(final RDFHandler handler, final int passes) throws RDFSourceException,
-                RDFHandlerException {
+        public void emit(final RDFHandler handler, final int passes)
+                throws RDFSourceException, RDFHandlerException {
 
             // different BNodes may be returned each time the query is evaluated;
             // to allow preserving their identities, we should store the query result and
@@ -657,7 +888,7 @@ public final class RDFSources {
                 actualHandler = RDFHandlers.decouple(actualHandler);
             }
             if (!this.preserveBNodes) {
-                actualHandler = rewriteBNodes(actualHandler, //
+                actualHandler = RDFSources.rewriteBNodes(actualHandler, //
                         Hash.murmur3(this.endpointURL).toString());
             }
 
@@ -667,10 +898,11 @@ public final class RDFSources {
                     sendQuery(actualHandler);
                     actualHandler.endRDF();
                 }
-            } catch (RDFHandlerException | RuntimeException | Error ex) {
+            } catch (RuntimeException | Error ex) {
                 throw ex;
             } catch (final Throwable ex) {
-                throw new RDFSourceException("Sparql query to " + this.endpointURL + " failed", ex);
+                throw new RDFSourceException("Sparql query to " + this.endpointURL + " failed",
+                        ex);
             } finally {
                 IO.closeQuietly(actualHandler);
             }
@@ -679,46 +911,47 @@ public final class RDFSources {
         private void sendQuery(final RDFHandler handler) throws Throwable {
 
             final List<String> acceptTypes;
-            acceptTypes = this.isSelect ? Arrays.asList("application/sparql-results+xml",
-                    "application/xml") : RDFFormat.RDFXML.getMIMETypes();
+            acceptTypes = this.isSelect
+                    ? Arrays.asList("application/sparql-results+xml", "application/xml")
+                            : RDFFormat.RDFXML.getMIMETypes();
 
-            final byte[] requestBody = ("query=" + URLEncoder.encode(this.query, "UTF-8") + "&infer=true")
-                    .getBytes(Charset.forName("UTF-8"));
+                    final byte[] requestBody = ("query=" + URLEncoder.encode(this.query, "UTF-8")
+                    + "&infer=true").getBytes(Charset.forName("UTF-8"));
 
-            final URL url = new URL(this.endpointURL);
-            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Accept", String.join(",", acceptTypes));
-            connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
-            connection.setRequestProperty("Content-Type",
-                    "application/x-www-form-urlencoded; charset=utf-8");
+                    final URL url = new URL(this.endpointURL);
+                    final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Accept", String.join(",", acceptTypes));
+                    connection.setRequestProperty("Content-Length", Integer.toString(requestBody.length));
+                    connection.setRequestProperty("Content-Type",
+                            "application/x-www-form-urlencoded; charset=utf-8");
 
-            connection.connect();
+                    connection.connect();
 
-            try {
-                final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
-                out.write(requestBody);
-                out.close();
+                    try {
+                        final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
+                        out.write(requestBody);
+                        out.close();
 
-                final int httpCode = connection.getResponseCode();
-                if (httpCode != HttpURLConnection.HTTP_OK) {
-                    throw new IOException("Download from '" + this.endpointURL + "' failed (HTTP "
-                            + httpCode + ")");
-                }
+                        final int httpCode = connection.getResponseCode();
+                        if (httpCode != HttpURLConnection.HTTP_OK) {
+                            throw new IOException("Download from '" + this.endpointURL + "' failed (HTTP "
+                                    + httpCode + ")");
+                        }
 
-                try (InputStream in = connection.getInputStream()) {
-                    if (this.isSelect) {
-                        parseTupleResult(in, handler);
-                    } else {
-                        parseTripleResult(in, handler);
+                        try (InputStream in = connection.getInputStream()) {
+                            if (this.isSelect) {
+                                parseTupleResult(in, handler);
+                            } else {
+                                parseTripleResult(in, handler);
+                            }
+                        }
+
+                    } finally {
+                        connection.disconnect();
                     }
-                }
-
-            } finally {
-                connection.disconnect();
-            }
         }
 
         private void parseTripleResult(final InputStream stream, final RDFHandler handler)
@@ -750,16 +983,12 @@ public final class RDFSources {
 
             final XMLStreamReader in = XMLInputFactory.newInstance().createXMLStreamReader(stream);
 
-            while (in.nextTag() != XMLStreamConstants.START_ELEMENT
-                    || !in.getLocalName().equals("results")) {
-            }
-
-            while (enterChild(in, "result")) {
-                while (enterChild(in, "binding")) {
+            while (seek(in, "result", null)) {
+                while (seek(in, "binding", "result")) {
                     final String varName = in.getAttributeValue(null, "name");
                     final char var = Character.toLowerCase(varName.charAt(0));
                     final int index = var == 's' ? 0 : var == 'p' ? 1 : var == 'o' ? 2 : 3;
-                    if (!enterChild(in, null)) {
+                    if (!seek(in, null, "binding")) {
                         throw new XMLStreamException("Empty <binding> element found");
                     }
                     final String tag = in.getLocalName();
@@ -767,25 +996,25 @@ public final class RDFSources {
                     if ("bnode".equals(tag)) {
                         value = vf.createBNode(in.getElementText());
                     } else if ("uri".equals(tag)) {
-                        value = vf.createURI(in.getElementText());
+                        value = vf.createIRI(in.getElementText());
                     } else if ("literal".equals(tag)) {
                         final String lang = in.getAttributeValue(null, "lang");
                         final String dt = in.getAttributeValue(null, "datatype");
                         final String label = in.getElementText();
-                        value = lang != null ? vf.createLiteral(label, lang) : dt != null ? vf
-                                .createLiteral(label, vf.createURI(dt)) : vf.createLiteral(label);
+                        value = lang != null ? vf.createLiteral(label, lang)
+                                : dt != null ? vf.createLiteral(label, vf.createIRI(dt))
+                                        : vf.createLiteral(label);
                     } else {
                         throw new XMLStreamException(
                                 "Expected <bnode>, <uri> or <literal>, found <" + tag + ">");
                     }
                     values[index] = value;
-                    leaveChild(in); // leave binding
                 }
-                leaveChild(in); // leave result
 
-                if (values[0] instanceof Resource && values[1] instanceof URI && values[2] != null) {
+                if (values[0] instanceof Resource && values[1] instanceof IRI
+                        && values[2] != null) {
                     final Resource s = (Resource) values[0];
-                    final URI p = (URI) values[1];
+                    final IRI p = (IRI) values[1];
                     final Value o = values[2];
                     if (values[3] instanceof Resource) {
                         final Resource c = (Resource) values[3];
@@ -796,26 +1025,24 @@ public final class RDFSources {
                 }
                 Arrays.fill(values, null);
             }
-
-            while (in.nextTag() != XMLStreamConstants.END_DOCUMENT) {
-            }
         }
 
-        private static boolean enterChild(final XMLStreamReader in, @Nullable final String name)
-                throws XMLStreamException {
-            if (in.nextTag() == XMLStreamConstants.END_ELEMENT) {
-                return false;
-            }
-            if (name == null || name.equals(in.getLocalName())) {
-                return true;
-            }
-            final String childName = in.getLocalName();
-            throw new XMLStreamException("Expected <" + name + ">, found <" + childName + ">");
-        }
-
-        private static void leaveChild(final XMLStreamReader in) throws XMLStreamException {
-            if (in.nextTag() != XMLStreamConstants.END_ELEMENT) {
-                throw new XMLStreamException("Unexpected element <" + in.getLocalName() + ">");
+        private static boolean seek(final XMLStreamReader in, @Nullable final String soughtElement,
+                @Nullable final String withinElement) throws XMLStreamException {
+            while (true) {
+                if (in.getEventType() == XMLStreamConstants.END_DOCUMENT) {
+                    return false;
+                }
+                in.next();
+                if (in.getEventType() == XMLStreamConstants.START_ELEMENT) {
+                    if (soughtElement == null || soughtElement.equals(in.getLocalName())) {
+                        return true;
+                    }
+                } else if (in.getEventType() == XMLStreamConstants.END_ELEMENT) {
+                    if (withinElement != null && withinElement.equals(in.getLocalName())) {
+                        return false;
+                    }
+                }
             }
         }
 

@@ -13,18 +13,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.algebra.Projection;
-import org.openrdf.query.algebra.ProjectionElem;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.UnaryTupleOperator;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.algebra.Projection;
+import org.eclipse.rdf4j.query.algebra.ProjectionElem;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.UnaryTupleOperator;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,8 +112,8 @@ final class ProcessorTSV implements RDFProcessor {
                                 final char c = label.charAt(j);
                                 writer.write(c == '\t' || c == '\n' ? ' ' : c);
                             }
-                        } else if (value instanceof URI) {
-                            writer.write(((URI) value).stringValue());
+                        } else if (value instanceof IRI) {
+                            writer.write(((IRI) value).stringValue());
                         } else if (value instanceof BNode) {
                             writer.write(((BNode) value).getID());
                         }
@@ -164,19 +164,7 @@ final class ProcessorTSV implements RDFProcessor {
         @Override
         public void reduce(final Value key, final Statement[] statements, final RDFHandler handler)
                 throws RDFHandlerException {
-            
-            // TODO
-            boolean found = false;
-            for (Statement statement : statements) {
-                if (statement.getPredicate().stringValue().equals("ex:type")) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return;
-            }
-            
+
             final QuadModel model = QuadModel.create();
             model.addAll(Arrays.asList(statements));
             evaluateQuery(model);

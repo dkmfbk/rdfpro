@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -30,30 +30,30 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Statements;
 
+@SuppressWarnings("deprecation")
 final class ProcessorRDFS implements RDFProcessor {
 
-    private static final Map<URI, URI> VOC;
+    private static final Map<IRI, IRI> VOC;
 
     static {
-        VOC = new IdentityHashMap<URI, URI>();
-        for (final URI uri : new URI[] { RDF.TYPE, RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT,
+        VOC = new IdentityHashMap<IRI, IRI>();
+        for (final IRI iri : new IRI[] { RDF.TYPE, RDF.PROPERTY, RDF.XMLLITERAL, RDF.SUBJECT,
                 RDF.PREDICATE, RDF.OBJECT, RDF.STATEMENT, RDF.BAG, RDF.ALT, RDF.SEQ, RDF.VALUE,
                 RDF.LI, RDF.LIST, RDF.FIRST, RDF.REST, RDF.NIL, RDF.LANGSTRING, RDFS.RESOURCE,
                 RDFS.LITERAL, RDFS.CLASS, RDFS.SUBCLASSOF, RDFS.SUBPROPERTYOF, RDFS.DOMAIN,
@@ -82,7 +82,7 @@ final class ProcessorRDFS implements RDFProcessor {
                 XMLSchema.NEGATIVE_INTEGER, XMLSchema.NON_NEGATIVE_INTEGER,
                 XMLSchema.POSITIVE_INTEGER, XMLSchema.UNSIGNED_LONG, XMLSchema.UNSIGNED_INT,
                 XMLSchema.UNSIGNED_SHORT, XMLSchema.UNSIGNED_BYTE }) {
-            VOC.put(uri, uri);
+            ProcessorRDFS.VOC.put(iri, iri);
         }
     }
 
@@ -99,8 +99,8 @@ final class ProcessorRDFS implements RDFProcessor {
             final String... excludedRules) {
 
         final Map<Value, Value> interner = new HashMap<Value, Value>();
-        for (final URI uri : VOC.keySet()) {
-            interner.put(uri, uri);
+        for (final IRI iri : ProcessorRDFS.VOC.keySet()) {
+            interner.put(iri, iri);
         }
 
         final Database database = new Database();
@@ -108,9 +108,9 @@ final class ProcessorRDFS implements RDFProcessor {
 
             @Override
             public void accept(final Statement t) {
-                final Resource s = normalize(t.getSubject());
-                final URI p = normalize(t.getPredicate());
-                final Value o = normalize(t.getObject());
+                final Resource s = this.normalize(t.getSubject());
+                final IRI p = this.normalize(t.getPredicate());
+                final Value o = this.normalize(t.getObject());
                 database.add(s, p, o);
             }
 
@@ -123,11 +123,12 @@ final class ProcessorRDFS implements RDFProcessor {
                 }
                 if (value instanceof Literal) {
                     final Literal lit = (Literal) value;
-                    final URI dt = lit.getDatatype();
+                    final IRI dt = lit.getDatatype();
                     if (dt != null) {
-                        final URI dtn = normalize(dt);
+                        final IRI dtn = this.normalize(dt);
                         if (dtn != dt) {
-                            value = (T) Statements.VALUE_FACTORY.createLiteral(lit.getLabel(), dtn);
+                            value = (T) Statements.VALUE_FACTORY.createLiteral(lit.getLabel(),
+                                    dtn);
                         }
                     }
                 }
@@ -137,7 +138,8 @@ final class ProcessorRDFS implements RDFProcessor {
 
         });
         database.commit();
-        final Ruleset ruleset = excludedRules == null || excludedRules.length == 0 ? Ruleset.DEFAULT
+        final Ruleset ruleset = excludedRules == null || excludedRules.length == 0
+                ? Ruleset.DEFAULT
                 : new Ruleset(excludedRules);
 
         new TBoxInferencer(decomposeOWLAxioms, ruleset, database).infer();
@@ -219,10 +221,11 @@ final class ProcessorRDFS implements RDFProcessor {
             for (final Statement statement : database) {
 
                 final Resource s = statement.getSubject();
-                final URI p = statement.getPredicate();
+                final IRI p = statement.getPredicate();
                 final Value o = statement.getObject();
 
-                statementArray[index++] = Objects.equals(context, statement.getContext()) ? statement
+                statementArray[index++] = Objects.equals(context, statement.getContext())
+                        ? statement
                         : context == null ? Statements.VALUE_FACTORY.createStatement(s, p, o)
                                 : Statements.VALUE_FACTORY.createStatement(s, p, o, context);
 
@@ -232,10 +235,9 @@ final class ProcessorRDFS implements RDFProcessor {
                     resources.put((Resource) o, (Resource) o);
                 }
 
-                if (o instanceof Resource
-                        && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
-                                || p.equals(RDFS.RANGE) || p.equals(RDFS.SUBPROPERTYOF)
-                                && o instanceof URI)) {
+                if (o instanceof Resource && (p.equals(RDFS.SUBCLASSOF) || p.equals(RDFS.DOMAIN)
+                        || p.equals(RDFS.RANGE)
+                        || p.equals(RDFS.SUBPROPERTYOF) && o instanceof IRI)) {
                     attributes.add(statement);
                 }
             }
@@ -244,16 +246,16 @@ final class ProcessorRDFS implements RDFProcessor {
 
             final int length = attributes.size();
             Resource subject = null;
-            Resource[] parents = EMPTY;
-            Resource[] domain = EMPTY;
-            Resource[] range = EMPTY;
+            Resource[] parents = TBox.EMPTY;
+            Resource[] domain = TBox.EMPTY;
+            Resource[] range = TBox.EMPTY;
             boolean property = false;
 
             int i = 0;
             while (i < length) {
                 final Statement t = attributes.get(i);
                 final Resource s = t.getSubject();
-                final URI p = t.getPredicate();
+                final IRI p = t.getPredicate();
 
                 if (s != subject) {
                     if (subject != null) {
@@ -264,9 +266,9 @@ final class ProcessorRDFS implements RDFProcessor {
                         }
                     }
                     subject = s;
-                    parents = EMPTY;
-                    domain = EMPTY;
-                    range = EMPTY;
+                    parents = TBox.EMPTY;
+                    domain = TBox.EMPTY;
+                    range = TBox.EMPTY;
                 }
 
                 final int start = i;
@@ -365,15 +367,15 @@ final class ProcessorRDFS implements RDFProcessor {
 
         void infer() {
 
-            addAxioms();
+            this.addAxioms();
             if (this.decomposeOWLAxioms) {
-                decomposeOWLAxioms();
+                this.decomposeOWLAxioms();
             }
             this.db.commit();
 
             this.delta = this.db;
             while (true) {
-                evalRules();
+                this.evalRules();
                 final List<Statement> added = this.db.commit();
                 if (added.isEmpty()) {
                     break;
@@ -384,55 +386,55 @@ final class ProcessorRDFS implements RDFProcessor {
 
         private void addAxioms() {
 
-            emit(RDF.TYPE, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDFS.DOMAIN, RDFS.DOMAIN, RDF.PROPERTY);
-            emit(RDFS.RANGE, RDFS.DOMAIN, RDF.PROPERTY);
-            emit(RDFS.SUBPROPERTYOF, RDFS.DOMAIN, RDF.PROPERTY);
-            emit(RDFS.SUBCLASSOF, RDFS.DOMAIN, RDFS.CLASS);
-            emit(RDF.SUBJECT, RDFS.DOMAIN, RDF.STATEMENT);
-            emit(RDF.PREDICATE, RDFS.DOMAIN, RDF.STATEMENT);
-            emit(RDF.OBJECT, RDFS.DOMAIN, RDF.STATEMENT);
-            emit(RDFS.MEMBER, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDF.FIRST, RDFS.DOMAIN, RDF.LIST);
-            emit(RDF.REST, RDFS.DOMAIN, RDF.LIST);
-            emit(RDFS.SEEALSO, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDFS.ISDEFINEDBY, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDFS.COMMENT, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDFS.LABEL, RDFS.DOMAIN, RDFS.RESOURCE);
-            emit(RDF.VALUE, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDF.TYPE, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDFS.DOMAIN, RDFS.DOMAIN, RDF.PROPERTY);
+            this.emit(RDFS.RANGE, RDFS.DOMAIN, RDF.PROPERTY);
+            this.emit(RDFS.SUBPROPERTYOF, RDFS.DOMAIN, RDF.PROPERTY);
+            this.emit(RDFS.SUBCLASSOF, RDFS.DOMAIN, RDFS.CLASS);
+            this.emit(RDF.SUBJECT, RDFS.DOMAIN, RDF.STATEMENT);
+            this.emit(RDF.PREDICATE, RDFS.DOMAIN, RDF.STATEMENT);
+            this.emit(RDF.OBJECT, RDFS.DOMAIN, RDF.STATEMENT);
+            this.emit(RDFS.MEMBER, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDF.FIRST, RDFS.DOMAIN, RDF.LIST);
+            this.emit(RDF.REST, RDFS.DOMAIN, RDF.LIST);
+            this.emit(RDFS.SEEALSO, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDFS.ISDEFINEDBY, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDFS.COMMENT, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDFS.LABEL, RDFS.DOMAIN, RDFS.RESOURCE);
+            this.emit(RDF.VALUE, RDFS.DOMAIN, RDFS.RESOURCE);
 
-            emit(RDF.TYPE, RDFS.RANGE, RDFS.CLASS);
-            emit(RDFS.DOMAIN, RDFS.RANGE, RDFS.CLASS);
-            emit(RDFS.RANGE, RDFS.RANGE, RDFS.CLASS);
-            emit(RDFS.SUBPROPERTYOF, RDFS.RANGE, RDF.PROPERTY);
-            emit(RDFS.SUBCLASSOF, RDFS.RANGE, RDFS.CLASS);
-            emit(RDF.SUBJECT, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDF.PREDICATE, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDF.OBJECT, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDFS.MEMBER, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDF.FIRST, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDF.REST, RDFS.RANGE, RDF.LIST);
-            emit(RDFS.SEEALSO, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDFS.ISDEFINEDBY, RDFS.RANGE, RDFS.RESOURCE);
-            emit(RDFS.COMMENT, RDFS.RANGE, RDFS.LITERAL);
-            emit(RDFS.LABEL, RDFS.RANGE, RDFS.LITERAL);
-            emit(RDF.VALUE, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDF.TYPE, RDFS.RANGE, RDFS.CLASS);
+            this.emit(RDFS.DOMAIN, RDFS.RANGE, RDFS.CLASS);
+            this.emit(RDFS.RANGE, RDFS.RANGE, RDFS.CLASS);
+            this.emit(RDFS.SUBPROPERTYOF, RDFS.RANGE, RDF.PROPERTY);
+            this.emit(RDFS.SUBCLASSOF, RDFS.RANGE, RDFS.CLASS);
+            this.emit(RDF.SUBJECT, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDF.PREDICATE, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDF.OBJECT, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDFS.MEMBER, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDF.FIRST, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDF.REST, RDFS.RANGE, RDF.LIST);
+            this.emit(RDFS.SEEALSO, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDFS.ISDEFINEDBY, RDFS.RANGE, RDFS.RESOURCE);
+            this.emit(RDFS.COMMENT, RDFS.RANGE, RDFS.LITERAL);
+            this.emit(RDFS.LABEL, RDFS.RANGE, RDFS.LITERAL);
+            this.emit(RDF.VALUE, RDFS.RANGE, RDFS.RESOURCE);
 
-            emit(RDF.ALT, RDFS.SUBCLASSOF, RDFS.CONTAINER);
-            emit(RDF.BAG, RDFS.SUBCLASSOF, RDFS.CONTAINER);
-            emit(RDF.SEQ, RDFS.SUBCLASSOF, RDFS.CONTAINER);
-            emit(RDFS.CONTAINERMEMBERSHIPPROPERTY, RDFS.SUBCLASSOF, RDF.PROPERTY);
+            this.emit(RDF.ALT, RDFS.SUBCLASSOF, RDFS.CONTAINER);
+            this.emit(RDF.BAG, RDFS.SUBCLASSOF, RDFS.CONTAINER);
+            this.emit(RDF.SEQ, RDFS.SUBCLASSOF, RDFS.CONTAINER);
+            this.emit(RDFS.CONTAINERMEMBERSHIPPROPERTY, RDFS.SUBCLASSOF, RDF.PROPERTY);
 
-            emit(RDFS.ISDEFINEDBY, RDFS.SUBPROPERTYOF, RDFS.SEEALSO);
-            emit(RDFS.DATATYPE, RDFS.SUBCLASSOF, RDFS.CLASS);
+            this.emit(RDFS.ISDEFINEDBY, RDFS.SUBPROPERTYOF, RDFS.SEEALSO);
+            this.emit(RDFS.DATATYPE, RDFS.SUBCLASSOF, RDFS.CLASS);
         }
 
         private void decomposeOWLAxioms() {
 
-            final Map<URI, List<Resource>> subprops = new HashMap<URI, List<Resource>>();
-            final Map<URI, List<Resource>> domains = new HashMap<URI, List<Resource>>();
-            final Map<URI, List<Resource>> ranges = new HashMap<URI, List<Resource>>();
-            final List<URI[]> inverses = new ArrayList<URI[]>();
+            final Map<IRI, List<Resource>> subprops = new HashMap<IRI, List<Resource>>();
+            final Map<IRI, List<Resource>> domains = new HashMap<IRI, List<Resource>>();
+            final Map<IRI, List<Resource>> ranges = new HashMap<IRI, List<Resource>>();
+            final List<IRI[]> inverses = new ArrayList<IRI[]>();
 
             final Map<Resource, Resource[]> nodes = new HashMap<Resource, Resource[]>();
             final Map<Resource, Resource> intersections = new HashMap<Resource, Resource>();
@@ -441,28 +443,28 @@ final class ProcessorRDFS implements RDFProcessor {
             for (final Statement t : this.db) {
 
                 final Resource s = t.getSubject();
-                final URI p = t.getPredicate();
+                final IRI p = t.getPredicate();
                 final Value o = t.getObject();
 
                 if (p == RDF.TYPE) {
                     if (o == OWL.CLASS || o == OWL.RESTRICTION) {
-                        emit(s, RDF.TYPE, RDFS.CLASS);
+                        this.emit(s, RDF.TYPE, RDFS.CLASS);
                     } else if (o == OWL.ANNOTATIONPROPERTY || o == OWL.DATATYPEPROPERTY
                             || o == OWL.OBJECTPROPERTY) {
-                        emit(s, RDF.TYPE, RDF.PROPERTY);
+                        this.emit(s, RDF.TYPE, RDF.PROPERTY);
                     }
 
                 } else if (p == OWL.EQUIVALENTCLASS) {
                     if (o instanceof Resource) {
-                        emit(s, RDFS.SUBCLASSOF, o);
-                        emit((Resource) o, RDFS.SUBCLASSOF, s);
+                        this.emit(s, RDFS.SUBCLASSOF, o);
+                        this.emit((Resource) o, RDFS.SUBCLASSOF, s);
                     }
 
                 } else if (p == OWL.EQUIVALENTPROPERTY) {
-                    if (s instanceof URI && o instanceof URI && !s.equals(o)) {
-                        for (final URI prop : new URI[] { (URI) s, (URI) o }) {
-                            final URI other = prop == s ? (URI) o : (URI) s;
-                            emit(prop, RDFS.SUBPROPERTYOF, other);
+                    if (s instanceof IRI && o instanceof IRI && !s.equals(o)) {
+                        for (final IRI prop : new IRI[] { (IRI) s, (IRI) o }) {
+                            final IRI other = prop == s ? (IRI) o : (IRI) s;
+                            this.emit(prop, RDFS.SUBPROPERTYOF, other);
                             List<Resource> list = subprops.get(prop);
                             if (list == null) {
                                 list = new ArrayList<>();
@@ -475,22 +477,21 @@ final class ProcessorRDFS implements RDFProcessor {
                     }
 
                 } else if (p == RDFS.DOMAIN || p == RDFS.RANGE || p == RDFS.SUBPROPERTYOF) {
-                    if (s instanceof URI
-                            && (o instanceof URI || o instanceof Resource
-                                    && p != RDFS.SUBPROPERTYOF)) {
-                        final Map<URI, List<Resource>> map = p == RDFS.DOMAIN ? domains
+                    if (s instanceof IRI && (o instanceof IRI
+                            || o instanceof Resource && p != RDFS.SUBPROPERTYOF)) {
+                        final Map<IRI, List<Resource>> map = p == RDFS.DOMAIN ? domains
                                 : p == RDFS.RANGE ? ranges : subprops;
                         List<Resource> list = map.get(s);
                         if (list == null) {
                             list = new ArrayList<>();
-                            map.put((URI) s, list);
+                            map.put((IRI) s, list);
                         }
                         list.add((Resource) o);
                     }
 
                 } else if (p == OWL.INVERSEOF) {
-                    if (s instanceof URI && o instanceof URI) {
-                        inverses.add(new URI[] { (URI) s, (URI) o });
+                    if (s instanceof IRI && o instanceof IRI) {
+                        inverses.add(new IRI[] { (IRI) s, (IRI) o });
                     }
 
                 } else if (p == OWL.INTERSECTIONOF) {
@@ -517,36 +518,36 @@ final class ProcessorRDFS implements RDFProcessor {
 
             // p owl:inverseOf q, q rdfs:subPropertyOf* q1, q1 rdfs:domain C -> p rdfs:range C
             // p owl:inverseOf q, q rdfs:subPropertyOf* q1, q1 rdfs:range C -> p rdfs:domain C
-            for (final URI[] pair : inverses) {
+            for (final IRI[] pair : inverses) {
                 for (int i = 0; i < 2; ++i) {
-                    final URI property = pair[i];
-                    final Set<URI> others = new HashSet<URI>();
+                    final IRI property = pair[i];
+                    final Set<IRI> others = new HashSet<IRI>();
                     others.add(pair[1 - i]);
                     boolean changed;
                     do {
                         changed = false;
-                        for (final URI other : others.toArray(new URI[others.size()])) {
+                        for (final IRI other : others.toArray(new IRI[others.size()])) {
                             final List<Resource> parents = subprops.get(other);
                             if (parents != null) {
                                 for (final Resource parent : parents) {
-                                    if (others.add((URI) parent)) {
+                                    if (others.add((IRI) parent)) {
                                         changed = true;
                                     }
                                 }
                             }
                         }
                     } while (changed);
-                    for (final URI other : others) {
+                    for (final IRI other : others) {
                         final List<Resource> otherDomains = domains.get(other);
                         if (otherDomains != null) {
                             for (final Resource domain : otherDomains) {
-                                emit(property, RDFS.RANGE, domain);
+                                this.emit(property, RDFS.RANGE, domain);
                             }
                         }
                         final List<Resource> otherRanges = ranges.get(other);
                         if (otherRanges != null) {
                             for (final Resource range : otherRanges) {
-                                emit(property, RDFS.DOMAIN, range);
+                                this.emit(property, RDFS.DOMAIN, range);
                             }
                         }
                     }
@@ -558,7 +559,7 @@ final class ProcessorRDFS implements RDFProcessor {
                 final Resource unionClass = entry.getKey();
                 for (Resource[] node = nodes.get(entry.getValue()); node != null
                         && node[0] != null; node = nodes.get(node[1])) {
-                    emit(node[0], RDFS.SUBCLASSOF, unionClass);
+                    this.emit(node[0], RDFS.SUBCLASSOF, unionClass);
                 }
             }
 
@@ -567,7 +568,7 @@ final class ProcessorRDFS implements RDFProcessor {
                 final Resource intersectionClass = entry.getKey();
                 for (Resource[] node = nodes.get(entry.getValue()); node != null
                         && node[0] != null; node = nodes.get(node[1])) {
-                    emit(intersectionClass, RDFS.SUBCLASSOF, node[0]);
+                    this.emit(intersectionClass, RDFS.SUBCLASSOF, node[0]);
                 }
             }
         }
@@ -575,98 +576,98 @@ final class ProcessorRDFS implements RDFProcessor {
         private void evalRules() {
 
             final Map<Resource, List<Resource>> superClasses //
-            = new HashMap<Resource, List<Resource>>();
+                    = new HashMap<Resource, List<Resource>>();
             final Map<Resource, List<Resource>> subClasses //
-            = new HashMap<Resource, List<Resource>>();
+                    = new HashMap<Resource, List<Resource>>();
 
-            final Map<URI, List<URI>> superProperties = new HashMap<URI, List<URI>>();
-            final Map<URI, List<URI>> subProperties = new HashMap<URI, List<URI>>();
+            final Map<IRI, List<IRI>> superProperties = new HashMap<IRI, List<IRI>>();
+            final Map<IRI, List<IRI>> subProperties = new HashMap<IRI, List<IRI>>();
 
             for (final Statement t : this.delta) {
 
                 final Resource s = t.getSubject();
-                final URI p = t.getPredicate();
+                final IRI p = t.getPredicate();
                 final Value o = t.getObject();
 
                 // RDFS1: "..."^^d => d rdf:type rdfs:Datatype
                 if (this.ruleset.rdfs1 && o instanceof Literal) {
                     final Literal l = (Literal) o;
-                    final URI dt = l.getDatatype();
+                    final IRI dt = l.getDatatype();
                     if (dt != null) {
-                        emit(dt, RDF.TYPE, RDFS.DATATYPE);
+                        this.emit(dt, RDF.TYPE, RDFS.DATATYPE);
                     }
                 }
 
                 // RDFS4A: s p o => s rdf:type rdfs:Resource
                 if (this.ruleset.rdfs4a) {
-                    emit(s, RDF.TYPE, RDFS.RESOURCE);
+                    this.emit(s, RDF.TYPE, RDFS.RESOURCE);
                 }
 
                 // RDFS4B: s p o => o rdf:type rdfs:Resource
                 if (this.ruleset.rdfs4b && o instanceof Resource) {
-                    emit((Resource) o, RDF.TYPE, RDFS.RESOURCE);
+                    this.emit((Resource) o, RDF.TYPE, RDFS.RESOURCE);
                 }
 
                 // RDFD2: s p o => p rdf:type rdf:Property
                 if (this.ruleset.rdfD2) {
-                    emit(p, RDF.TYPE, RDF.PROPERTY);
+                    this.emit(p, RDF.TYPE, RDF.PROPERTY);
                 }
 
                 if (p == RDF.TYPE) {
                     if (o == RDFS.CLASS) {
                         // RDFS8: c rdf:type rdfs:Class => c rdfs:subClassOf rdfs:Resource
                         if (this.ruleset.rdfs8) {
-                            emit(s, RDFS.SUBCLASSOF, RDFS.RESOURCE);
+                            this.emit(s, RDFS.SUBCLASSOF, RDFS.RESOURCE);
                         }
                         // RDFS10: c rdf:type rdfs:Class => c rdfs:subClassOf c
                         if (this.ruleset.rdfs10) {
-                            emit(s, RDFS.SUBCLASSOF, s);
+                            this.emit(s, RDFS.SUBCLASSOF, s);
                         }
                     } else if (o == RDF.PROPERTY) {
                         // RDFS6: p rdf:type rdf:Property => p rdfs:subPropertyOf p
                         if (this.ruleset.rdfs6) {
-                            emit(s, RDFS.SUBPROPERTYOF, s);
+                            this.emit(s, RDFS.SUBPROPERTYOF, s);
                         }
                     } else if (o == RDFS.DATATYPE) {
                         // RDFS13: d rdf:type rdfs:Datatype => d rdfs:subClassOf rdfs:Literal
                         if (this.ruleset.rdfs13) {
-                            emit(s, RDFS.SUBCLASSOF, RDFS.LITERAL);
+                            this.emit(s, RDFS.SUBCLASSOF, RDFS.LITERAL);
                         }
                     } else if (o == RDFS.CONTAINERMEMBERSHIPPROPERTY) {
                         // RDFS12: p rdf:type rdfs:CMP => p rdfs:subPropertyOf rdfs:member
                         if (this.ruleset.rdfs12) {
-                            emit(s, RDFS.SUBPROPERTYOF, RDFS.MEMBER);
+                            this.emit(s, RDFS.SUBPROPERTYOF, RDFS.MEMBER);
                         }
                     }
                 }
 
                 // RDFS2: p rdfs:domain c ^ s p o => s rdf:type c
                 if (this.ruleset.rdfs2) {
-                    if (p == RDFS.DOMAIN && s instanceof URI && o instanceof Resource) {
-                        for (final Statement t2 : this.db.filter(null, (URI) s, null)) {
-                            emit(t2.getSubject(), RDF.TYPE, o);
+                    if (p == RDFS.DOMAIN && s instanceof IRI && o instanceof Resource) {
+                        for (final Statement t2 : this.db.filter(null, (IRI) s, null)) {
+                            this.emit(t2.getSubject(), RDF.TYPE, o);
                         }
                     }
                     for (final Statement t2 : this.db.filter(p, RDFS.DOMAIN, null)) {
                         if (t2.getObject() instanceof Resource) {
-                            emit(s, RDF.TYPE, t2.getObject());
+                            this.emit(s, RDF.TYPE, t2.getObject());
                         }
                     }
                 }
 
                 // RDFS3: p rdfs:range c ^ x p y => y rdf:type c
                 if (this.ruleset.rdfs3) {
-                    if (p == RDFS.RANGE && s instanceof URI && o instanceof Resource) {
-                        for (final Statement t2 : this.db.filter(null, (URI) s, null)) {
+                    if (p == RDFS.RANGE && s instanceof IRI && o instanceof Resource) {
+                        for (final Statement t2 : this.db.filter(null, (IRI) s, null)) {
                             if (t2.getObject() instanceof Resource) {
-                                emit((Resource) t2.getObject(), RDF.TYPE, o);
+                                this.emit((Resource) t2.getObject(), RDF.TYPE, o);
                             }
                         }
                     }
                     if (o instanceof Resource) {
                         for (final Statement t2 : this.db.filter(p, RDFS.RANGE, null)) {
                             if (t2.getObject() instanceof Resource) {
-                                emit((Resource) o, RDF.TYPE, t2.getObject());
+                                this.emit((Resource) o, RDF.TYPE, t2.getObject());
                             }
                         }
                     }
@@ -679,25 +680,26 @@ final class ProcessorRDFS implements RDFProcessor {
                     final Resource c1 = s;
                     final Resource c2 = (Resource) o;
                     if (this.ruleset.rdfs11) {
-                        for (final Resource c0 : match(subClasses, null, RDFS.SUBCLASSOF, c1,
+                        for (final Resource c0 : this.match(subClasses, null, RDFS.SUBCLASSOF, c1,
                                 Resource.class)) {
-                            emit(c0, RDFS.SUBCLASSOF, c2);
+                            this.emit(c0, RDFS.SUBCLASSOF, c2);
                         }
-                        for (final Resource c3 : match(superClasses, c2, RDFS.SUBCLASSOF, null,
-                                Resource.class)) {
-                            emit(c1, RDFS.SUBCLASSOF, c3);
+                        for (final Resource c3 : this.match(superClasses, c2, RDFS.SUBCLASSOF,
+                                null, Resource.class)) {
+                            this.emit(c1, RDFS.SUBCLASSOF, c3);
                         }
                     }
                     if (this.ruleset.rdfs9) {
                         for (final Statement t2 : this.db.filter(null, RDF.TYPE, c1)) {
-                            emit(t2.getSubject(), RDF.TYPE, c2);
+                            this.emit(t2.getSubject(), RDF.TYPE, c2);
                         }
                     }
                 }
                 if (this.ruleset.rdfs9 && p == RDF.TYPE && o instanceof Resource) {
-                    for (final Statement t2 : this.db.filter((Resource) o, RDFS.SUBCLASSOF, null)) {
+                    for (final Statement t2 : this.db.filter((Resource) o, RDFS.SUBCLASSOF,
+                            null)) {
                         if (t2.getObject() instanceof Resource) {
-                            emit(s, RDF.TYPE, t2.getObject());
+                            this.emit(s, RDF.TYPE, t2.getObject());
                         }
                     }
                 }
@@ -705,29 +707,29 @@ final class ProcessorRDFS implements RDFProcessor {
                 // RDFS7: p1 rdfs:subPropertyOf p2 ^ s p1 o => s p2 o
                 // RDFS5: p1 rdfs:subPropertyOf p2 ^ p2 rdfs:subPropertyOf p3
                 // => p1 rdfs:subPropertyOf p3
-                if (p == RDFS.SUBPROPERTYOF && s instanceof URI && o instanceof URI) {
-                    final URI p1 = (URI) s;
-                    final URI p2 = (URI) o;
+                if (p == RDFS.SUBPROPERTYOF && s instanceof IRI && o instanceof IRI) {
+                    final IRI p1 = (IRI) s;
+                    final IRI p2 = (IRI) o;
                     if (this.ruleset.rdfs5) {
-                        for (final URI p0 : match(subProperties, null, RDFS.SUBPROPERTYOF, p1,
-                                URI.class)) {
-                            emit(p0, RDFS.SUBPROPERTYOF, p2);
+                        for (final IRI p0 : this.match(subProperties, null, RDFS.SUBPROPERTYOF, p1,
+                                IRI.class)) {
+                            this.emit(p0, RDFS.SUBPROPERTYOF, p2);
                         }
-                        for (final URI p3 : match(superProperties, p2, RDFS.SUBPROPERTYOF, null,
-                                URI.class)) {
-                            emit(p1, RDFS.SUBPROPERTYOF, p3);
+                        for (final IRI p3 : this.match(superProperties, p2, RDFS.SUBPROPERTYOF,
+                                null, IRI.class)) {
+                            this.emit(p1, RDFS.SUBPROPERTYOF, p3);
                         }
                     }
                     if (this.ruleset.rdfs7) {
                         for (final Statement t2 : this.db.filter(null, p1, null)) {
-                            emit(t2.getSubject(), p2, t2.getObject());
+                            this.emit(t2.getSubject(), p2, t2.getObject());
                         }
                     }
                 }
                 if (this.ruleset.rdfs7) {
                     for (final Statement t2 : this.db.filter(p, RDFS.SUBPROPERTYOF, null)) {
-                        if (t2.getObject() instanceof URI) {
-                            emit(s, (URI) t2.getObject(), o);
+                        if (t2.getObject() instanceof IRI) {
+                            this.emit(s, (IRI) t2.getObject(), o);
                         }
                     }
                 }
@@ -735,7 +737,8 @@ final class ProcessorRDFS implements RDFProcessor {
         }
 
         private <T> List<T> match(final Map<T, List<T>> map, @Nullable final Resource subject,
-                @Nullable final URI predicate, @Nullable final Value object, final Class<T> clazz) {
+                @Nullable final IRI predicate, @Nullable final Value object,
+                final Class<T> clazz) {
 
             final T key = clazz.cast(subject != null ? subject : object);
             List<T> list = map.get(key);
@@ -754,7 +757,7 @@ final class ProcessorRDFS implements RDFProcessor {
             return list;
         }
 
-        private void emit(final Resource subject, final URI predicate, final Value object) {
+        private void emit(final Resource subject, final IRI predicate, final Value object) {
             this.db.add(subject, predicate, object);
         }
 
@@ -791,7 +794,7 @@ final class ProcessorRDFS implements RDFProcessor {
             this.tbox = tbox;
             this.deduplicator = deduplicator;
             this.dropBNodeTypes = dropBNodesTypes;
-            this.matrix = new Statement[64 * STATEMENTS_PER_BUCKET];
+            this.matrix = new Statement[64 * ABoxInferencer.STATEMENTS_PER_BUCKET];
             this.set = new HashSet<Statement>();
             this.emitted = new ArrayList<Statement>();
         }
@@ -806,7 +809,7 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             final Resource s = statement.getSubject();
-            final URI p = statement.getPredicate();
+            final IRI p = statement.getPredicate();
             final Value o = statement.getObject();
 
             Resource s2 = this.tbox.resources.get(s);
@@ -814,9 +817,9 @@ final class ProcessorRDFS implements RDFProcessor {
                 s2 = s;
             }
 
-            URI p2 = (URI) this.tbox.resources.get(p);
+            IRI p2 = (IRI) this.tbox.resources.get(p);
             if (p2 == null) {
-                p2 = s2 == s && p.equals(s) ? (URI) s : p;
+                p2 = s2 == s && p.equals(s) ? (IRI) s : p;
             }
 
             Value o2 = this.tbox.resources.get(o);
@@ -825,10 +828,10 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             int index = 0;
-            emit(s2, p2, o2, false);
+            this.emit(s2, p2, o2, false);
             while (index < this.emitted.size()) {
                 final Statement t = this.emitted.get(index);
-                infer(t.getSubject(), t.getPredicate(), t.getObject());
+                this.infer(t.getSubject(), t.getPredicate(), t.getObject());
                 ++index;
             }
 
@@ -841,24 +844,24 @@ final class ProcessorRDFS implements RDFProcessor {
             }
         }
 
-        private void infer(final Resource subject, final URI predicate, final Value object) {
+        private void infer(final Resource subject, final IRI predicate, final Value object) {
 
             if (this.ruleset.rdfs1 && object instanceof Literal) {
                 final Literal l = (Literal) object;
-                final URI dt = l.getDatatype();
+                final IRI dt = l.getDatatype();
                 if (dt != null) {
-                    emit(dt, RDF.TYPE, RDFS.DATATYPE, true);
+                    this.emit(dt, RDF.TYPE, RDFS.DATATYPE, true);
                 }
             }
 
             if (this.ruleset.rdfs4a) {
-                emit(subject, RDF.TYPE, RDFS.RESOURCE, false);
+                this.emit(subject, RDF.TYPE, RDFS.RESOURCE, false);
             }
             if (this.ruleset.rdfs4b && object instanceof Resource) {
-                emit((Resource) object, RDF.TYPE, RDFS.RESOURCE, predicate == RDF.TYPE);
+                this.emit((Resource) object, RDF.TYPE, RDFS.RESOURCE, predicate == RDF.TYPE);
             }
             if (this.ruleset.rdfD2) {
-                emit(predicate, RDF.TYPE, RDF.PROPERTY, true);
+                this.emit(predicate, RDF.TYPE, RDF.PROPERTY, true);
             }
 
             if (this.ruleset.rdfs2 || this.ruleset.rdfs3 || this.ruleset.rdfs7) {
@@ -866,17 +869,17 @@ final class ProcessorRDFS implements RDFProcessor {
                 if (p != null) {
                     if (this.ruleset.rdfs2) {
                         for (final Resource c : p.domain) {
-                            emit(subject, RDF.TYPE, c, false);
+                            this.emit(subject, RDF.TYPE, c, false);
                         }
                     }
                     if (this.ruleset.rdfs3 && object instanceof Resource) {
                         for (final Resource c : p.range) {
-                            emit((Resource) object, RDF.TYPE, c, false);
+                            this.emit((Resource) object, RDF.TYPE, c, false);
                         }
                     }
                     if (this.ruleset.rdfs7) {
                         for (final Resource q : p.parents) {
-                            emit(subject, (URI) q, object, false);
+                            this.emit(subject, (IRI) q, object, false);
                         }
                     }
                 }
@@ -885,22 +888,22 @@ final class ProcessorRDFS implements RDFProcessor {
             if (predicate == RDF.TYPE) {
                 if (object == RDFS.CLASS) {
                     if (this.ruleset.rdfs8) {
-                        emit(subject, RDFS.SUBCLASSOF, RDFS.RESOURCE, true);
+                        this.emit(subject, RDFS.SUBCLASSOF, RDFS.RESOURCE, true);
                     }
                     if (this.ruleset.rdfs10) {
-                        emit(subject, RDFS.SUBCLASSOF, subject, true);
+                        this.emit(subject, RDFS.SUBCLASSOF, subject, true);
                     }
                 } else if (object == RDF.PROPERTY) {
                     if (this.ruleset.rdfs6) {
-                        emit(subject, RDFS.SUBPROPERTYOF, subject, true);
+                        this.emit(subject, RDFS.SUBPROPERTYOF, subject, true);
                     }
                 } else if (object == RDFS.DATATYPE) {
                     if (this.ruleset.rdfs13) {
-                        emit(subject, RDFS.SUBCLASSOF, RDFS.LITERAL, true);
+                        this.emit(subject, RDFS.SUBCLASSOF, RDFS.LITERAL, true);
                     }
                 } else if (object == RDFS.CONTAINERMEMBERSHIPPROPERTY) {
                     if (this.ruleset.rdfs12) {
-                        emit(subject, RDFS.SUBPROPERTYOF, RDFS.MEMBER, true);
+                        this.emit(subject, RDFS.SUBPROPERTYOF, RDFS.MEMBER, true);
                     }
                 }
 
@@ -908,14 +911,14 @@ final class ProcessorRDFS implements RDFProcessor {
                     final TBox.Type t = this.tbox.types.get(object);
                     if (t != null) {
                         for (final Resource c : t.parents) {
-                            emit(subject, RDF.TYPE, c, false);
+                            this.emit(subject, RDF.TYPE, c, false);
                         }
                     }
                 }
             }
         }
 
-        private void emit(final Resource subject, final URI predicate, final Value object,
+        private void emit(final Resource subject, final IRI predicate, final Value object,
                 final boolean buffer) {
 
             final int hash = System.identityHashCode(subject) * 3323
@@ -923,21 +926,21 @@ final class ProcessorRDFS implements RDFProcessor {
 
             final int index = hash & 0x3F;
             final long mask = 1L << index;
-            final int offset = index * STATEMENTS_PER_BUCKET;
+            final int offset = index * ABoxInferencer.STATEMENTS_PER_BUCKET;
 
             Statement statement = null;
 
             if ((this.bitmask & mask) == 0L) {
-                statement = create(subject, predicate, object);
+                statement = this.create(subject, predicate, object);
                 this.bitmask = this.bitmask | mask;
                 this.matrix[offset] = statement;
                 this.matrix[offset + 1] = null;
             } else {
-                final int last = offset + STATEMENTS_PER_BUCKET;
+                final int last = offset + ABoxInferencer.STATEMENTS_PER_BUCKET;
                 for (int i = offset; i < last; ++i) {
                     final Statement s = this.matrix[i];
                     if (s == null) {
-                        statement = create(subject, predicate, object);
+                        statement = this.create(subject, predicate, object);
                         this.matrix[i] = statement;
                         final int next = i + 1;
                         if (next < last) {
@@ -950,7 +953,7 @@ final class ProcessorRDFS implements RDFProcessor {
                     }
                 }
                 if (statement == null) {
-                    final Statement s = create(subject, predicate, object);
+                    final Statement s = this.create(subject, predicate, object);
                     if (this.set.add(s)) {
                         statement = s;
                     }
@@ -962,10 +965,11 @@ final class ProcessorRDFS implements RDFProcessor {
             }
         }
 
-        private Statement create(final Resource subject, final URI predicate, final Value object) {
-            return this.context == null ? Statements.VALUE_FACTORY.createStatement(subject,
-                    predicate, object) : Statements.VALUE_FACTORY.createStatement(subject,
-                    predicate, object, this.context);
+        private Statement create(final Resource subject, final IRI predicate, final Value object) {
+            return this.context == null
+                    ? Statements.VALUE_FACTORY.createStatement(subject, predicate, object)
+                    : Statements.VALUE_FACTORY.createStatement(subject, predicate, object,
+                            this.context);
         }
 
     }
@@ -984,9 +988,9 @@ final class ProcessorRDFS implements RDFProcessor {
 
         Deduplicator() {
             this.mainBuffer = new ConcurrentHashMap<Statement, Statement>();
-            this.recentBuffer = new Statement[RECENT_BUFFER_SIZE];
-            this.locks = new Object[LOCK_COUNT];
-            for (int i = 0; i < LOCK_COUNT; ++i) {
+            this.recentBuffer = new Statement[Deduplicator.RECENT_BUFFER_SIZE];
+            this.locks = new Object[Deduplicator.LOCK_COUNT];
+            for (int i = 0; i < Deduplicator.LOCK_COUNT; ++i) {
                 this.locks[i] = new Object();
             }
         }
@@ -995,17 +999,17 @@ final class ProcessorRDFS implements RDFProcessor {
 
         boolean add(final Statement statement, final boolean buffer) {
 
-            if (buffer || VOC.containsKey(statement.getPredicate())
-                    && VOC.containsKey(statement.getObject())
-                    && VOC.containsKey(statement.getSubject())) {
+            if (buffer || ProcessorRDFS.VOC.containsKey(statement.getPredicate())
+                    && ProcessorRDFS.VOC.containsKey(statement.getObject())
+                    && ProcessorRDFS.VOC.containsKey(statement.getSubject())) {
                 if (this.mainBuffer.put(statement, statement) != null) {
                     return true; // duplicate
                 }
             }
 
             final int hash = statement.hashCode() & 0x7FFFFFFF;
-            final int index = hash % RECENT_BUFFER_SIZE;
-            final Object lock = this.locks[hash % LOCK_COUNT];
+            final int index = hash % Deduplicator.RECENT_BUFFER_SIZE;
+            final Object lock = this.locks[hash % Deduplicator.LOCK_COUNT];
             synchronized (lock) {
                 final Statement old = this.recentBuffer[index];
                 if (old != null && old.equals(statement)) {
@@ -1096,7 +1100,7 @@ final class ProcessorRDFS implements RDFProcessor {
             this.pending = new HashSet<Triple>();
         }
 
-        public void add(final Resource subj, final URI pred, final Value obj) {
+        public void add(final Resource subj, final IRI pred, final Value obj) {
             final Triple triple = new Triple(subj, pred, obj);
             if (!this.triples.contains(triple)) {
                 this.pending.add(triple);
@@ -1108,15 +1112,15 @@ final class ProcessorRDFS implements RDFProcessor {
             for (final Triple triple : this.pending) {
                 result.add(triple.getStatement());
                 this.triples.add(triple);
-                final Node subjNode = nodeFor(triple.subj, true);
+                final Node subjNode = this.nodeFor(triple.subj, true);
                 triple.nextBySubj = subjNode.nextBySubj;
                 subjNode.nextBySubj = triple;
                 ++subjNode.numSubj;
-                final Node predNode = nodeFor(triple.pred, true);
+                final Node predNode = this.nodeFor(triple.pred, true);
                 triple.nextByPred = predNode.nextByPred;
                 predNode.nextByPred = triple;
                 ++predNode.numPred;
-                final Node objNode = nodeFor(triple.obj, true);
+                final Node objNode = this.nodeFor(triple.obj, true);
                 triple.nextByObj = objNode.nextByObj;
                 objNode.nextByObj = triple;
                 ++objNode.numObj;
@@ -1125,7 +1129,7 @@ final class ProcessorRDFS implements RDFProcessor {
             return result;
         }
 
-        public Iterable<Statement> filter(@Nullable final Resource subj, @Nullable final URI pred,
+        public Iterable<Statement> filter(@Nullable final Resource subj, @Nullable final IRI pred,
                 @Nullable final Value obj) {
 
             Node node = null;
@@ -1134,7 +1138,7 @@ final class ProcessorRDFS implements RDFProcessor {
             int num = Integer.MAX_VALUE;
 
             if (subj != null) {
-                final Node n = nodeFor(subj, false);
+                final Node n = this.nodeFor(subj, false);
                 if (n == null) {
                     return Collections.emptyList();
                 }
@@ -1147,7 +1151,7 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             if (pred != null) {
-                final Node n = nodeFor(pred, false);
+                final Node n = this.nodeFor(pred, false);
                 if (n == null) {
                     return Collections.emptyList();
                 }
@@ -1160,7 +1164,7 @@ final class ProcessorRDFS implements RDFProcessor {
             }
 
             if (obj != null) {
-                final Node n = nodeFor(obj, false);
+                final Node n = this.nodeFor(obj, false);
                 if (n == null) {
                     return Collections.emptyList();
                 }
@@ -1188,7 +1192,7 @@ final class ProcessorRDFS implements RDFProcessor {
                         private Triple triple = t;
 
                         {
-                            advance(false);
+                            this.advance(false);
                         }
 
                         @Override
@@ -1199,7 +1203,7 @@ final class ProcessorRDFS implements RDFProcessor {
                         @Override
                         public Statement next() {
                             final Statement result = this.triple.getStatement();
-                            advance(true);
+                            this.advance(true);
                             return result;
                         }
 
@@ -1290,7 +1294,7 @@ final class ProcessorRDFS implements RDFProcessor {
 
             Resource subj;
 
-            URI pred;
+            IRI pred;
 
             Value obj;
 
@@ -1306,7 +1310,7 @@ final class ProcessorRDFS implements RDFProcessor {
             @Nullable
             Triple nextByObj;
 
-            Triple(final Resource subj, final URI pred, final Value obj) {
+            Triple(final Resource subj, final IRI pred, final Value obj) {
                 this.subj = subj;
                 this.pred = pred;
                 this.obj = obj;
@@ -1314,7 +1318,8 @@ final class ProcessorRDFS implements RDFProcessor {
 
             public Statement getStatement() {
                 if (this.statement == null) {
-                    this.statement = new StatementImpl(this.subj, this.pred, this.obj);
+                    this.statement = Statements.VALUE_FACTORY.createStatement(this.subj, this.pred,
+                            this.obj);
                 }
                 return this.statement;
             }

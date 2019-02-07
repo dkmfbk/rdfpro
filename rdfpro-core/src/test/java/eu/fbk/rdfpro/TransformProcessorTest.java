@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti <francesco.corcoglioniti@gmail.com> with support by
  * Marco Rospocher, Marco Amadori and Michele Mostarda.
- * 
+ *
  * To the extent possible under law, the author has dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -17,17 +17,17 @@ package eu.fbk.rdfpro;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+
+import eu.fbk.rdfpro.util.Statements;
 
 /**
  * Test case for {@link eu.fbk.rdfpro.base.FilterProcessorOld}.
@@ -43,21 +43,27 @@ public class TransformProcessorTest {
         // rdfs:label' @mapreduce -u -e '+o dbo:Company' 's' @transform '+p rdfs:label' @write
         // labels.nt.gz
 
-        URI dboCompany = new URIImpl("http://dbpedia.org/ontology/Company");
+        final ValueFactory vf = Statements.VALUE_FACTORY;
 
-        RDFSource aboxSource = RDFSources.read(true, true, null, null, "dbpedia.tbox.owl");
-        RDFSource tboxSource = RDFSources.read(true, true, null, null, "dbpedia.abox.nt.gz");
+        final IRI dboCompany = vf.createIRI("http://dbpedia.org/ontology/Company");
 
-        RDFHandler labelsSink = RDFHandlers.write(null, 0, "labels.nt.gz");
+        final RDFSource aboxSource = RDFSources.read(true, true, null, null, null, true,
+                "dbpedia.tbox.owl");
+        final RDFSource tboxSource = RDFSources.read(true, true, null, null, null, true,
+                "dbpedia.abox.nt.gz");
+
+        final RDFHandler labelsSink = RDFHandlers.write(null, 0, "labels.nt.gz");
 
         final RDFProcessor processor = RDFProcessors.sequence( //
                 RDFProcessors.rdfs(aboxSource, null, false, false), //
                 RDFProcessors.transform(Transformer.filter((final Statement s) -> {
-                    final URI p = s.getPredicate();
+                    final IRI p = s.getPredicate();
                     return p.equals(RDF.TYPE) || p.equals(RDFS.LABEL);
                 })), //
-                RDFProcessors.mapReduce(Mapper.select("s"), Reducer.filter(Reducer.IDENTITY, (
-                        final Statement s) -> s.getObject().equals(dboCompany), null), true));
+                RDFProcessors.mapReduce(Mapper.select("s"),
+                        Reducer.filter(Reducer.IDENTITY,
+                                (final Statement s) -> s.getObject().equals(dboCompany), null),
+                        true));
 
         processor.apply(tboxSource, labelsSink, 1);
 
@@ -96,14 +102,13 @@ public class TransformProcessorTest {
             }
         });
 
-        final ValueFactory factory = new ValueFactoryImpl();
         handler.startRDF();
-        handler.handleStatement(factory.createStatement(factory.createURI("http://sx"),
-                factory.createURI("http://p1"), factory.createURI("http://sx")));
-        handler.handleStatement(factory.createStatement(factory.createURI("http://sF"),
-                factory.createURI("http://pF"), factory.createURI("http://sF")));
-        handler.handleStatement(factory.createStatement(factory.createURI("http://sy"),
-                factory.createURI("http://p2"), factory.createURI("http://sy")));
+        handler.handleStatement(vf.createStatement(vf.createIRI("http://sx"),
+                vf.createIRI("http://p1"), vf.createIRI("http://sx")));
+        handler.handleStatement(vf.createStatement(vf.createIRI("http://sF"),
+                vf.createIRI("http://pF"), vf.createIRI("http://sF")));
+        handler.handleStatement(vf.createStatement(vf.createIRI("http://sy"),
+                vf.createIRI("http://p2"), vf.createIRI("http://sy")));
         handler.endRDF();
 
         Assert.assertEquals(1, flags[0]);

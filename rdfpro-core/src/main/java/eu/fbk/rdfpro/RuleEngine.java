@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -23,15 +23,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Throwables;
-
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fbk.rdfpro.util.Environment;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.IO;
 import eu.fbk.rdfpro.util.QuadModel;
 
@@ -39,15 +38,16 @@ import eu.fbk.rdfpro.util.QuadModel;
  * Rule engine abstraction.
  * <p>
  * Implementation note: concrete rule engine implementations should extend this abstract class and
- * implement one or both methods {@link #doEval(QuadModel)} and {@link #doEval(RDFHandler)}.
+ * implement one or both methods {@link #doEval(Collection)} and
+ * {@link #doEval(RDFHandler, boolean)}.
  * </p>
  */
 public abstract class RuleEngine {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RuleEngine.class);
 
-    private static final String IMPLEMENTATION = Environment.getProperty(
-            "rdfpro.rules.implementation", "eu.fbk.rdfpro.RuleEngineImpl");
+    private static final String IMPLEMENTATION = Environment
+            .getProperty("rdfpro.rules.implementation", "eu.fbk.rdfpro.RuleEngineImpl");
 
     // private static final String IMPLEMENTATION = Environment.getProperty(
     // "rdfpro.rules.implementation", "eu.fbk.rdfpro.RuleEngineDrools");
@@ -92,12 +92,13 @@ public abstract class RuleEngine {
 
         try {
             // Log the operation
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Creating '{}' engine with ruleset:\n{}\n", IMPLEMENTATION, ruleset);
+            if (RuleEngine.LOGGER.isTraceEnabled()) {
+                RuleEngine.LOGGER.trace("Creating '{}' engine with ruleset:\n{}\n",
+                        RuleEngine.IMPLEMENTATION, ruleset);
             }
 
             // Locate the RuleEngine constructor to be used
-            final Class<?> clazz = Class.forName(IMPLEMENTATION);
+            final Class<?> clazz = Class.forName(RuleEngine.IMPLEMENTATION);
             final Constructor<?> constructor = clazz.getConstructor(Ruleset.class);
 
             // Instantiate the engine via reflection
@@ -106,11 +107,13 @@ public abstract class RuleEngine {
         } catch (final IllegalAccessException | ClassNotFoundException | NoSuchMethodException
                 | InstantiationException ex) {
             // Configuration is wrong
-            throw new Error("Illegal rule engine implementation: " + IMPLEMENTATION, ex);
+            throw new Error("Illegal rule engine implementation: " + RuleEngine.IMPLEMENTATION,
+                    ex);
 
         } catch (final InvocationTargetException ex) {
             // Configuration is ok, but the RuleEngine cannot be created
-            throw Throwables.propagate(ex.getCause());
+            Exceptions.throwIfUnchecked(ex.getCause());
+            throw new RuntimeException(ex.getCause());
         }
     }
 
@@ -135,20 +138,21 @@ public abstract class RuleEngine {
         Objects.requireNonNull(model);
 
         // Handle two cases, respectively with/without logging information emitted
-        if (!LOGGER.isDebugEnabled()) {
+        if (!RuleEngine.LOGGER.isDebugEnabled()) {
 
             // Logging disabled: directly forward to doEval()
-            doEval(model);
+            this.doEval(model);
 
         } else {
 
             // Logging enabled: log relevant info before and after forwarding to doEval()
             final long ts = System.currentTimeMillis();
             final int inputSize = model.size();
-            LOGGER.debug("Rule evaluation started: {} input statements, {} rule(s), model input",
+            RuleEngine.LOGGER.debug(
+                    "Rule evaluation started: {} input statements, {} rule(s), model input",
                     inputSize, this.ruleset.getRules().size());
-            doEval(model);
-            LOGGER.debug(
+            this.doEval(model);
+            RuleEngine.LOGGER.debug(
                     "Rule evaluation completed: {} input statements, {} output statements, {} ms",
                     inputSize, model.size(), System.currentTimeMillis() - ts);
         }
@@ -170,10 +174,10 @@ public abstract class RuleEngine {
         Objects.requireNonNull(handler);
 
         // Handle two cases, respectively with/without logging information emitted
-        if (!LOGGER.isDebugEnabled()) {
+        if (!RuleEngine.LOGGER.isDebugEnabled()) {
 
             // Logging disabled: delegate to doEval(), filtering out non-matchable quads
-            return doEval(handler, deduplicate);
+            return this.doEval(handler, deduplicate);
 
         } else {
 
@@ -194,7 +198,7 @@ public abstract class RuleEngine {
 
             // Delegate to doEval(), wrapping the returned handler to perform logging and filter
             // out non-matchable quads
-            return new AbstractRDFHandlerWrapper(doEval(sink, deduplicate)) {
+            return new AbstractRDFHandlerWrapper(this.doEval(sink, deduplicate)) {
 
                 private long ts;
 
@@ -203,7 +207,7 @@ public abstract class RuleEngine {
                     this.ts = System.currentTimeMillis();
                     numProcessed.set(0);
                     numOut.set(0);
-                    LOGGER.debug("Rule evaluation started: {} rule(s), stream input",
+                    RuleEngine.LOGGER.debug("Rule evaluation started: {} rule(s), stream input",
                             RuleEngine.this.ruleset.getRules().size());
                     super.startRDF();
                 }
@@ -217,8 +221,10 @@ public abstract class RuleEngine {
                 @Override
                 public void endRDF() throws RDFHandlerException {
                     super.endRDF();
-                    LOGGER.debug("Rule evaluation completed: {} input statements, "
-                            + "{} output statements , {} ms", numProcessed.get(), numOut.get(),
+                    RuleEngine.LOGGER.debug(
+                            "Rule evaluation completed: {} input statements, "
+                                    + "{} output statements , {} ms",
+                            numProcessed.get(), numOut.get(),
                             System.currentTimeMillis() - this.ts);
                 }
 
@@ -227,8 +233,8 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(QuadModel)}. Its base implementation delegates to
-     * {@link #doEval(RDFHandler)}.
+     * Internal method called by {@link #eval(Collection)}. Its base implementation delegates to
+     * {@link #doEval(RDFHandler, boolean)}.
      *
      * @param model
      *            the model to operate on
@@ -242,8 +248,8 @@ public abstract class RuleEngine {
             // Optimized version that adds inferred statement back to the supplied model, relying
             // on the fact that no statement can be possibly deleted
             final List<Statement> inputStmts = new ArrayList<>(model);
-            final RDFHandler handler = doEval(RDFHandlers.decouple(RDFHandlers.wrap(Collections
-                    .synchronizedCollection(model))), false);
+            final RDFHandler handler = this.doEval(RDFHandlers
+                    .decouple(RDFHandlers.wrap(Collections.synchronizedCollection(model))), false);
             try {
                 handler.startRDF();
                 for (final Statement stmt : inputStmts) {
@@ -262,8 +268,10 @@ public abstract class RuleEngine {
             // the input model and loads those statement (this will also take into consideration
             // possible deletions)
             final List<Statement> outputStmts = new ArrayList<>();
-            final RDFHandler handler = doEval(RDFHandlers.decouple(RDFHandlers.wrap(Collections
-                    .synchronizedCollection(outputStmts))), true);
+            final RDFHandler handler = this.doEval(
+                    RDFHandlers.decouple(
+                            RDFHandlers.wrap(Collections.synchronizedCollection(outputStmts))),
+                    true);
             try {
                 handler.startRDF();
                 for (final Statement stmt : model) {
@@ -283,8 +291,8 @@ public abstract class RuleEngine {
     }
 
     /**
-     * Internal method called by {@link #eval(RDFHandler)}. Its base implementation delegates to
-     * {@link #doEval(QuadModel)}.
+     * Internal method called by {@link #eval(RDFHandler, boolean)}. Its base implementation
+     * delegates to {@link #doEval(Collection)}.
      *
      * @param handler
      *            the handler where to emit resulting statements
@@ -313,7 +321,7 @@ public abstract class RuleEngine {
 
             @Override
             public void endRDF() throws RDFHandlerException {
-                doEval(this.model);
+                RuleEngine.this.doEval(this.model);
                 for (final Statement stmt : this.model) {
                     super.handleStatement(stmt);
                 }

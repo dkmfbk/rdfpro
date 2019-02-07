@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -21,11 +21,12 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.common.iteration.Iteration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import info.aduna.iteration.CloseableIteration;
-import info.aduna.iteration.Iteration;
+// TODO: replace with Guava
 
 final class Iterators {
 
@@ -86,7 +87,7 @@ final class Iterators {
                 try {
                     ((AutoCloseable) this.iterator).close();
                 } catch (final Throwable ex) {
-                    LOGGER.error("Could not close iterator", ex);
+                    Iterators.LOGGER.error("Could not close iterator", ex);
                 }
             }
         }
@@ -135,7 +136,7 @@ final class Iterators {
 
         @Override
         public T next() {
-            if (!hasNext()) {
+            if (!this.hasNext()) {
                 throw new NoSuchElementException();
             }
             final T element = this.currentIterator.next();
@@ -177,7 +178,8 @@ final class Iterators {
 
         private boolean removable;
 
-        FilterIterator(final Iterator<? extends T> iterator, final Predicate<? super T> predicate) {
+        FilterIterator(final Iterator<? extends T> iterator,
+                final Predicate<? super T> predicate) {
             this.iterator = iterator;
             this.predicate = predicate;
             this.next = null;
@@ -206,7 +208,7 @@ final class Iterators {
 
         @Override
         public T next() {
-            if (!hasNext()) {
+            if (!this.hasNext()) {
                 throw new NoSuchElementException();
             }
             final T result = this.next;
@@ -278,10 +280,10 @@ final class Iterators {
             try {
                 return this.iteration.hasNext();
             } catch (RuntimeException | Error ex) {
-                close();
+                this.close();
                 throw ex;
             } catch (final Throwable ex) {
-                close();
+                this.close();
                 throw new RuntimeException(ex);
             }
         }
@@ -291,10 +293,10 @@ final class Iterators {
             try {
                 return this.iteration.next();
             } catch (RuntimeException | Error ex) {
-                close();
+                this.close();
                 throw ex;
             } catch (final Throwable ex) {
-                close();
+                this.close();
                 throw new RuntimeException(ex);
             }
         }
@@ -305,15 +307,15 @@ final class Iterators {
                 try {
                     ((CloseableIteration<? extends T, ?>) this.iteration).close();
                 } catch (final Throwable ex) {
-                    LOGGER.error("Could not close iteration", ex);
+                    Iterators.LOGGER.error("Could not close iteration", ex);
                 }
             }
         }
 
     }
 
-    private static final class IteratorIteration<T, E extends Exception> implements
-            CloseableIteration<T, E> {
+    private static final class IteratorIteration<T, E extends Exception>
+            implements CloseableIteration<T, E> {
 
         private final Iterator<T> iterator;
 

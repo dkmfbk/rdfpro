@@ -1,21 +1,21 @@
 // Imports
-var RDF = Java.type("org.openrdf.model.vocabulary.RDF");
-var RDFS = Java.type("org.openrdf.model.vocabulary.RDFS");
-var OWL = Java.type("org.openrdf.model.vocabulary.OWL");
-var XMLSchema = Java.type("org.openrdf.model.vocabulary.XMLSchema");
-var URI = Java.type("org.openrdf.model.URI");
-var BNode = Java.type("org.openrdf.model.BNode");
-var Literal = Java.type("org.openrdf.model.Literal");
-var Resource = Java.type("org.openrdf.model.Resource");
-var Value = Java.type("org.openrdf.model.Value");
+var RDF = Java.type("org.eclipse.rdf4j.model.vocabulary.RDF");
+var RDFS = Java.type("org.eclipse.rdf4j.model.vocabulary.RDFS");
+var OWL = Java.type("org.eclipse.rdf4j.model.vocabulary.OWL");
+var XMLSchema = Java.type("org.eclipse.rdf4j.model.vocabulary.XMLSchema");
+var URI = Java.type("org.eclipse.rdf4j.model.URI");
+var BNode = Java.type("org.eclipse.rdf4j.model.BNode");
+var Literal = Java.type("org.eclipse.rdf4j.model.Literal");
+var Resource = Java.type("org.eclipse.rdf4j.model.Resource");
+var Value = Java.type("org.eclipse.rdf4j.model.Value");
 
 // Global objects
-var vf = org.openrdf.model.impl.ValueFactoryImpl.getInstance();
+var vf = org.eclipse.rdf4j.model.impl.SimpleValueFactory.getInstance();
 
 // Custom functions for dealing with broken equality
 function eq(x,y) { return x == null && y == null || x != null && x.equals(y); }
 
-// Custom utility functions for dealing with Sesame model objects
+// Custom utility functions for dealing with RDF4J model objects
 function subj(x) { return x.getSubject(); }
 function pred(x) { return x.getPredicate(); }
 function obj(x)  { return x.getObject(); }
@@ -32,7 +32,7 @@ function isiri(x) { return x instanceof URI; }
 function isblank(x) { return x instanceof BNode; }
 function isliteral(x) { return x instanceof Literal; }
 function isnumeric(x) { return x instanceof Literal && x.datatype != null &&
-	org.openrdf.model.datatypes.XMLDatatypeUtil.isNumericDatatype(x.datatype); }
+	org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil.isNumericDatatype(x.datatype); }
 
 // SPARQL functions for extracting node components
 function str(x) { if (x instanceof BNode) throw "str() called with bnode " + x; return x.toString(); }

@@ -5,18 +5,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
 
-import eu.fbk.rdfpro.RDFHandlers;
-import eu.fbk.rdfpro.RDFProcessor;
-import eu.fbk.rdfpro.RDFProcessors;
-import eu.fbk.rdfpro.RDFSource;
-import eu.fbk.rdfpro.RDFSources;
+import eu.fbk.rdfpro.util.Statements;
 
 public class RuleProcessorTest {
 
@@ -24,7 +19,7 @@ public class RuleProcessorTest {
     // example: data.tql.gz -r rdfs tbox.tql.gz
 
     public static void main(final String... args) throws Throwable {
-        mainRules(args);
+        RuleProcessorTest.mainRules(args);
         // mainTemplate(args);
     }
 
@@ -37,7 +32,7 @@ public class RuleProcessorTest {
             }
         }
 
-        final RDFSource source = RDFSources.read(true, true, null, null,
+        final RDFSource source = RDFSources.read(true, true, null, null, null, true,
                 Arrays.copyOfRange(args, 0, index));
 
         final RDFProcessor processor = RDFProcessors.parse(true,
@@ -54,6 +49,7 @@ public class RuleProcessorTest {
         System.out.println("Average: " + (System.currentTimeMillis() - ts) / (n - 5));
     }
 
+    @SuppressWarnings("unused")
     private static void mainTemplate(final String... args) throws Throwable {
 
         int index = 0;
@@ -63,7 +59,7 @@ public class RuleProcessorTest {
             }
         }
 
-        RDFSource source = RDFSources.read(true, true, null, null,
+        RDFSource source = RDFSources.read(true, true, null, null, null, true,
                 Arrays.copyOfRange(args, 0, index));
 
         final List<Statement> statements = new ArrayList<>();
@@ -78,7 +74,7 @@ public class RuleProcessorTest {
         for (int i = 0; i < 1000000; ++i) {
             for (final Statement stmt : statements) {
 
-                method1(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
+                RuleProcessorTest.method1(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(),
                         stmt.getContext(), array, 0);
                 counter.addAndGet(array[1].hashCode() + array[3].hashCode());
 
@@ -100,7 +96,7 @@ public class RuleProcessorTest {
     // method2 14.4 14.5 14.3 14.3
     // method1/method3 10.0 10.0 10.0
 
-    private static void method1(final Resource s, final URI p, final Value o, final Resource c,
+    private static void method1(final Resource s, final IRI p, final Value o, final Resource c,
             final Value[] out, int offset) {
         out[offset++] = s;
         out[offset++] = OWL.SAMEAS;
@@ -108,19 +104,22 @@ public class RuleProcessorTest {
         out[offset++] = OWL.THING;
     }
 
-    private static void method2(final Resource s, final URI p, final Value o, final Resource c,
+    @SuppressWarnings("unused")
+    private static void method2(final Resource s, final IRI p, final Value o, final Resource c,
             final QuadHandler handler) {
         handler.handle(s, OWL.SAMEAS, s, OWL.THING);
     }
 
     private static interface QuadHandler {
 
-        void handle(Resource s, URI p, Value o, Resource c);
+        void handle(Resource s, IRI p, Value o, Resource c);
 
     }
 
+    @SuppressWarnings("unused")
     private static Statement method3(final Statement s) {
-        return new ContextStatementImpl(s.getSubject(), OWL.SAMEAS, s.getSubject(), OWL.THING);
+        return Statements.VALUE_FACTORY.createStatement(s.getSubject(), OWL.SAMEAS, s.getSubject(),
+                OWL.THING);
     }
 
 }

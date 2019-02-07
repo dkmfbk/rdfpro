@@ -3,26 +3,24 @@ package eu.fbk.rdfpro.util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.junit.Assert;
 import org.junit.Test;
-import org.openrdf.model.Literal;
-import org.openrdf.model.URI;
-import org.openrdf.model.impl.LiteralImpl;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.RDFS;
-
-import eu.fbk.rdfpro.util.StatementMatcher;
 
 public class StatementMatcherTest {
 
     @Test
     public void test() {
 
-        final URI uri1 = new URIImpl("ex:uri1");
-        final URI uri2 = new URIImpl("ex:uri2");
-        final Literal lit1 = new LiteralImpl("label");
+        final ValueFactory vf = Statements.VALUE_FACTORY;
+        final IRI uri1 = vf.createIRI("ex:uri1");
+        final IRI uri2 = vf.createIRI("ex:uri2");
+        final Literal lit1 = vf.createLiteral("label");
 
         final StatementMatcher matcher = StatementMatcher.builder()
                 .addValues(null, RDF.TYPE, OWL.THING, null, null, "x")
@@ -50,9 +48,10 @@ public class StatementMatcherTest {
     @Test
     public void test2() {
 
-        final URI uri1 = new URIImpl("ex:uri1");
-        final URI uri2 = new URIImpl("ex:uri2");
-        final Literal lit1 = new LiteralImpl("label");
+        final ValueFactory vf = Statements.VALUE_FACTORY;
+        final IRI uri1 = vf.createIRI("ex:uri1");
+        final IRI uri2 = vf.createIRI("ex:uri2");
+        final Literal lit1 = vf.createLiteral("label");
 
         final StatementMatcher matcher = StatementMatcher.builder()
                 .addValues(null, null, null, null, null, "x")

@@ -21,7 +21,7 @@ goto error
 REM set the following to true to enable ANSI escape sequences under Windows
 set RDFPRO_ANSI_ENABLED=false
 
-"%JAVA_HOME%\bin\java.exe" %JAVA_OPTS% -classpath "%RDFPRO_HOME%etc;%RDFPRO_HOME%lib\*" eu.fbk.rdfpro.tool.Main %*
+"%JAVA_HOME%\bin\java.exe" %JAVA_OPTS% -Djdk.xml.entityExpansionLimit=0 -classpath "%RDFPRO_HOME%etc;%RDFPRO_HOME%lib\*" eu.fbk.rdfpro.tool.Main %*
 if ERRORLEVEL 1 goto error
 goto end
 

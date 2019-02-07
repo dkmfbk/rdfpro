@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -47,20 +47,20 @@ import javax.annotation.Nullable;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-import org.openrdf.model.Model;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFWriter;
-import org.openrdf.rio.Rio;
-import org.openrdf.rio.WriterConfig;
-import org.openrdf.rio.helpers.BasicWriterSettings;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFWriter;
+import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.WriterConfig;
+import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +102,13 @@ public final class RDFHandlers {
 
     static {
         final WriterConfig config = new WriterConfig();
-        config.set(BasicWriterSettings.PRETTY_PRINT, true);
+
+        // TODO: we have to disable pretty printing as this would require indexing all data prior
+        // to (reordering and) emitting it for the Turtle and TriG formats. We will address this
+        // issue implementing a moving window buffer that performs a partial reordering of
+        // statements prior to their writing.
+        config.set(BasicWriterSettings.PRETTY_PRINT, false);
+
         config.set(BasicWriterSettings.RDF_LANGSTRING_TO_LANG_LITERAL, true);
         config.set(BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL, true);
         DEFAULT_WRITER_CONFIG = config;
@@ -124,8 +130,9 @@ public final class RDFHandlers {
      */
     public static RDFHandler wrap(final Collection<? super Statement> statements) {
         Objects.requireNonNull(statements);
-        return new WrapHandler(statements, statements instanceof Model
-                || statements instanceof QuadModel ? statements : null);
+        return new WrapHandler(statements,
+                statements instanceof Model || statements instanceof QuadModel ? statements
+                        : null);
     }
 
     /**
@@ -147,14 +154,14 @@ public final class RDFHandlers {
 
     /**
      * Returns an {@code RDFHandler} that populates the supplied statement collection and
-     * prefix-to-namespace-uri map. Access to the collection and map is not synchronized, so they
+     * prefix-to-namespace-iri map. Access to the collection and map is not synchronized, so they
      * MUST be thread-safe (may use {@link Collections#synchronizedCollection(Collection)} and
      * {@link Collections#synchronizedMap(Map)}).
      *
      * @param statements
      *            the statement collection to populate, not null
      * @param namespaces
-     *            the prefix-to-namespace-uri map to populate, or null to discard namespaces
+     *            the prefix-to-namespace-iri map to populate, or null to discard namespaces
      * @return the created {@code RDFHandler}
      */
     public static RDFHandler wrap(final Collection<? super Statement> statements,
@@ -185,7 +192,8 @@ public final class RDFHandlers {
      */
     public static RDFHandler write(@Nullable final WriterConfig config, final int chunkSize,
             final String... locations) {
-        final WriterConfig actualConfig = config != null ? config : DEFAULT_WRITER_CONFIG;
+        final WriterConfig actualConfig = config != null ? config
+                : RDFHandlers.DEFAULT_WRITER_CONFIG;
         final RDFHandler[] handlers = new RDFHandler[locations.length];
         for (int i = 0; i < locations.length; ++i) {
             final String location = locations[i];
@@ -194,8 +202,9 @@ public final class RDFHandlers {
             handlers[i] = parallel ? new ParallelWriteHandler(actualConfig, location)
                     : new SequentialWriteHandler(actualConfig, location);
         }
-        return handlers.length == 0 ? NIL : handlers.length == 1 ? handlers[0]
-                : dispatchRoundRobin(chunkSize, handlers);
+        return handlers.length == 0 ? RDFHandlers.NIL
+                : handlers.length == 1 ? handlers[0]
+                        : RDFHandlers.dispatchRoundRobin(chunkSize, handlers);
     }
 
     /**
@@ -227,10 +236,10 @@ public final class RDFHandlers {
 
         Objects.requireNonNull(handler);
 
-        if (ignoredMethods == 0 || handler == NIL) {
+        if (ignoredMethods == 0 || handler == RDFHandlers.NIL) {
             return handler;
 
-        } else if ((ignoredMethods & METHOD_HANDLE_STATEMENT) == 0) {
+        } else if ((ignoredMethods & RDFHandlers.METHOD_HANDLE_STATEMENT) == 0) {
             return new IgnoreMethodHandler(handler, ignoredMethods) {
 
                 @Override
@@ -263,7 +272,7 @@ public final class RDFHandlers {
      * @return the created {@code RDFHandler} wrapper
      */
     public static RDFHandler ignorePasses(final RDFHandler handler, final int maxPasses) {
-        if (handler == NIL) {
+        if (handler == RDFHandlers.NIL) {
             return handler;
         }
         return new AbstractRDFHandlerWrapper(handler) {
@@ -274,7 +283,7 @@ public final class RDFHandlers {
 
             @Override
             public void startRDF() throws RDFHandlerException {
-                this.passHandler = this.pass < maxPasses ? this.handler : NIL;
+                this.passHandler = this.pass < maxPasses ? this.handler : RDFHandlers.NIL;
                 this.passHandler.startRDF();
             }
 
@@ -284,9 +293,9 @@ public final class RDFHandlers {
             }
 
             @Override
-            public void handleNamespace(final String prefix, final String uri)
+            public void handleNamespace(final String prefix, final String iri)
                     throws RDFHandlerException {
-                this.passHandler.handleNamespace(prefix, uri);
+                this.passHandler.handleNamespace(prefix, iri);
             }
 
             @Override
@@ -315,7 +324,7 @@ public final class RDFHandlers {
      * @return the created {@code RDFHandler} dispatcher
      */
     public static RDFHandler dispatchAll(final RDFHandler... handlers) {
-        return dispatchAll(handlers, new int[handlers.length]);
+        return RDFHandlers.dispatchAll(handlers, new int[handlers.length]);
     }
 
     /**
@@ -341,7 +350,7 @@ public final class RDFHandlers {
             throw new NullPointerException();
         }
         if (handlers.length == 0) {
-            return NIL;
+            return RDFHandlers.NIL;
         } else if (handlers.length == 1) {
             return handlers[0];
         } else if (handlers.length == 2 && extraPasses[0] == extraPasses[1]) {
@@ -368,12 +377,13 @@ public final class RDFHandlers {
      *            the {@code RDFHandler}s to forward calls to, in a round robin fashion
      * @return the created {@code RDFHandler} dispatcher
      */
-    public static RDFHandler dispatchRoundRobin(final int chunkSize, final RDFHandler... handlers) {
+    public static RDFHandler dispatchRoundRobin(final int chunkSize,
+            final RDFHandler... handlers) {
         if (Arrays.asList(handlers).contains(null)) {
             throw new NullPointerException();
         }
         if (handlers.length == 0) {
-            return NIL;
+            return RDFHandlers.NIL;
         } else if (handlers.length == 1) {
             return handlers[0];
         } else {
@@ -413,11 +423,11 @@ public final class RDFHandlers {
         if (count == 1 && (operation == SetOperator.SUM_MULTISET //
                 || operation == SetOperator.UNION_MULTISET //
                 || operation == SetOperator.INTERSECTION_MULTISET //
-        /*    */|| operation == SetOperator.DIFFERENCE_MULTISET)) {
+                /*    */ || operation == SetOperator.DIFFERENCE_MULTISET)) {
             result[0] = handler;
         } else if (count == 1 && operation == SetOperator.SYMMETRIC_DIFFERENCE
                 || operation == SetOperator.SYMMETRIC_DIFFERENCE_MULTISET) {
-            result[0] = NIL;
+            result[0] = RDFHandlers.NIL;
         } else if (operation == SetOperator.SUM_MULTISET) {
             Arrays.fill(result, new CollectMergerHandler(handler, count));
         } else if (operation == SetOperator.UNION) {
@@ -443,7 +453,7 @@ public final class RDFHandlers {
      * @return the (possibly) wrapped handler
      */
     public static RDFHandler decouple(final RDFHandler handler) {
-        if (handler == NIL || handler instanceof DecoupleHandler) {
+        if (handler == RDFHandlers.NIL || handler instanceof DecoupleHandler) {
             return handler;
         }
         return new DecoupleHandler(handler);
@@ -463,10 +473,10 @@ public final class RDFHandlers {
      */
     public static RDFHandler decouple(final RDFHandler handler, final int numConsumerThreads) {
         if (numConsumerThreads <= 0) {
-            throw new IllegalArgumentException("Invalid number of consumer threads: "
-                    + numConsumerThreads);
+            throw new IllegalArgumentException(
+                    "Invalid number of consumer threads: " + numConsumerThreads);
         }
-        if (handler == NIL || handler instanceof DecoupleQueueHandler) {
+        if (handler == RDFHandlers.NIL || handler instanceof DecoupleQueueHandler) {
             return handler;
         }
         return new DecoupleQueueHandler(handler, numConsumerThreads);
@@ -482,7 +492,7 @@ public final class RDFHandlers {
      * @return the (possibly) wrapped handler
      */
     public static RDFHandler synchronize(final RDFHandler handler) {
-        if (handler == NIL || handler instanceof SynchronizeHandler) {
+        if (handler == RDFHandlers.NIL || handler instanceof SynchronizeHandler) {
             return handler;
         }
         return new SynchronizeHandler(handler);
@@ -502,16 +512,16 @@ public final class RDFHandlers {
 
         @SuppressWarnings("unchecked")
         @Override
-        public synchronized void handleNamespace(final String prefix, final String uri)
+        public synchronized void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
             if (this.namespaceSink instanceof Model) {
-                ((Model) this.namespaceSink).setNamespace(prefix, uri);
+                ((Model) this.namespaceSink).setNamespace(prefix, iri);
             } else if (this.namespaceSink instanceof QuadModel) {
-                ((QuadModel) this.namespaceSink).setNamespace(prefix, uri);
+                ((QuadModel) this.namespaceSink).setNamespace(prefix, iri);
             } else if (this.namespaceSink instanceof Collection<?>) {
-                ((Collection<Namespace>) this.namespaceSink).add(new NamespaceImpl(prefix, uri));
+                ((Collection<Namespace>) this.namespaceSink).add(new SimpleNamespace(prefix, iri));
             } else if (this.namespaceSink instanceof Map<?, ?>) {
-                ((Map<String, String>) this.namespaceSink).put(prefix, uri);
+                ((Map<String, String>) this.namespaceSink).put(prefix, iri);
             }
         }
 
@@ -544,7 +554,8 @@ public final class RDFHandlers {
         public void startRDF() throws RDFHandlerException {
             try {
                 final RDFFormat format = Statements.toRDFFormat(this.location);
-                LOGGER.debug("Starting sequential {} writing of {}", format, this.location);
+                RDFHandlers.LOGGER.debug("Starting sequential {} writing of {}", format,
+                        this.location);
                 final OutputStream stream = IO.write(this.location);
                 if (Statements.isRDFFormatTextBased(format)) {
                     this.out = IO.buffer(new OutputStreamWriter(stream, Charset.forName("UTF-8")));
@@ -567,9 +578,9 @@ public final class RDFHandlers {
         }
 
         @Override
-        public synchronized void handleNamespace(final String prefix, final String uri)
+        public synchronized void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            this.writer.handleNamespace(prefix, uri);
+            this.writer.handleNamespace(prefix, iri);
         }
 
         @Override
@@ -623,7 +634,7 @@ public final class RDFHandlers {
         @Override
         public void startRDF() throws RDFHandlerException {
             try {
-                LOGGER.debug("Starting parallel {} writing of {}",
+                RDFHandlers.LOGGER.debug("Starting parallel {} writing of {}",
                         Statements.toRDFFormat(this.location).getName(), this.location);
                 this.out = IO.write(this.location);
                 this.partialOuts = new ArrayList<Writer>();
@@ -632,7 +643,7 @@ public final class RDFHandlers {
 
                     @Override
                     protected RDFWriter initialValue() {
-                        return newWriter();
+                        return ParallelWriteHandler.this.newWriter();
                     }
 
                 };
@@ -707,19 +718,19 @@ public final class RDFHandlers {
 
         private Resource lastSubj;
 
-        private URI lastPred;
+        private IRI lastPred;
 
         private int count;
 
         UpdateHandler(final String endpointURL, @Nullable final Integer chunkSize) {
             this.endpointURL = endpointURL;
-            this.chunkSize = chunkSize != null ? chunkSize : DEFAULT_CHUNK_SIZE;
+            this.chunkSize = chunkSize != null ? chunkSize : UpdateHandler.DEFAULT_CHUNK_SIZE;
             this.builder = new StringBuilder();
             this.lastCtx = null;
             this.lastSubj = null;
             this.lastPred = null;
             this.count = 0;
-            this.builder.append(HEAD);
+            this.builder.append(UpdateHandler.HEAD);
         }
 
         @Override
@@ -741,24 +752,24 @@ public final class RDFHandlers {
 
             if (!sameCtx && statement.getContext() != null) {
                 this.builder.append("GRAPH ");
-                emit(statement.getContext());
+                this.emit(statement.getContext());
                 this.builder.append(" {\n");
             }
 
             if (!samePred) {
                 if (!sameSubj) {
-                    emit(statement.getSubject());
+                    this.emit(statement.getSubject());
                     this.builder.append(" ");
                 } else {
                     this.builder.append(" ; ");
                 }
-                emit(statement.getPredicate());
+                this.emit(statement.getPredicate());
                 this.builder.append(" ");
             } else {
                 this.builder.append(" , ");
             }
 
-            emit(statement.getObject());
+            this.emit(statement.getObject());
 
             this.lastCtx = statement.getContext();
             this.lastSubj = statement.getSubject();
@@ -766,13 +777,13 @@ public final class RDFHandlers {
 
             ++this.count;
             if (this.count == this.chunkSize) {
-                flush();
+                this.flush();
             }
         }
 
         @Override
         public void endRDF() throws RDFHandlerException {
-            flush();
+            this.flush();
         }
 
         private void emit(final Value value) {
@@ -790,10 +801,10 @@ public final class RDFHandlers {
                 }
                 this.builder.append("}");
                 final String update = this.builder.toString();
-                this.builder.setLength(HEAD.length());
+                this.builder.setLength(UpdateHandler.HEAD.length());
                 this.count = 0;
                 try {
-                    sendUpdate(update);
+                    this.sendUpdate(update);
                 } catch (final Throwable ex) {
                     throw new RDFHandlerException(ex);
                 }
@@ -823,8 +834,8 @@ public final class RDFHandlers {
 
                 final int httpCode = connection.getResponseCode();
                 if (httpCode != HttpURLConnection.HTTP_OK) {
-                    throw new IOException("Upload to '" + this.endpointURL + "' failed (HTTP "
-                            + httpCode + ")");
+                    throw new IOException(
+                            "Upload to '" + this.endpointURL + "' failed (HTTP " + httpCode + ")");
                 }
 
             } finally {
@@ -848,11 +859,12 @@ public final class RDFHandlers {
 
         IgnoreMethodHandler(final RDFHandler handler, final int ignoredMethods) {
             super(handler);
-            this.forwardStartRDF = (ignoredMethods & METHOD_START_RDF) == 0;
-            this.forwardHandleComment = (ignoredMethods & METHOD_HANDLE_COMMENT) == 0;
-            this.forwardHandleNamespace = (ignoredMethods & METHOD_HANDLE_NAMESPACE) == 0;
-            this.forwardEndRDF = (ignoredMethods & METHOD_END_RDF) == 0;
-            this.forwardClose = (ignoredMethods & METHOD_CLOSE) == 0;
+            this.forwardStartRDF = (ignoredMethods & RDFHandlers.METHOD_START_RDF) == 0;
+            this.forwardHandleComment = (ignoredMethods & RDFHandlers.METHOD_HANDLE_COMMENT) == 0;
+            this.forwardHandleNamespace = (ignoredMethods
+                    & RDFHandlers.METHOD_HANDLE_NAMESPACE) == 0;
+            this.forwardEndRDF = (ignoredMethods & RDFHandlers.METHOD_END_RDF) == 0;
+            this.forwardClose = (ignoredMethods & RDFHandlers.METHOD_CLOSE) == 0;
         }
 
         @Override
@@ -870,10 +882,10 @@ public final class RDFHandlers {
         }
 
         @Override
-        public final void handleNamespace(final String prefix, final String uri)
+        public final void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
             if (this.forwardHandleNamespace) {
-                super.handleNamespace(prefix, uri);
+                super.handleNamespace(prefix, iri);
             }
         }
 
@@ -917,10 +929,10 @@ public final class RDFHandlers {
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            this.first.handleNamespace(prefix, uri);
-            this.second.handleNamespace(prefix, uri);
+            this.first.handleNamespace(prefix, iri);
+            this.second.handleNamespace(prefix, iri);
         }
 
         @Override
@@ -995,10 +1007,10 @@ public final class RDFHandlers {
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
             for (final RDFHandler handler : this.passHandlers) {
-                handler.handleNamespace(prefix, uri);
+                handler.handleNamespace(prefix, iri);
             }
         }
 
@@ -1047,20 +1059,20 @@ public final class RDFHandlers {
 
         @Override
         public void handleComment(final String comment) throws RDFHandlerException {
-            pickHandler().handleComment(comment);
+            this.pickHandler().handleComment(comment);
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
             for (final RDFHandler handler : this.handlers) {
-                handler.handleNamespace(prefix, uri);
+                handler.handleNamespace(prefix, iri);
             }
         }
 
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            pickHandler().handleStatement(statement);
+            this.pickHandler().handleStatement(statement);
         }
 
         @Override
@@ -1137,25 +1149,25 @@ public final class RDFHandlers {
             if (this.pending <= 0) {
                 this.pending = this.size;
                 super.startRDF();
-                doStartRDF();
+                this.doStartRDF();
             }
         }
 
         @Override
         public final void handleStatement(final Statement statement) throws RDFHandlerException {
-            doHandleStatement(statement, 0);
+            this.doHandleStatement(statement, 0);
         }
 
         public final void handleStatement(final Statement statement, final int label)
                 throws RDFHandlerException {
-            doHandleStatement(statement, label);
+            this.doHandleStatement(statement, label);
         }
 
         @Override
         public final void endRDF() throws RDFHandlerException {
             --this.pending;
             if (this.pending == 0) {
-                doEndRDF();
+                this.doEndRDF();
                 super.endRDF();
             }
         }
@@ -1163,7 +1175,7 @@ public final class RDFHandlers {
         @Override
         public void close() {
             super.close();
-            doClose();
+            this.doClose();
         }
 
         void doStartRDF() throws RDFHandlerException {
@@ -1228,7 +1240,7 @@ public final class RDFHandlers {
                         try {
                             final Statement statement = (Statement) record[0];
                             final int label = ((Long) record[1]).intValue();
-                            doHandleStatementSorted(statement, label);
+                            CollectSorterHandler.this.doHandleStatementSorted(statement, label);
                         } catch (final RDFHandlerException ex) {
                             throw new RuntimeException(ex);
                         }
@@ -1276,7 +1288,7 @@ public final class RDFHandlers {
 
             if (!statement.equals(this.statement)
                     || !Objects.equals(statement.getContext(), this.statement.getContext())) {
-                flush();
+                this.flush();
                 this.statement = statement;
                 Arrays.fill(this.multiplicities, 0);
             }
@@ -1286,7 +1298,7 @@ public final class RDFHandlers {
         @Override
         void doEndRDF() throws RDFHandlerException {
             super.doEndRDF();
-            flush();
+            this.flush();
         }
 
         private void flush() throws RDFHandlerException {
@@ -1336,7 +1348,7 @@ public final class RDFHandlers {
             this.incomingThreads.clear();
             this.futures.clear();
             this.exception = null;
-            this.buffer = new Statement[BUFFER_SIZE];
+            this.buffer = new Statement[DecoupleHandler.BUFFER_SIZE];
             this.size = 0;
             this.mask = 0;
             this.disabled = false;
@@ -1348,7 +1360,7 @@ public final class RDFHandlers {
             if (this.disabled) {
                 super.handleStatement(statement);
             } else {
-                handleStatementHelper(statement);
+                this.handleStatementHelper(statement);
             }
         }
 
@@ -1356,7 +1368,7 @@ public final class RDFHandlers {
             if ((this.counter.getAndIncrement() & this.mask) != 0) {
                 super.handleStatement(statement);
             } else {
-                handleStatementInBackground(statement);
+                this.handleStatementInBackground(statement);
             }
         }
 
@@ -1366,14 +1378,14 @@ public final class RDFHandlers {
             Statement[] fullBuffer = null;
             synchronized (this) {
                 this.buffer[this.size++] = statement;
-                if (this.size == BUFFER_SIZE) {
+                if (this.size == DecoupleHandler.BUFFER_SIZE) {
                     fullBuffer = this.buffer;
-                    this.buffer = new Statement[BUFFER_SIZE];
+                    this.buffer = new Statement[DecoupleHandler.BUFFER_SIZE];
                     this.size = 0;
                     this.incomingThreads.add(Thread.currentThread());
-                    checkNotFailed();
-                    calibrateMask();
-                    fullBuffer = handleStatementsInBackground(fullBuffer);
+                    this.checkNotFailed();
+                    this.calibrateMask();
+                    fullBuffer = this.handleStatementsInBackground(fullBuffer);
                 }
             }
 
@@ -1444,7 +1456,7 @@ public final class RDFHandlers {
             } else {
                 this.mask = 0xFFFFFFFF;
                 this.disabled = true;
-                LOGGER.debug("Decoupler disabled");
+                RDFHandlers.LOGGER.debug("Decoupler disabled");
             }
 
             // note: we do not declare mask as volatile, so the change will be picked up by
@@ -1488,7 +1500,7 @@ public final class RDFHandlers {
             }
 
             // Check there were no errors in background processing
-            checkNotFailed();
+            this.checkNotFailed();
 
             // Propagate
             super.endRDF();
@@ -1518,9 +1530,9 @@ public final class RDFHandlers {
         }
 
         @Override
-        public synchronized void handleNamespace(final String prefix, final String uri)
+        public synchronized void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            super.handleNamespace(prefix, uri);
+            super.handleNamespace(prefix, iri);
         }
 
         @Override
@@ -1554,7 +1566,7 @@ public final class RDFHandlers {
         public void startRDF() throws RDFHandlerException {
             super.startRDF();
             this.exception = new AtomicReference<>(null);
-            this.queue = new ArrayBlockingQueue<>(CAPACITY);
+            this.queue = new ArrayBlockingQueue<>(DecoupleQueueHandler.CAPACITY);
             this.futures = Lists.newArrayList();
             for (int i = 0; i < this.numConsumers; ++i) {
                 this.futures.add(Environment.getPool().submit(new Runnable() {
@@ -1570,12 +1582,12 @@ public final class RDFHandlers {
                                 final Object element = DecoupleQueueHandler.this.queue.take();
                                 if (element instanceof Statement) {
                                     handler.handleStatement((Statement) element);
-                                } else if (element instanceof NamespaceImpl) {
-                                    final NamespaceImpl ns = (NamespaceImpl) element;
+                                } else if (element instanceof Namespace) {
+                                    final Namespace ns = (Namespace) element;
                                     handler.handleNamespace(ns.getPrefix(), ns.getName());
                                 } else if (element instanceof String) {
                                     handler.handleComment((String) element);
-                                } else if (element == EOF) {
+                                } else if (element == DecoupleQueueHandler.EOF) {
                                     break;
                                 }
                             }
@@ -1591,28 +1603,28 @@ public final class RDFHandlers {
 
         @Override
         public void handleComment(final String comment) throws RDFHandlerException {
-            check();
-            put(comment);
+            this.check();
+            this.put(comment);
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            check();
-            put(new NamespaceImpl(prefix, uri));
+            this.check();
+            this.put(new SimpleNamespace(prefix, iri));
         }
 
         @Override
         public void handleStatement(final Statement statement) throws RDFHandlerException {
-            check();
-            put(statement);
+            this.check();
+            this.put(statement);
         }
 
         @Override
         public void endRDF() throws RDFHandlerException {
             try {
-                check();
-                put(EOF);
+                this.check();
+                this.put(DecoupleQueueHandler.EOF);
                 for (final Future<?> future : this.futures) {
                     try {
                         future.get();
@@ -1620,7 +1632,7 @@ public final class RDFHandlers {
                         this.exception.compareAndSet(null, ex);
                     }
                 }
-                check();
+                this.check();
                 super.endRDF();
             } finally {
                 this.exception = null;

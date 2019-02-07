@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -19,12 +19,12 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.Var;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.Var;
 
 // This looks more like a StatementMapper
 
@@ -50,29 +50,33 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     public StatementTemplate(final Object subj, final Object pred, final Object obj,
             @Nullable final Object ctx) {
 
-        this.subj = check(subj);
-        this.pred = check(pred);
-        this.obj = check(obj);
-        this.ctx = check(ctx);
+        this.subj = StatementTemplate.check(subj);
+        this.pred = StatementTemplate.check(pred);
+        this.obj = StatementTemplate.check(obj);
+        this.ctx = StatementTemplate.check(ctx);
 
-        this.subjIndex = this.subj instanceof Resource ? 4 : ((StatementComponent) this.subj)
-                .getIndex();
-        this.predIndex = this.pred instanceof Resource ? 5 : ((StatementComponent) this.pred)
-                .getIndex();
-        this.objIndex = this.obj instanceof Resource ? 6 : ((StatementComponent) this.obj)
-                .getIndex();
+        this.subjIndex = this.subj instanceof Resource ? 4
+                : ((StatementComponent) this.subj).getIndex();
+        this.predIndex = this.pred instanceof Resource ? 5
+                : ((StatementComponent) this.pred).getIndex();
+        this.objIndex = this.obj instanceof Resource ? 6
+                : ((StatementComponent) this.obj).getIndex();
         this.ctxIndex = this.ctx == null || this.ctx instanceof Resource ? 7
                 : ((StatementComponent) this.ctx).getIndex();
     }
 
     public StatementTemplate(final StatementPattern head) {
-        this(componentFor(head.getSubjectVar()), componentFor(head.getPredicateVar()),
-                componentFor(head.getObjectVar()), componentFor(head.getContextVar()));
+        this(StatementTemplate.componentFor(head.getSubjectVar()),
+                StatementTemplate.componentFor(head.getPredicateVar()),
+                StatementTemplate.componentFor(head.getObjectVar()),
+                StatementTemplate.componentFor(head.getContextVar()));
     }
 
     public StatementTemplate(final StatementPattern head, final StatementPattern body) {
-        this(componentFor(head.getSubjectVar(), body), componentFor(head.getPredicateVar(), body),
-                componentFor(head.getObjectVar(), body), componentFor(head.getContextVar(), body));
+        this(StatementTemplate.componentFor(head.getSubjectVar(), body),
+                StatementTemplate.componentFor(head.getPredicateVar(), body),
+                StatementTemplate.componentFor(head.getObjectVar(), body),
+                StatementTemplate.componentFor(head.getContextVar(), body));
     }
 
     public StatementTemplate normalize(final Function<? super Value, ?> normalizer) {
@@ -83,19 +87,19 @@ public final class StatementTemplate implements Function<Statement, Statement> {
         final Object nobj = this.obj instanceof StatementComponent ? (Object) this.obj
                 : normalizer.apply((Value) this.obj);
         final Object nctx = this.ctx == null //
-                || this.ctx instanceof StatementComponent ? (Object) this.ctx : normalizer
-                .apply((Value) this.ctx);
-        return nsubj == this.subj && npred == this.pred && nobj == this.obj && nctx == this.ctx ? this
-                : new StatementTemplate(nsubj, npred, nobj, nctx);
+                || this.ctx instanceof StatementComponent ? (Object) this.ctx
+                        : normalizer.apply((Value) this.ctx);
+        return nsubj == this.subj && npred == this.pred && nobj == this.obj && nctx == this.ctx
+                ? this : new StatementTemplate(nsubj, npred, nobj, nctx);
     }
 
     @Override
     public Statement apply(final Statement stmt) {
         try {
-            final URI p = (URI) resolve(stmt, this.predIndex);
-            final Resource s = (Resource) resolve(stmt, this.subjIndex);
-            final Resource c = (Resource) resolve(stmt, this.ctxIndex);
-            final Value o = (Value) resolve(stmt, this.objIndex);
+            final IRI p = (IRI) this.resolve(stmt, this.predIndex);
+            final Resource s = (Resource) this.resolve(stmt, this.subjIndex);
+            final Resource c = (Resource) this.resolve(stmt, this.ctxIndex);
+            final Value o = (Value) this.resolve(stmt, this.objIndex);
             return Statements.VALUE_FACTORY.createStatement(s, p, o, c);
         } catch (final Throwable ex) {
             return null;
@@ -104,10 +108,10 @@ public final class StatementTemplate implements Function<Statement, Statement> {
 
     public Statement apply(final Statement stmt, final StatementDeduplicator deduplicator) {
         try {
-            final URI p = (URI) resolve(stmt, this.predIndex);
-            final Resource s = (Resource) resolve(stmt, this.subjIndex);
-            final Resource c = (Resource) resolve(stmt, this.ctxIndex);
-            final Value o = (Value) resolve(stmt, this.objIndex);
+            final IRI p = (IRI) this.resolve(stmt, this.predIndex);
+            final Resource s = (Resource) this.resolve(stmt, this.subjIndex);
+            final Resource c = (Resource) this.resolve(stmt, this.ctxIndex);
+            final Value o = (Value) this.resolve(stmt, this.objIndex);
             if (deduplicator.add(s, p, o, c)) {
                 return Statements.VALUE_FACTORY.createStatement(s, p, o, c);
             }
@@ -160,13 +164,13 @@ public final class StatementTemplate implements Function<Statement, Statement> {
     @Override
     public String toString() {
         final StringBuilder builder = new StringBuilder();
-        toStringHelper(this.subj, builder);
+        this.toStringHelper(this.subj, builder);
         builder.append(' ');
-        toStringHelper(this.pred, builder);
+        this.toStringHelper(this.pred, builder);
         builder.append(' ');
-        toStringHelper(this.obj, builder);
+        this.toStringHelper(this.obj, builder);
         builder.append(' ');
-        toStringHelper(this.ctx, builder);
+        this.toStringHelper(this.ctx, builder);
         return builder.toString();
     }
 
@@ -208,8 +212,8 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             case "c":
                 return StatementComponent.CONTEXT;
             default:
-                throw new IllegalArgumentException("Could not extract component from "
-                        + var.getName());
+                throw new IllegalArgumentException(
+                        "Could not extract component from " + var.getName());
             }
         }
     }
@@ -234,8 +238,8 @@ public final class StatementTemplate implements Function<Statement, Statement> {
             } else if (ctxVar != null && !ctxVar.hasValue() && name.equals(ctxVar.getName())) {
                 return StatementComponent.CONTEXT;
             }
-            throw new IllegalArgumentException("Could not find variable " + var.getName()
-                    + " in pattern " + body);
+            throw new IllegalArgumentException(
+                    "Could not find variable " + var.getName() + " in pattern " + body);
         }
     }
 }

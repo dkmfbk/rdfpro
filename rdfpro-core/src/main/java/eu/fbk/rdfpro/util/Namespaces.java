@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -34,8 +34,10 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Namespace;
-import org.openrdf.model.impl.NamespaceImpl;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+
+// TODO: rename URI -> IRI
 
 /**
  * A specialized immutable {@code Namespace} set.
@@ -139,8 +141,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
             }
             this.data[pointer++] = uri;
             this.data[pointer] = prefix;
-            neighborhood = insert(this.uriTable, uri.hashCode(), pointer, neighborhood, null);
-            neighborhood = insert(this.prefixTable, prefix.hashCode(), pointer, neighborhood,
+            neighborhood = this.insert(this.uriTable, uri.hashCode(), pointer, neighborhood, null);
+            neighborhood = this.insert(this.prefixTable, prefix.hashCode(), pointer, neighborhood,
                     prefix);
             ++pointer;
         }
@@ -183,10 +185,10 @@ public final class Namespaces extends AbstractSet<Namespace> {
                 table[offset + 1] = table[oldOffset + 1];
                 table[oldOffset] = 0;
                 table[oldOffset + 1] = 0;
-                return insert(table, hash, pointer, neighborhood, prefixToCheck);
+                return this.insert(table, hash, pointer, neighborhood, prefixToCheck);
             }
         }
-        return insert(table, hash, pointer, neighborhood + 1, prefixToCheck);
+        return this.insert(table, hash, pointer, neighborhood + 1, prefixToCheck);
     }
 
     private int lookup(final String string, final int[] table, final int field) {
@@ -234,8 +236,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
         final List<URIPrefixPair> pairs = new ArrayList<>();
 
         for (final URL url : urls) {
-            try (final BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    url.openStream(), Charset.forName("UTF-8")))) {
+            try (final BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(url.openStream(), Charset.forName("UTF-8")))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     final String[] tokens = line.split("\\s+");
@@ -352,7 +354,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
     public boolean contains(@Nullable final Object object) {
         if (object instanceof Namespace) {
             final Namespace ns = (Namespace) object;
-            return Objects.equals(ns.getName(), uriFor(ns.getPrefix()));
+            return Objects.equals(ns.getName(), this.uriFor(ns.getPrefix()));
         }
         return false;
     }
@@ -374,7 +376,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
      * @return a non-null list with the prefixes bound to the give URI
      */
     public List<String> prefixesFor(final String uri) {
-        int index = lookup(uri, this.uriTable, 0);
+        int index = this.lookup(uri, this.uriTable, 0);
         if (index < 0) {
             return null;
         }
@@ -397,7 +399,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
      */
     @Nullable
     public String prefixFor(final String uri) {
-        final int index = lookup(uri, this.uriTable, 0);
+        final int index = this.lookup(uri, this.uriTable, 0);
         return index < 0 ? null : this.data[index + 1];
     }
 
@@ -429,7 +431,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
      */
     @Nullable
     public String uriFor(final String prefix) {
-        final int index = lookup(prefix, this.prefixTable, 1);
+        final int index = this.lookup(prefix, this.prefixTable, 1);
         return index < 0 ? null : this.data[index];
     }
 
@@ -449,7 +451,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
 
     @Override
     public Namespace[] toArray() {
-        return super.toArray(new Namespace[size()]);
+        return super.toArray(new Namespace[this.size()]);
     }
 
     private class EntryMap extends AbstractMap<String, String> {
@@ -476,7 +478,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
         public String get(final Object key) {
             if (key instanceof String) {
                 final String s = (String) key;
-                return this.keyIsPrefix ? uriFor(s) : prefixFor(s);
+                return this.keyIsPrefix ? Namespaces.this.uriFor(s) : Namespaces.this.prefixFor(s);
             }
             return null;
         }
@@ -485,7 +487,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
         public boolean containsKey(final Object key) {
             if (key instanceof String) {
                 final String s = (String) key;
-                return this.keyIsPrefix ? uriFor(s) != null : prefixFor(s) != null;
+                return this.keyIsPrefix ? Namespaces.this.uriFor(s) != null
+                        : Namespaces.this.prefixFor(s) != null;
             }
             return false;
         }
@@ -494,7 +497,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
         public boolean containsValue(final Object value) {
             if (value instanceof String) {
                 final String s = (String) value;
-                return this.keyIsPrefix ? prefixFor(s) != null : uriFor(s) != null;
+                return this.keyIsPrefix ? Namespaces.this.prefixFor(s) != null
+                        : Namespaces.this.uriFor(s) != null;
             }
             return false;
         }
@@ -526,8 +530,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
                 if (entry.getKey() instanceof String && entry.getValue() instanceof String) {
                     final String key = (String) entry.getKey();
                     final String value = (String) entry.getValue();
-                    return this.keyIsPrefix ? Objects.equals(uriFor(key), value) : Objects.equals(
-                            prefixFor(key), value);
+                    return this.keyIsPrefix ? Objects.equals(Namespaces.this.uriFor(key), value)
+                            : Objects.equals(Namespaces.this.prefixFor(key), value);
                 }
             }
             return false;
@@ -560,7 +564,8 @@ public final class Namespaces extends AbstractSet<Namespace> {
                 return new AbstractMap.SimpleImmutableEntry<String, String>(prefix, uri);
             } else {
                 while (this.offset < Namespaces.this.data.length
-                        && Namespaces.this.data[this.offset] == Namespaces.this.data[this.offset - 2]) {
+                        && Namespaces.this.data[this.offset] == Namespaces.this.data[this.offset
+                                - 2]) {
                     this.offset += 2;
                 }
                 return new AbstractMap.SimpleImmutableEntry<String, String>(uri, prefix);
@@ -583,7 +588,7 @@ public final class Namespaces extends AbstractSet<Namespace> {
             final String uri = Namespaces.this.data[this.offset];
             final String prefix = Namespaces.this.data[this.offset + 1];
             this.offset += 2;
-            return new NamespaceImpl(prefix, uri);
+            return new SimpleNamespace(prefix, uri);
         }
 
     }

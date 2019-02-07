@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -18,10 +18,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.openrdf.model.Namespace;
-import org.openrdf.model.URI;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 
 /**
  * Constants for the VOID vocabulary.
@@ -35,119 +35,121 @@ public final class VOID {
     public static final String NAMESPACE = "http://rdfs.org/ns/void#";
 
     /** Immutable {@link Namespace} constant for the vocabulary namespace. */
-    public static final Namespace NS = new NamespaceImpl(PREFIX, NAMESPACE);
+    public static final Namespace NS = new SimpleNamespace(VOID.PREFIX, VOID.NAMESPACE);
 
     // CLASSES
 
     /** Class void:Dataset. */
-    public static final URI DATASET = createURI("Dataset");
+    public static final IRI DATASET = VOID.createIRI("Dataset");
 
     /** Class void:DatasetDescription. */
-    public static final URI DATASET_DESCRIPTION = createURI("DatasetDescription");
+    public static final IRI DATASET_DESCRIPTION = VOID.createIRI("DatasetDescription");
 
     /** Class void:Linkset. */
-    public static final URI LINKSET = createURI("Linkset");
+    public static final IRI LINKSET = VOID.createIRI("Linkset");
 
     /** Class void:TechnicalFeature. */
-    public static final URI TECHNICAL_FEATURE = createURI("TechnicalFeature");
+    public static final IRI TECHNICAL_FEATURE = VOID.createIRI("TechnicalFeature");
 
     // PROPERTIES
 
     /** Property void:class. */
-    public static final URI CLASS = createURI("class");
+    public static final IRI CLASS = VOID.createIRI("class");
 
     /** Property void:classes. */
-    public static final URI CLASSES = createURI("classes");
+    public static final IRI CLASSES = VOID.createIRI("classes");
 
     /** Property void:classPartition. */
-    public static final URI CLASS_PARTITION = createURI("classPartition");
+    public static final IRI CLASS_PARTITION = VOID.createIRI("classPartition");
 
     /** Property void:dataDump. */
-    public static final URI DATA_DUMP = createURI("dataDump");
+    public static final IRI DATA_DUMP = VOID.createIRI("dataDump");
 
     /** Property void:distinctObjects. */
-    public static final URI DISTINCT_OBJECTS = createURI("distinctObjects");
+    public static final IRI DISTINCT_OBJECTS = VOID.createIRI("distinctObjects");
 
     /** Property void:distinctSubjects. */
-    public static final URI DISTINCT_SUBJECTS = createURI("distinctSubjects");
+    public static final IRI DISTINCT_SUBJECTS = VOID.createIRI("distinctSubjects");
 
     /** Property void:documents. */
-    public static final URI DOCUMENTS = createURI("documents");
+    public static final IRI DOCUMENTS = VOID.createIRI("documents");
 
     /** Property void:entities. */
-    public static final URI ENTITIES = createURI("entities");
+    public static final IRI ENTITIES = VOID.createIRI("entities");
 
     /** Property void:exampleResource. */
-    public static final URI EXAMPLE_RESOURCE = createURI("exampleResource");
+    public static final IRI EXAMPLE_RESOURCE = VOID.createIRI("exampleResource");
 
     /** Property void:feature. */
-    public static final URI FEATURE = createURI("feature");
+    public static final IRI FEATURE = VOID.createIRI("feature");
 
     /** Property void:inDataset. */
-    public static final URI IN_DATASET = createURI("inDataset");
+    public static final IRI IN_DATASET = VOID.createIRI("inDataset");
 
     /** Property void:linkPredicate. */
-    public static final URI LINK_PREDICATE = createURI("linkPredicate");
+    public static final IRI LINK_PREDICATE = VOID.createIRI("linkPredicate");
 
     /** Property void:objectsTarget. */
-    public static final URI OBJECTS_TARGET = createURI("objectsTarget");
+    public static final IRI OBJECTS_TARGET = VOID.createIRI("objectsTarget");
 
     /** Property void:openSearchDescription. */
-    public static final URI OPEN_SEARCH_DESCRIPTION = createURI("openSearchDescription");
+    public static final IRI OPEN_SEARCH_DESCRIPTION = VOID.createIRI("openSearchDescription");
 
     /** Property void:properties. */
-    public static final URI PROPERTIES = createURI("properties");
+    public static final IRI PROPERTIES = VOID.createIRI("properties");
 
     /** Property void:property. */
-    public static final URI PROPERTY = createURI("property");
+    public static final IRI PROPERTY = VOID.createIRI("property");
 
     /** Property void:propertyPartition. */
-    public static final URI PROPERTY_PARTITION = createURI("propertyPartition");
+    public static final IRI PROPERTY_PARTITION = VOID.createIRI("propertyPartition");
 
     /** Property void:rootResource. */
-    public static final URI ROOT_RESOURCE = createURI("rootResource");
+    public static final IRI ROOT_RESOURCE = VOID.createIRI("rootResource");
 
     /** Property void:sparqlEndpoint. */
-    public static final URI SPARQL_ENDPOINT = createURI("sparqlEndpoint");
+    public static final IRI SPARQL_ENDPOINT = VOID.createIRI("sparqlEndpoint");
 
     /** Property void:subjectsTarget. */
-    public static final URI SUBJECTS_TARGET = createURI("subjectsTarget");
+    public static final IRI SUBJECTS_TARGET = VOID.createIRI("subjectsTarget");
 
     /** Property void:subset. */
-    public static final URI SUBSET = createURI("subset");
+    public static final IRI SUBSET = VOID.createIRI("subset");
 
     /** Property void:target. */
-    public static final URI TARGET = createURI("target");
+    public static final IRI TARGET = VOID.createIRI("target");
 
     /** Property void:triples. */
-    public static final URI TRIPLES = createURI("triples");
+    public static final IRI TRIPLES = VOID.createIRI("triples");
 
     /** Property void:uriLookupEndpoint. */
-    public static final URI URI_LOOKUP_ENDPOINT = createURI("uriLookupEndpoint");
+    public static final IRI URI_LOOKUP_ENDPOINT = VOID.createIRI("uriLookupEndpoint");
 
     /** Property void:uriRegexPattern. */
-    public static final URI URI_REGEX_PATTERN = createURI("uriRegexPattern");
+    public static final IRI URI_REGEX_PATTERN = VOID.createIRI("uriRegexPattern");
 
     /** Property void:uriSpace. */
-    public static final URI URI_SPACE = createURI("uriSpace");
+    public static final IRI URI_SPACE = VOID.createIRI("uriSpace");
 
     /** Property void:vocabulary. */
-    public static final URI VOCABULARY = createURI("vocabulary");
+    public static final IRI VOCABULARY = VOID.createIRI("vocabulary");
 
     // ALL TERMS
 
-    public static Set<URI> TERMS = Collections.unmodifiableSet(new HashSet<URI>(Arrays.asList(
-            DATASET, DATASET_DESCRIPTION, LINKSET, TECHNICAL_FEATURE, CLASS, CLASSES,
-            CLASS_PARTITION, DATA_DUMP, DISTINCT_OBJECTS, DISTINCT_SUBJECTS, DOCUMENTS, ENTITIES,
-            EXAMPLE_RESOURCE, FEATURE, IN_DATASET, LINK_PREDICATE, OBJECTS_TARGET,
-            OPEN_SEARCH_DESCRIPTION, PROPERTIES, PROPERTY, PROPERTY_PARTITION, ROOT_RESOURCE,
-            SPARQL_ENDPOINT, SUBJECTS_TARGET, SUBSET, TARGET, TRIPLES, URI_LOOKUP_ENDPOINT,
-            URI_REGEX_PATTERN, URI_SPACE, VOCABULARY)));
+    public static Set<IRI> TERMS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            VOID.DATASET, VOID.DATASET_DESCRIPTION, VOID.LINKSET, VOID.TECHNICAL_FEATURE,
+            VOID.CLASS, VOID.CLASSES, VOID.CLASS_PARTITION, VOID.DATA_DUMP, VOID.DISTINCT_OBJECTS,
+            VOID.DISTINCT_SUBJECTS, VOID.DOCUMENTS, VOID.ENTITIES, VOID.EXAMPLE_RESOURCE,
+            VOID.FEATURE, VOID.IN_DATASET, VOID.LINK_PREDICATE, VOID.OBJECTS_TARGET,
+            VOID.OPEN_SEARCH_DESCRIPTION, VOID.PROPERTIES, VOID.PROPERTY, VOID.PROPERTY_PARTITION,
+            VOID.ROOT_RESOURCE, VOID.SPARQL_ENDPOINT, VOID.SUBJECTS_TARGET, VOID.SUBSET,
+            VOID.TARGET, VOID.TRIPLES, VOID.URI_LOOKUP_ENDPOINT, VOID.URI_REGEX_PATTERN,
+            VOID.URI_SPACE, VOID.VOCABULARY)));
 
     // HELPER METHODS
 
-    private static URI createURI(final String localName) {
-        return ValueFactoryImpl.getInstance().createURI(NAMESPACE, localName);
+    private static IRI createIRI(final String localName) {
+        return SimpleValueFactory.getInstance().createIRI(VOID.NAMESPACE, localName);
     }
 
     private VOID() {

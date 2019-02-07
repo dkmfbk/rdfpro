@@ -8,26 +8,27 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.rio.RDFHandler;
 import org.junit.Test;
-import org.openrdf.model.Statement;
-import org.openrdf.model.impl.StatementImpl;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.vocabulary.OWL;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.rio.RDFHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.fbk.rdfpro.util.Statements;
 import eu.fbk.rdfpro.util.Tracker;
 
 public class ScriptTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScriptTest.class);
 
-    private static final String SCRIPT = "var k = new org.openrdf.model.impl.URIImpl(\"ex:blabla\"); logger.info(pippo); function filter (s, h) { if (s.getSubject().equals(new org.openrdf.model.impl.URIImpl(\"ex:blabla\"))) { print(1); } h.handleStatement(s); }";
+    private static final String SCRIPT = "var k = new org.eclipse.rdf4j.model.impl.URIImpl(\"ex:blabla\"); logger.info(pippo); function filter (s, h) { if (s.getSubject().equals(org.eclipse.rdf4j.model.impl.SimpleValueFactory.getInstance().createIRI(\"ex:blabla\"))) { print(1); } h.handleStatement(s); }";
 
     // private static final String SCRIPT =
-    // "def k = new org.openrdf.model.impl.URIImpl(\"ex:blabla\"); def filter (s, h) { if (s.getSubject() == new org.openrdf.model.impl.URIImpl(\"ex:blabla\")) { println(1); }; h.handleStatement(s); }";
+    // "def k = new org.openrdf.model.impl.URIImpl(\"ex:blabla\"); def filter (s, h) { if
+    // (s.getSubject() == new org.openrdf.model.impl.URIImpl(\"ex:blabla\")) { println(1); };
+    // h.handleStatement(s); }";
 
     @Test
     public void test() throws Throwable {
@@ -55,17 +56,18 @@ public class ScriptTest {
         }
 
         final ScriptEngine engine = manager.getEngineByExtension("js");
-        engine.getContext().setAttribute("logger", LOGGER, ScriptContext.ENGINE_SCOPE);
+        engine.getContext().setAttribute("logger", ScriptTest.LOGGER, ScriptContext.ENGINE_SCOPE);
         engine.eval("var pippo=\"ouch\";\n");
-        engine.eval(SCRIPT);
+        engine.eval(ScriptTest.SCRIPT);
         @SuppressWarnings("unchecked")
         final Filter<Statement> filter = ((Invocable) engine).getInterface(Filter.class);
-        final RDFHandler handler = RDFProcessors.track(
-                new Tracker(LOGGER, "Started", "Done %d %d", "%d %d %d")).wrap(RDFHandlers.NIL);
+        final RDFHandler handler = RDFProcessors
+                .track(new Tracker(ScriptTest.LOGGER, "Started", "Done %d %d", "%d %d %d"))
+                .wrap(RDFHandlers.NIL);
         handler.startRDF();
         for (int i = 0; i < 100000000; ++i) {
-            final Statement statement = new StatementImpl(new URIImpl("ex:entity" + i), RDF.TYPE,
-                    OWL.THING);
+            final Statement statement = Statements.VALUE_FACTORY.createStatement(
+                    Statements.VALUE_FACTORY.createIRI("ex:entity" + i), RDF.TYPE, OWL.THING);
             // handler.handleStatement(statement);
             filter.filter(statement, handler);
         }

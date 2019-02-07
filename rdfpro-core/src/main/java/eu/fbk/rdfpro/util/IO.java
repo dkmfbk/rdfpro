@@ -1,26 +1,31 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 package eu.fbk.rdfpro.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.Writer;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.MalformedURLException;
@@ -63,8 +68,8 @@ public final class IO {
     // 1M - 383701 tr/s
     // note: pipe buffer on linux is 64k
 
-    private static final int BUFFER_SIZE = Integer.parseInt(Environment.getProperty(
-            "rdfpro.buffer.size", "" + 64 * 1024));
+    private static final int BUFFER_SIZE = Integer
+            .parseInt(Environment.getProperty("rdfpro.buffer.size", "" + 64 * 1024));
 
     // parallel read performances varying queue size on test TQL file, buffer = 64K
     // 16 * 64k (1M) - 603k tr/s
@@ -73,11 +78,11 @@ public final class IO {
     // 256 * 64k (16M) - 624k-631k tr/s
     // 1024 * 64k (64M) - 625k tr/s
 
-    private static final int BUFFER_NUM_READ = Integer.parseInt(Environment.getProperty(
-            "rdfpro.buffer.numr", "256"));
+    private static final int BUFFER_NUM_READ = Integer
+            .parseInt(Environment.getProperty("rdfpro.buffer.numr", "256"));
 
-    private static final int BUFFER_NUM_WRITE = Integer.parseInt(Environment.getProperty(
-            "rdfpro.buffer.numw", "16"));
+    private static final int BUFFER_NUM_WRITE = Integer
+            .parseInt(Environment.getProperty("rdfpro.buffer.numw", "16"));
 
     @Nullable
     public static <T> T closeQuietly(@Nullable final T object) {
@@ -85,10 +90,32 @@ public final class IO {
             try {
                 ((AutoCloseable) object).close();
             } catch (final Throwable ex) {
-                LOGGER.error("Error closing " + object.getClass().getSimpleName(), ex);
+                IO.LOGGER.error("Error closing " + object.getClass().getSimpleName(), ex);
             }
         }
         return object;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends Serializable> T cloneSerializable(final T object) {
+
+        if (object == null) {
+            return null;
+        }
+
+        try {
+            final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            final ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(object);
+            oos.close();
+
+            final ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            final ObjectInputStream ois = new ObjectInputStream(bis);
+            return (T) ois.readObject();
+
+        } catch (final IOException | ClassNotFoundException ex) {
+            throw new Error(ex);
+        }
     }
 
     public static URL extractURL(final String location) {
@@ -134,8 +161,8 @@ public final class IO {
 
     public static InputStream read(final String location) throws IOException {
 
-        final String ext = extractExtension(location);
-        final URL url = extractURL(location);
+        final String ext = IO.extractExtension(location);
+        final URL url = IO.extractURL(location);
 
         String cmd = null;
         if (ext.endsWith(".bz2")) {
@@ -159,11 +186,11 @@ public final class IO {
             }
 
             if (cmd == null) {
-                LOGGER.debug("Reading file {}", file);
+                IO.LOGGER.debug("Reading file {}", file);
                 return new FileInputStream(file);
 
             } else {
-                LOGGER.debug("Reading file {} using {}", file, cmd);
+                IO.LOGGER.debug("Reading file {} using {}", file, cmd);
                 cmd += " " + file.getAbsolutePath();
                 final Process process = new ProcessBuilder(cmd.split("\\s+")) //
                         .redirectError(Redirect.INHERIT).start();
@@ -173,11 +200,11 @@ public final class IO {
         } else {
             final InputStream stream = url.openStream();
             if (cmd == null) {
-                LOGGER.debug("Downloading file {}", url);
+                IO.LOGGER.debug("Downloading file {}", url);
                 return stream;
 
             } else {
-                LOGGER.debug("Downloading file {} using {}", url, cmd);
+                IO.LOGGER.debug("Downloading file {} using {}", url, cmd);
                 final Process process = new ProcessBuilder(cmd.split("\\s+")) //
                         .redirectError(Redirect.INHERIT).start();
                 Environment.getPool().execute(new Runnable() {
@@ -196,10 +223,10 @@ public final class IO {
                             process.getOutputStream().close();
 
                         } catch (final Throwable ex) {
-                            LOGGER.error("Error reading from " + url, ex);
+                            IO.LOGGER.error("Error reading from " + url, ex);
                             process.destroy();
                         } finally {
-                            closeQuietly(stream);
+                            IO.closeQuietly(stream);
                         }
                     }
                 });
@@ -210,8 +237,8 @@ public final class IO {
 
     public static OutputStream write(final String location) throws IOException {
 
-        final String ext = extractExtension(location);
-        final URL url = extractURL(location);
+        final String ext = IO.extractExtension(location);
+        final URL url = IO.extractURL(location);
 
         if (!"file".equals(url.getProtocol())) {
             throw new IllegalArgumentException("Cannot write to non-file URL " + location);
@@ -238,11 +265,11 @@ public final class IO {
         }
 
         if (cmd == null) {
-            LOGGER.debug("Writing file {}", file);
+            IO.LOGGER.debug("Writing file {}", file);
             return new FileOutputStream(file);
 
         } else {
-            LOGGER.debug("Writing file {} using {}", file, cmd);
+            IO.LOGGER.debug("Writing file {} using {}", file, cmd);
             final Process process = new ProcessBuilder(cmd.split("\\s+")) //
                     .redirectOutput(file).redirectError(Redirect.INHERIT).start();
             return new FilterOutputStream(process.getOutputStream()) {
@@ -260,19 +287,20 @@ public final class IO {
                 }
 
                 @Override
-                public void write(final byte[] b, final int off, final int len) throws IOException {
+                public void write(final byte[] b, final int off, final int len)
+                        throws IOException {
                     this.out.write(b, off, len);
                 }
 
                 @Override
                 public void close() throws IOException {
                     if (this.closed.compareAndSet(false, true)) {
-                        LOGGER.debug("Completing '{}'", cmd);
+                        IO.LOGGER.debug("Completing '{}'", cmd);
                         this.out.flush();
                         this.out.close();
                         try {
                             final int code = process.waitFor();
-                            LOGGER.debug("Process completed with exit code {}", code);
+                            IO.LOGGER.debug("Process completed with exit code {}", code);
                         } catch (final InterruptedException ex) {
                             throw new IOException("Didn't wait till IO completion", ex);
                         } finally {
@@ -353,7 +381,7 @@ public final class IO {
 
         public SimpleBufferedInputStream(final InputStream stream) {
             this.stream = Objects.requireNonNull(stream);
-            this.buffer = new byte[BUFFER_SIZE];
+            this.buffer = new byte[IO.BUFFER_SIZE];
             this.count = 0;
             this.pos = 0;
             this.closed = false;
@@ -362,7 +390,7 @@ public final class IO {
         @Override
         public int read() throws IOException {
             if (this.pos >= this.count) {
-                fill();
+                this.fill();
                 if (this.pos >= this.count) {
                     return -1;
                 }
@@ -376,7 +404,7 @@ public final class IO {
                 throw new IndexOutOfBoundsException();
             }
             if (len == 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             int result = 0;
@@ -393,12 +421,12 @@ public final class IO {
                         return result;
                     }
                 }
-                if (len >= BUFFER_SIZE) {
+                if (len >= IO.BUFFER_SIZE) {
                     final int n = this.stream.read(buf, off, len);
                     result += n < 0 ? 0 : n;
                     return result == 0 ? -1 : result;
                 } else if (len > 0) {
-                    fill();
+                    this.fill();
                     if (this.count == 0) {
                         return result == 0 ? -1 : result;
                     }
@@ -409,7 +437,7 @@ public final class IO {
         @Override
         public long skip(final long n) throws IOException {
             if (n <= 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             final int available = this.count - this.pos;
@@ -455,7 +483,7 @@ public final class IO {
         }
 
         private void fill() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             final int n = this.stream.read(this.buffer);
             this.count = n < 0 ? 0 : n;
             this.pos = 0;
@@ -481,33 +509,33 @@ public final class IO {
 
         SimpleBufferedOutputStream(final OutputStream stream) {
             this.stream = Objects.requireNonNull(stream);
-            this.buffer = new byte[BUFFER_SIZE];
+            this.buffer = new byte[IO.BUFFER_SIZE];
             this.count = 0;
             this.closed = false;
         }
 
         @Override
         public void write(final int b) throws IOException {
-            if (this.count >= BUFFER_SIZE) {
-                flushBuffer();
+            if (this.count >= IO.BUFFER_SIZE) {
+                this.flushBuffer();
             }
             this.buffer[this.count++] = (byte) b;
         }
 
         @Override
         public void write(final byte buf[], int off, int len) throws IOException {
-            if (len >= BUFFER_SIZE) {
-                flushBuffer();
+            if (len >= IO.BUFFER_SIZE) {
+                this.flushBuffer();
                 this.stream.write(buf, off, len);
                 return;
             }
-            final int available = BUFFER_SIZE - this.count;
+            final int available = IO.BUFFER_SIZE - this.count;
             if (available < len) {
                 System.arraycopy(buf, off, this.buffer, this.count, available);
                 this.count += available;
                 off += available;
                 len -= available;
-                flushBuffer();
+                this.flushBuffer();
             }
             System.arraycopy(buf, off, this.buffer, this.count, len);
             this.count += len;
@@ -515,7 +543,7 @@ public final class IO {
 
         @Override
         public void flush() throws IOException {
-            flushBuffer();
+            this.flushBuffer();
             this.stream.flush();
         }
 
@@ -527,7 +555,7 @@ public final class IO {
                 }
                 this.closed = true;
             }
-            flushBuffer();
+            this.flushBuffer();
             this.stream.close();
             // this.count = BUFFER_SIZE; // fail soon in case a new write request is received
         }
@@ -555,7 +583,7 @@ public final class IO {
 
         public SimpleBufferedReader(final Reader reader) {
             this.reader = reader;
-            this.buffer = new char[BUFFER_SIZE];
+            this.buffer = new char[IO.BUFFER_SIZE];
             this.count = 0;
             this.pos = 0;
             this.closed = false;
@@ -564,7 +592,7 @@ public final class IO {
         @Override
         public int read() throws IOException {
             if (this.pos >= this.count) {
-                fill();
+                this.fill();
                 if (this.pos >= this.count) {
                     return -1;
                 }
@@ -578,15 +606,15 @@ public final class IO {
                 throw new IndexOutOfBoundsException();
             }
             if (len == 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             int available = this.count - this.pos;
             if (available == 0) {
-                if (len >= BUFFER_SIZE) {
+                if (len >= IO.BUFFER_SIZE) {
                     return this.reader.read(cbuf, off, len);
                 } else {
-                    fill();
+                    this.fill();
                     available = this.count - this.pos;
                     if (available == 0) {
                         return -1;
@@ -602,7 +630,7 @@ public final class IO {
         @Override
         public long skip(final long n) throws IOException {
             if (n <= 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             final int available = this.count - this.pos;
@@ -642,7 +670,7 @@ public final class IO {
         }
 
         private void fill() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             final int n = this.reader.read(this.buffer);
             this.count = n < 0 ? 0 : n;
             this.pos = 0;
@@ -668,33 +696,33 @@ public final class IO {
 
         SimpleBufferedWriter(final Writer writer) {
             this.writer = Objects.requireNonNull(writer);
-            this.buffer = new char[BUFFER_SIZE];
+            this.buffer = new char[IO.BUFFER_SIZE];
             this.count = 0;
             this.closed = false;
         }
 
         @Override
         public void write(final int c) throws IOException {
-            if (this.count >= BUFFER_SIZE) {
-                flushBuffer();
+            if (this.count >= IO.BUFFER_SIZE) {
+                this.flushBuffer();
             }
             this.buffer[this.count++] = (char) c;
         }
 
         @Override
         public void write(final char[] cbuf, int off, int len) throws IOException {
-            if (len >= BUFFER_SIZE) {
-                flushBuffer();
+            if (len >= IO.BUFFER_SIZE) {
+                this.flushBuffer();
                 this.writer.write(cbuf, off, len);
                 return;
             }
-            final int available = BUFFER_SIZE - this.count;
+            final int available = IO.BUFFER_SIZE - this.count;
             if (available < len) {
                 System.arraycopy(cbuf, off, this.buffer, this.count, available);
                 this.count += available;
                 off += available;
                 len -= available;
-                flushBuffer();
+                this.flushBuffer();
             }
             System.arraycopy(cbuf, off, this.buffer, this.count, len);
             this.count += len;
@@ -702,18 +730,18 @@ public final class IO {
 
         @Override
         public void write(final String str, int off, int len) throws IOException {
-            if (len >= BUFFER_SIZE) {
-                flushBuffer();
+            if (len >= IO.BUFFER_SIZE) {
+                this.flushBuffer();
                 this.writer.write(str, off, len);
                 return;
             }
-            final int available = BUFFER_SIZE - this.count;
+            final int available = IO.BUFFER_SIZE - this.count;
             if (available < len) {
                 str.getChars(off, off + available, this.buffer, this.count);
                 this.count += available;
                 off += available;
                 len -= available;
-                flushBuffer();
+                this.flushBuffer();
             }
             str.getChars(off, off + len, this.buffer, this.count);
             this.count += len;
@@ -721,7 +749,7 @@ public final class IO {
 
         @Override
         public void flush() throws IOException {
-            flushBuffer();
+            this.flushBuffer();
             this.writer.flush();
         }
 
@@ -733,7 +761,7 @@ public final class IO {
                 }
                 this.closed = true;
             }
-            flushBuffer();
+            this.flushBuffer();
             this.writer.close();
             // this.count = BUFFER_SIZE; // fail soon in case a new write request is received
         }
@@ -777,7 +805,7 @@ public final class IO {
         @Override
         public int read() throws IOException {
             if (this.pos >= this.count) {
-                fill();
+                this.fill();
                 if (this.count == 0) {
                     return -1;
                 }
@@ -791,12 +819,12 @@ public final class IO {
                 throw new IndexOutOfBoundsException();
             }
             if (len == 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             final int available = this.count - this.pos;
             if (available == 0) {
-                fill();
+                this.fill();
                 if (this.count == 0) {
                     return -1;
                 }
@@ -810,12 +838,12 @@ public final class IO {
         @Override
         public long skip(final long n) throws IOException {
             if (n <= 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             int available = this.count - this.pos;
             if (available == 0) {
-                fill();
+                this.fill();
                 available = this.count;
             }
             final long skipped = available < n ? available : n;
@@ -852,7 +880,7 @@ public final class IO {
         }
 
         private void fill() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             if (this.buffer != null) {
                 this.buffer = null;
                 this.pos = 0;
@@ -896,7 +924,7 @@ public final class IO {
             private final CountDownLatch latch;
 
             private Fetcher(final Reader reader, final char delimiter) {
-                this.queue = new ArrayBlockingQueue<Object>(BUFFER_NUM_READ, false);
+                this.queue = new ArrayBlockingQueue<Object>(IO.BUFFER_NUM_READ, false);
                 this.reader = reader;
                 this.delimiter = delimiter;
                 this.buffers = new ArrayList<CharBuffer>();
@@ -909,7 +937,7 @@ public final class IO {
 
             private void release(final CharBuffer buffer) {
                 synchronized (this.buffers) {
-                    if (this.buffers.size() < BUFFER_NUM_READ + Environment.getCores() + 1) {
+                    if (this.buffers.size() < IO.BUFFER_NUM_READ + Environment.getCores() + 1) {
                         buffer.clear();
                         this.buffers.add(buffer);
                     }
@@ -922,7 +950,7 @@ public final class IO {
                         return this.buffers.remove(this.buffers.size() - 1);
                     }
                 }
-                return CharBuffer.allocate(BUFFER_SIZE);
+                return CharBuffer.allocate(IO.BUFFER_SIZE);
             }
 
             public void open() {
@@ -951,15 +979,15 @@ public final class IO {
                         // ignore
                     }
                 }
-                synchronized (FETCHERS) {
-                    FETCHERS.remove(this.reader);
+                synchronized (Fetcher.FETCHERS) {
+                    Fetcher.FETCHERS.remove(this.reader);
                 }
                 this.queue.clear();
                 this.buffers.clear();
                 this.reader = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
-                        propagate(this.exception);
+                        IO.propagate(this.exception);
                     }
                 }
             }
@@ -973,12 +1001,12 @@ public final class IO {
                         }
                     }
                     for (final CharBuffer buffer : buffers) {
-                        release(buffer);
+                        this.release(buffer);
                     }
                     buffers.clear();
                     final Object object = this.queue.take();
-                    if (object == EOF) {
-                        this.queue.add(EOF);
+                    if (object == Fetcher.EOF) {
+                        this.queue.add(Fetcher.EOF);
                         return;
                     }
                     buffers.addAll((List<CharBuffer>) object);
@@ -993,7 +1021,7 @@ public final class IO {
             public void run() {
 
                 try {
-                    CharBuffer restBuffer = allocate();
+                    CharBuffer restBuffer = this.allocate();
                     List<CharBuffer> buffers = new ArrayList<CharBuffer>();
 
                     boolean eof = false;
@@ -1013,7 +1041,7 @@ public final class IO {
                         curBuffer.flip();
                         buffers.add(curBuffer);
 
-                        restBuffer = allocate();
+                        restBuffer = this.allocate();
                         if (!eof) {
                             final char[] curChars = curBuffer.array();
                             final int curLastIndex = curBuffer.limit() - 1;
@@ -1040,11 +1068,11 @@ public final class IO {
                 }
 
                 try {
-                    closeQuietly(this.reader);
+                    IO.closeQuietly(this.reader);
 
                     while (true) {
                         try {
-                            this.queue.put(EOF);
+                            this.queue.put(Fetcher.EOF);
                             break;
                         } catch (final InterruptedException ex) {
                             // ignore
@@ -1056,11 +1084,11 @@ public final class IO {
             }
 
             public static Fetcher forReader(final Reader reader, final char delimiter) {
-                synchronized (FETCHERS) {
-                    Fetcher fetcher = FETCHERS.get(reader);
+                synchronized (Fetcher.FETCHERS) {
+                    Fetcher fetcher = Fetcher.FETCHERS.get(reader);
                     if (fetcher == null) {
                         fetcher = new Fetcher(reader, delimiter);
-                        FETCHERS.put(reader, fetcher);
+                        Fetcher.FETCHERS.put(reader, fetcher);
                     } else if (fetcher.delimiter != delimiter) {
                         throw new IllegalStateException("Already reading from reader " + reader
                                 + " using delimiter " + delimiter);
@@ -1093,9 +1121,9 @@ public final class IO {
             this.emitter = Emitter.forWriter(writer);
             this.delimiter = delimiter;
             this.buffers = new ArrayList<CharBuffer>();
-            this.buffer = new char[2 * BUFFER_SIZE];
+            this.buffer = new char[2 * IO.BUFFER_SIZE];
             this.count = 0;
-            this.threshold = BUFFER_SIZE;
+            this.threshold = IO.BUFFER_SIZE;
             this.closed = false;
             this.emitter.open();
         }
@@ -1105,7 +1133,7 @@ public final class IO {
             if (this.count < this.threshold) {
                 this.buffer[this.count++] = (char) c;
             } else {
-                writeAndTryFlush((char) c);
+                this.writeAndTryFlush((char) c);
             }
         }
 
@@ -1125,7 +1153,7 @@ public final class IO {
             }
             final int end = off + len;
             while (off < end) {
-                writeAndTryFlush(cbuf[off++]);
+                this.writeAndTryFlush(cbuf[off++]);
             }
         }
 
@@ -1145,13 +1173,13 @@ public final class IO {
                 len -= available;
             }
             while (off < end) {
-                writeAndTryFlush(str.charAt(off++));
+                this.writeAndTryFlush(str.charAt(off++));
             }
         }
 
         @Override
         public void flush() throws IOException {
-            flushBuffers();
+            this.flushBuffers();
         }
 
         @Override
@@ -1160,7 +1188,7 @@ public final class IO {
                 if (this.closed) {
                     return;
                 }
-                flushBuffers();
+                this.flushBuffers();
                 this.closed = true;
             }
             this.buffers.clear();
@@ -1172,18 +1200,18 @@ public final class IO {
         private void writeAndTryFlush(final char c) throws IOException {
             this.buffer[this.count++] = c;
             if (c == this.delimiter) {
-                flushBuffers();
+                this.flushBuffers();
             } else if (this.count == this.buffer.length) {
-                checkNotClosed();
+                this.checkNotClosed();
                 this.buffers.add(CharBuffer.wrap(this.buffer));
-                this.buffer = new char[BUFFER_SIZE];
+                this.buffer = new char[IO.BUFFER_SIZE];
                 this.count = 0;
                 this.threshold = 0;
             }
         }
 
         private void flushBuffers() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             if (this.count > 0) {
                 final CharBuffer cb = CharBuffer.wrap(this.buffer);
                 cb.limit(this.count);
@@ -1195,7 +1223,7 @@ public final class IO {
                 this.buffers.clear();
             }
             this.count = 0;
-            this.threshold = BUFFER_SIZE;
+            this.threshold = IO.BUFFER_SIZE;
         }
 
         private void checkNotClosed() throws IOException {
@@ -1223,7 +1251,7 @@ public final class IO {
             private final CountDownLatch latch;
 
             private Emitter(final Writer writer) {
-                this.queue = new ArrayBlockingQueue<Object>(BUFFER_NUM_WRITE, false);
+                this.queue = new ArrayBlockingQueue<Object>(IO.BUFFER_NUM_WRITE, false);
                 this.writer = writer;
                 this.buffers = new ArrayList<CharBuffer>();
                 this.references = 0;
@@ -1234,7 +1262,7 @@ public final class IO {
 
             private void release(final CharBuffer buffer) {
                 synchronized (this.buffers) {
-                    if (this.buffers.size() < BUFFER_NUM_WRITE + Environment.getCores() + 1) {
+                    if (this.buffers.size() < IO.BUFFER_NUM_WRITE + Environment.getCores() + 1) {
                         buffer.clear();
                         this.buffers.add(buffer);
                     }
@@ -1247,7 +1275,7 @@ public final class IO {
                         return this.buffers.remove(this.buffers.size() - 1);
                     }
                 }
-                return CharBuffer.allocate(2 * BUFFER_SIZE);
+                return CharBuffer.allocate(2 * IO.BUFFER_SIZE);
             }
 
             public void open() {
@@ -1269,7 +1297,7 @@ public final class IO {
                 }
                 while (true) {
                     try {
-                        this.queue.put(EOF);
+                        this.queue.put(Emitter.EOF);
                         break;
                     } catch (final InterruptedException ex) {
                         // ignore
@@ -1283,15 +1311,15 @@ public final class IO {
                         // ignore
                     }
                 }
-                synchronized (EMITTERS) {
-                    EMITTERS.remove(this.writer);
+                synchronized (Emitter.EMITTERS) {
+                    Emitter.EMITTERS.remove(this.writer);
                 }
                 this.queue.clear();
                 this.buffers.clear();
                 this.writer = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
-                        propagate(this.exception);
+                        IO.propagate(this.exception);
                     }
                 }
             }
@@ -1305,7 +1333,7 @@ public final class IO {
                     }
                     this.queue.put(new ArrayList<CharBuffer>(buffers));
                     buffers.clear();
-                    buffers.add(allocate());
+                    buffers.add(this.allocate());
                 } catch (IOException | RuntimeException | Error ex) {
                     throw ex;
                 } catch (final Throwable ex) {
@@ -1319,7 +1347,7 @@ public final class IO {
                 try {
                     while (true) {
                         final Object object = this.queue.take();
-                        if (object == EOF) {
+                        if (object == Emitter.EOF) {
                             break;
                         }
                         final List<CharBuffer> buffers = (List<CharBuffer>) object;
@@ -1327,7 +1355,7 @@ public final class IO {
                             this.writer.write(buffer.array(), buffer.position(), buffer.limit());
                         }
                         if (!buffers.isEmpty()) {
-                            release(buffers.get(0));
+                            this.release(buffers.get(0));
                         }
                     }
                 } catch (final Throwable ex) {
@@ -1336,17 +1364,17 @@ public final class IO {
                     }
                     this.queue.clear();
                 } finally {
-                    closeQuietly(this.writer);
+                    IO.closeQuietly(this.writer);
                     this.latch.countDown();
                 }
             }
 
             public static Emitter forWriter(final Writer writer) {
-                synchronized (EMITTERS) {
-                    Emitter manager = EMITTERS.get(writer);
+                synchronized (Emitter.EMITTERS) {
+                    Emitter manager = Emitter.EMITTERS.get(writer);
                     if (manager == null) {
                         manager = new Emitter(writer);
-                        EMITTERS.put(writer, manager);
+                        Emitter.EMITTERS.put(writer, manager);
                     }
                     return manager;
                 }
@@ -1386,7 +1414,7 @@ public final class IO {
         @Override
         public int read() throws IOException {
             if (this.pos >= this.count) {
-                fill();
+                this.fill();
                 if (this.count == 0) {
                     return -1;
                 }
@@ -1400,12 +1428,12 @@ public final class IO {
                 throw new IndexOutOfBoundsException();
             }
             if (len == 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             final int available = this.count - this.pos;
             if (available == 0) {
-                fill();
+                this.fill();
                 if (this.count == 0) {
                     return -1;
                 }
@@ -1419,12 +1447,12 @@ public final class IO {
         @Override
         public long skip(final long n) throws IOException {
             if (n <= 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             int available = this.count - this.pos;
             if (available == 0) {
-                fill();
+                this.fill();
                 available = this.count;
             }
             final long skipped = available < n ? available : n;
@@ -1461,7 +1489,7 @@ public final class IO {
         }
 
         private void fill() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             if (this.buffer != null) {
                 this.buffer = null;
                 this.pos = 0;
@@ -1505,7 +1533,7 @@ public final class IO {
             private final CountDownLatch latch;
 
             private Fetcher(final InputStream stream, final byte delimiter) {
-                this.queue = new ArrayBlockingQueue<Object>(BUFFER_NUM_READ, false);
+                this.queue = new ArrayBlockingQueue<Object>(IO.BUFFER_NUM_READ, false);
                 this.stream = stream;
                 this.delimiter = delimiter;
                 this.buffers = new ArrayList<ByteBuffer>();
@@ -1518,7 +1546,7 @@ public final class IO {
 
             private void release(final ByteBuffer buffer) {
                 synchronized (this.buffers) {
-                    if (this.buffers.size() < BUFFER_NUM_READ + Environment.getCores() + 1) {
+                    if (this.buffers.size() < IO.BUFFER_NUM_READ + Environment.getCores() + 1) {
                         buffer.clear();
                         this.buffers.add(buffer);
                     }
@@ -1531,7 +1559,7 @@ public final class IO {
                         return this.buffers.remove(this.buffers.size() - 1);
                     }
                 }
-                return ByteBuffer.allocate(2 * BUFFER_SIZE);
+                return ByteBuffer.allocate(2 * IO.BUFFER_SIZE);
             }
 
             public void open() {
@@ -1560,15 +1588,15 @@ public final class IO {
                         // ignore
                     }
                 }
-                synchronized (FETCHERS) {
-                    FETCHERS.remove(this.stream);
+                synchronized (Fetcher.FETCHERS) {
+                    Fetcher.FETCHERS.remove(this.stream);
                 }
                 this.queue.clear();
                 this.buffers.clear();
                 this.stream = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
-                        propagate(this.exception);
+                        IO.propagate(this.exception);
                     }
                 }
             }
@@ -1582,12 +1610,12 @@ public final class IO {
                         }
                     }
                     for (final ByteBuffer buffer : buffers) {
-                        release(buffer);
+                        this.release(buffer);
                     }
                     buffers.clear();
                     final Object object = this.queue.take();
-                    if (object == EOF) {
-                        this.queue.add(EOF);
+                    if (object == Fetcher.EOF) {
+                        this.queue.add(Fetcher.EOF);
                         return;
                     }
                     buffers.addAll((List<ByteBuffer>) object);
@@ -1602,7 +1630,7 @@ public final class IO {
             public void run() {
 
                 try {
-                    ByteBuffer restBuffer = allocate();
+                    ByteBuffer restBuffer = this.allocate();
                     List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
 
                     boolean eof = false;
@@ -1630,7 +1658,7 @@ public final class IO {
                         curBuffer.flip();
                         buffers.add(curBuffer);
 
-                        restBuffer = allocate();
+                        restBuffer = this.allocate();
                         if (!eof) {
                             final int curLastIndex = curBuffer.limit() - 1;
                             for (int i = curLastIndex; i >= 0; --i) {
@@ -1656,11 +1684,11 @@ public final class IO {
                 }
 
                 try {
-                    closeQuietly(this.stream);
+                    IO.closeQuietly(this.stream);
 
                     while (true) {
                         try {
-                            this.queue.put(EOF);
+                            this.queue.put(Fetcher.EOF);
                             break;
                         } catch (final InterruptedException ex) {
                             // ignore
@@ -1672,11 +1700,11 @@ public final class IO {
             }
 
             public static Fetcher forStream(final InputStream stream, final byte delimiter) {
-                synchronized (FETCHERS) {
-                    Fetcher fetcher = FETCHERS.get(stream);
+                synchronized (Fetcher.FETCHERS) {
+                    Fetcher fetcher = Fetcher.FETCHERS.get(stream);
                     if (fetcher == null) {
                         fetcher = new Fetcher(stream, delimiter);
-                        FETCHERS.put(stream, fetcher);
+                        Fetcher.FETCHERS.put(stream, fetcher);
                     } else if (fetcher.delimiter != delimiter) {
                         throw new IllegalStateException("Already reading from stream " + stream
                                 + " using delimiter " + delimiter);
@@ -1709,9 +1737,9 @@ public final class IO {
             this.emitter = Emitter.forStream(stream);
             this.delimiter = delimiter;
             this.buffers = new ArrayList<ByteBuffer>();
-            this.buffer = new byte[2 * BUFFER_SIZE];
+            this.buffer = new byte[2 * IO.BUFFER_SIZE];
             this.count = 0;
-            this.threshold = BUFFER_SIZE;
+            this.threshold = IO.BUFFER_SIZE;
             this.closed = false;
             this.emitter.open();
         }
@@ -1721,7 +1749,7 @@ public final class IO {
             if (this.count < this.threshold) {
                 this.buffer[this.count++] = (byte) c;
             } else {
-                writeAndTryFlush((byte) c);
+                this.writeAndTryFlush((byte) c);
             }
         }
 
@@ -1741,13 +1769,13 @@ public final class IO {
             }
             final int end = off + len;
             while (off < end) {
-                writeAndTryFlush(buf[off++]);
+                this.writeAndTryFlush(buf[off++]);
             }
         }
 
         @Override
         public void flush() throws IOException {
-            flushBuffers();
+            this.flushBuffers();
         }
 
         @Override
@@ -1756,7 +1784,7 @@ public final class IO {
                 if (this.closed) {
                     return;
                 }
-                flushBuffers();
+                this.flushBuffers();
                 this.closed = true;
             }
             this.buffers.clear();
@@ -1768,18 +1796,18 @@ public final class IO {
         private void writeAndTryFlush(final byte c) throws IOException {
             this.buffer[this.count++] = c;
             if (c == this.delimiter) {
-                flushBuffers();
+                this.flushBuffers();
             } else if (this.count == this.buffer.length) {
-                checkNotClosed();
+                this.checkNotClosed();
                 this.buffers.add(ByteBuffer.wrap(this.buffer));
-                this.buffer = new byte[BUFFER_SIZE];
+                this.buffer = new byte[IO.BUFFER_SIZE];
                 this.count = 0;
                 this.threshold = 0;
             }
         }
 
         private void flushBuffers() throws IOException {
-            checkNotClosed();
+            this.checkNotClosed();
             if (this.count > 0) {
                 final ByteBuffer buffer = ByteBuffer.wrap(this.buffer);
                 buffer.limit(this.count);
@@ -1791,7 +1819,7 @@ public final class IO {
                 this.buffers.clear();
             }
             this.count = 0;
-            this.threshold = BUFFER_SIZE;
+            this.threshold = IO.BUFFER_SIZE;
         }
 
         private void checkNotClosed() throws IOException {
@@ -1819,7 +1847,7 @@ public final class IO {
             private final CountDownLatch latch;
 
             private Emitter(final OutputStream stream) {
-                this.queue = new ArrayBlockingQueue<Object>(BUFFER_NUM_WRITE, false);
+                this.queue = new ArrayBlockingQueue<Object>(IO.BUFFER_NUM_WRITE, false);
                 this.stream = stream;
                 this.buffers = new ArrayList<ByteBuffer>();
                 this.references = 0;
@@ -1830,7 +1858,7 @@ public final class IO {
 
             private void release(final ByteBuffer buffer) {
                 synchronized (this.buffers) {
-                    if (this.buffers.size() < BUFFER_NUM_WRITE + Environment.getCores() + 1) {
+                    if (this.buffers.size() < IO.BUFFER_NUM_WRITE + Environment.getCores() + 1) {
                         buffer.clear();
                         this.buffers.add(buffer);
                     }
@@ -1843,7 +1871,7 @@ public final class IO {
                         return this.buffers.remove(this.buffers.size() - 1);
                     }
                 }
-                return ByteBuffer.allocate(2 * BUFFER_SIZE);
+                return ByteBuffer.allocate(2 * IO.BUFFER_SIZE);
             }
 
             public void open() {
@@ -1865,7 +1893,7 @@ public final class IO {
                 }
                 while (true) {
                     try {
-                        this.queue.put(EOF);
+                        this.queue.put(Emitter.EOF);
                         break;
                     } catch (final InterruptedException ex) {
                         // ignore
@@ -1879,15 +1907,15 @@ public final class IO {
                         // ignore
                     }
                 }
-                synchronized (EMITTERS) {
-                    EMITTERS.remove(this.stream);
+                synchronized (Emitter.EMITTERS) {
+                    Emitter.EMITTERS.remove(this.stream);
                 }
                 this.queue.clear();
                 this.buffers.clear();
                 this.stream = null; // may be heavyweight, better to release immediately
                 synchronized (this) {
                     if (this.exception != null) {
-                        propagate(this.exception);
+                        IO.propagate(this.exception);
                     }
                 }
             }
@@ -1901,9 +1929,9 @@ public final class IO {
                     }
                     this.queue.put(new ArrayList<ByteBuffer>(buffers));
                     buffers.clear();
-                    buffers.add(allocate());
+                    buffers.add(this.allocate());
                 } catch (final Throwable ex) {
-                    propagate(ex);
+                    IO.propagate(ex);
                 }
             }
 
@@ -1913,7 +1941,7 @@ public final class IO {
                 try {
                     while (true) {
                         final Object object = this.queue.take();
-                        if (object == EOF) {
+                        if (object == Emitter.EOF) {
                             break;
                         }
                         final List<ByteBuffer> buffers = (List<ByteBuffer>) object;
@@ -1921,7 +1949,7 @@ public final class IO {
                             this.stream.write(buffer.array(), buffer.position(), buffer.limit());
                         }
                         if (!buffers.isEmpty()) {
-                            release(buffers.get(0));
+                            this.release(buffers.get(0));
                         }
                     }
                 } catch (final Throwable ex) {
@@ -1930,17 +1958,17 @@ public final class IO {
                     }
                     this.queue.clear();
                 } finally {
-                    closeQuietly(this.stream);
+                    IO.closeQuietly(this.stream);
                     this.latch.countDown();
                 }
             }
 
             public static Emitter forStream(final OutputStream stream) {
-                synchronized (EMITTERS) {
-                    Emitter emitter = EMITTERS.get(stream);
+                synchronized (Emitter.EMITTERS) {
+                    Emitter emitter = Emitter.EMITTERS.get(stream);
                     if (emitter == null) {
                         emitter = new Emitter(stream);
-                        EMITTERS.put(stream, emitter);
+                        Emitter.EMITTERS.put(stream, emitter);
                     }
                     return emitter;
                 }
@@ -1964,7 +1992,7 @@ public final class IO {
         @Override
         public int read() throws IOException {
             final int b0 = this.stream.read();
-            return (b0 & 0xFFFFFF80) == 0 ? b0 : readHelper(b0);
+            return (b0 & 0xFFFFFF80) == 0 ? b0 : this.readHelper(b0);
         }
 
         private int readHelper(final int b0) throws IOException {
@@ -2005,18 +2033,18 @@ public final class IO {
                 throw new IndexOutOfBoundsException();
             }
             if (len == 0) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0;
             }
             int index = off;
-            int c = read();
+            int c = this.read();
             if (c < 0) {
                 return -1;
             }
             buf[index++] = (char) c;
             final int end = off + Math.min(len, this.stream.available() / 2);
             while (index < end) {
-                c = read();
+                c = this.read();
                 if (c < 0) {
                     break;
                 }
@@ -2028,13 +2056,13 @@ public final class IO {
         @Override
         public long skip(final long n) throws IOException {
             if (n == 0L) {
-                checkNotClosed();
+                this.checkNotClosed();
                 return 0L;
             }
             final int skippable = this.stream.available() / 2;
             int toSkip = skippable;
             do {
-                final int c = read();
+                final int c = this.read();
                 if (c < 0) {
                     break;
                 }
@@ -2097,7 +2125,7 @@ public final class IO {
             if (c <= 0b1111111) { // 0xxxxxxx
                 this.stream.write(c);
             } else {
-                writeHelper(c);
+                this.writeHelper(c);
             }
         }
 
@@ -2127,7 +2155,7 @@ public final class IO {
         public void write(final char[] cbuf, final int off, final int len) throws IOException {
             final int end = off + len;
             for (int index = off; index < end; ++index) {
-                write(cbuf[index]);
+                this.write(cbuf[index]);
             }
         }
 
@@ -2135,7 +2163,7 @@ public final class IO {
         public void write(final String str, final int off, final int len) throws IOException {
             final int end = off + len;
             for (int index = off; index < end; ++index) {
-                write(str.charAt(index));
+                this.write(str.charAt(index));
             }
         }
 

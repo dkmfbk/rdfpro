@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -15,6 +15,7 @@ package eu.fbk.rdfpro;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -24,18 +25,26 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.vocabulary.SESAME;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.impl.ListBindingSet;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.slf4j.LoggerFactory;
+
+import eu.fbk.rdfpro.util.Algebra;
+import eu.fbk.rdfpro.util.Exceptions;
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Scripting;
 import eu.fbk.rdfpro.util.Statements;
@@ -63,7 +72,8 @@ import eu.fbk.rdfpro.util.Statements;
  * implementations:
  * </p>
  * <ul>
- * <li>{@link #NIL} is the null transformer, mapping every statement to an empty statement list;</li>
+ * <li>{@link #NIL} is the null transformer, mapping every statement to an empty statement
+ * list;</li>
  * <li>{@link #IDENTITY} is the identity transformer, mapping every statement to itself;</li>
  * <li>{@link #filter(Predicate)} and {@link #filter(String, Predicate)} create transformers that
  * apply a given {@code Predicate} to check the input statements or its components, emitting the
@@ -149,8 +159,8 @@ public interface Transformer {
         final boolean[] flags = new boolean[4];
         for (int i = 0; i < comp.length(); ++i) {
             final char c = comp.charAt(i);
-            final int index = c == 's' ? 0 : c == 'p' ? 1 : c == 'o' ? 2
-                    : c == 'c' || c == 'g' ? 3 : -1;
+            final int index = c == 's' ? 0
+                    : c == 'p' ? 1 : c == 'o' ? 2 : c == 'c' || c == 'g' ? 3 : -1;
             if (index < 0 || flags[index]) {
                 throw new IllegalArgumentException("Invalid components '" + components + "'");
             }
@@ -158,7 +168,7 @@ public interface Transformer {
         }
 
         if (!flags[0] && !flags[1] && !flags[2] && !flags[3]) {
-            return IDENTITY;
+            return Transformer.IDENTITY;
         }
 
         return new Transformer() {
@@ -174,11 +184,169 @@ public interface Transformer {
             @Override
             public void transform(final Statement statement, final RDFHandler handler)
                     throws RDFHandlerException {
-                if ((skipSubj || predicate.test(statement.getSubject()))
-                        && (skipPred || predicate.test(statement.getPredicate()))
-                        && (skipObj || predicate.test(statement.getObject()))
-                        && (skipCtx || predicate.test(statement.getContext()))) {
+                if ((this.skipSubj || predicate.test(statement.getSubject()))
+                        && (this.skipPred || predicate.test(statement.getPredicate()))
+                        && (this.skipObj || predicate.test(statement.getObject()))
+                        && (this.skipCtx || predicate.test(statement.getContext()))) {
                     handler.handleStatement(statement);
+                }
+            }
+
+        };
+    }
+
+    /**
+     * Returns a {@code Transformer} that emits only statements matching the SPARQL condition
+     * supplied. The condition is a value expression (i.e., what can be used in the body of a
+     * SPARQL FILTER) that may reference the following variables:
+     * <ul>
+     * <li>{@code s} - statement subject</li>
+     * <li>{@code p} - statement predicate</li>
+     * <li>{@code o} - statement object</li>
+     * <li>{@code c} or {@code g} - statement context</li>
+     * <li>{@code e} - statement entities (resource subject/object)</li>
+     * <li>{@code i} - any IRI in the statement</li>
+     * <li>{@code l} - any literal in the statement</li>
+     * <li>{@code b} - any blank node in the statement</li>
+     * <li>{@code v} - any RDF value in the statement</li>
+     * </ul>
+     * Note that some variables accept multiple values (e.g., {@code v}), while some variables may
+     * not have values (e.g., {@code l}). The general behaviour is to evaluate the condition on
+     * any combination of values for all the variables referenced in it. If there are no
+     * combination the statement is discarded. If there are one or more combinations and for one
+     * of them the condition evaluates to {@code 'true'^^xsd:boolean}, then the statement is
+     * accepted.
+     * 
+     * @param condition
+     *            the condition to evaluate
+     * @return the created {@code Transformer}
+     */
+    static Transformer filter(final ValueExpr condition) {
+
+        Objects.requireNonNull(condition);
+
+        final List<String> vars = ImmutableList.copyOf(Algebra.extractVariables(condition, false));
+        final int size = vars.size();
+        final List<Function<Statement, Value[]>> extractors = Lists.newArrayListWithCapacity(size);
+
+        final Value[] emptyValues = new Value[0];
+        for (final String var : vars) {
+            switch (var) {
+            case "s":
+                extractors.add(s -> new Value[] { s.getSubject() });
+                break;
+            case "p":
+                extractors.add(s -> new Value[] { s.getPredicate() });
+                break;
+            case "o":
+                extractors.add(s -> new Value[] { s.getObject() });
+                break;
+            case "c":
+            case "g":
+                extractors.add(s -> new Value[] { s.getContext() });
+                break;
+            case "e":
+                extractors.add(s -> s.getObject() instanceof Resource
+                        ? new Value[] { s.getSubject(), s.getObject() }
+                        : new Value[] { s.getSubject() });
+                break;
+            case "i":
+                extractors.add(s -> {
+                    final Value[] values = new Value[1 //
+                            + (s.getSubject() instanceof IRI ? 1 : 0)
+                            + (s.getObject() instanceof IRI ? 1 : 0)
+                            + (s.getContext() instanceof IRI ? 1 : 0)];
+                    int index = 0;
+                    if (s.getSubject() instanceof IRI) {
+                        values[index++] = s.getSubject();
+                    }
+                    values[index++] = s.getPredicate();
+                    if (s.getObject() instanceof IRI) {
+                        values[index++] = s.getObject();
+                    }
+                    if (s.getContext() instanceof IRI) {
+                        values[index++] = s.getContext();
+                    }
+                    return values;
+                });
+                break;
+            case "l":
+                extractors.add(s -> s.getObject() instanceof Literal //
+                        ? new Value[] { s.getObject() }
+                        : emptyValues);
+                break;
+            case "b":
+                extractors.add(s -> {
+                    final Value[] values = new Value[0 //
+                            + (s.getSubject() instanceof BNode ? 1 : 0)
+                            + (s.getObject() instanceof BNode ? 1 : 0)
+                            + (s.getContext() instanceof BNode ? 1 : 0)];
+                    int index = 0;
+                    if (s.getSubject() instanceof BNode) {
+                        values[index++] = s.getSubject();
+                    }
+                    if (s.getObject() instanceof BNode) {
+                        values[index++] = s.getObject();
+                    }
+                    if (s.getContext() instanceof BNode) {
+                        values[index++] = s.getContext();
+                    }
+                    return values;
+                });
+                break;
+            case "v":
+                extractors.add(s -> new Value[] { s.getSubject(), s.getPredicate(), s.getObject(),
+                        s.getContext() != null ? s.getContext() : SESAME.NIL });
+                break;
+            default:
+                throw new IllegalArgumentException("Illegal variable " + var + " in " + condition);
+            }
+
+        }
+
+        return new Transformer() {
+
+            private volatile boolean errorsSuppressed = false;
+
+            @Override
+            public void transform(final Statement stmt, final RDFHandler handler)
+                    throws RDFHandlerException {
+
+                int combinations = 1;
+                final Value[][] values = new Value[size][];
+                for (int i = 0; i < size; ++i) {
+                    values[i] = extractors.get(i).apply(stmt);
+                    combinations *= values[i].length;
+                }
+
+                if (combinations == 0) {
+                    return;
+                }
+
+                final List<Value> tuple = Lists.newArrayList(Collections.nCopies(size, null));
+                final ListBindingSet bindings = new ListBindingSet(vars, tuple);
+
+                for (int c = 0; c < combinations; ++c) {
+                    int j = c;
+                    for (int i = size - 1; i >= 0; --i) {
+                        tuple.set(i, values[i][j % values[i].length]);
+                        j = j / values[i].length;
+                    }
+                    Value result = null;
+                    try {
+                        result = Algebra.evaluateValueExpr(condition, bindings);
+                    } catch (final Throwable ex) {
+                        if (!errorsSuppressed) {
+                            errorsSuppressed = true;
+                            LoggerFactory.getLogger(Transformer.class)
+                                    .error("Could not evaluate expression " + condition
+                                            + " (further errors suppressed)", ex);
+                        }
+                    }
+                    if (result instanceof Literal && ((Literal) result).booleanValue()) {
+                        handler.handleStatement(stmt);
+                        break;
+                    }
                 }
             }
 
@@ -234,8 +402,8 @@ public interface Transformer {
         final boolean[] flags = new boolean[4];
         for (int i = 0; i < comp.length(); ++i) {
             final char c = comp.charAt(i);
-            final int index = c == 's' ? 0 : c == 'p' ? 1 : c == 'o' ? 2
-                    : c == 'c' || c == 'g' ? 3 : -1;
+            final int index = c == 's' ? 0
+                    : c == 'p' ? 1 : c == 'o' ? 2 : c == 'c' || c == 'g' ? 3 : -1;
             if (index < 0 || flags[index]) {
                 throw new IllegalArgumentException("Invalid components '" + components + "'");
             }
@@ -243,7 +411,7 @@ public interface Transformer {
         }
 
         if (!flags[0] && !flags[1] && !flags[2] && !flags[3]) {
-            return IDENTITY;
+            return Transformer.IDENTITY;
         }
 
         return new Transformer() {
@@ -261,7 +429,7 @@ public interface Transformer {
                     throws RDFHandlerException {
 
                 Resource subj = statement.getSubject();
-                URI pred = statement.getPredicate();
+                IRI pred = statement.getPredicate();
                 Value obj = statement.getObject();
                 Resource ctx = statement.getContext();
 
@@ -278,11 +446,11 @@ public interface Transformer {
 
                 if (this.mapPred) {
                     final Value v = function.apply(pred);
-                    if (!(v instanceof URI)) {
+                    if (!(v instanceof IRI)) {
                         return;
                     }
                     modified |= v != pred;
-                    pred = (URI) v;
+                    pred = (IRI) v;
                 }
 
                 if (this.mapObj) {
@@ -306,11 +474,11 @@ public interface Transformer {
                 if (!modified) {
                     handler.handleStatement(statement);
                 } else if (ctx == null) {
-                    handler.handleStatement(Statements.VALUE_FACTORY.createStatement(subj, pred,
-                            obj));
+                    handler.handleStatement(
+                            Statements.VALUE_FACTORY.createStatement(subj, pred, obj));
                 } else {
-                    handler.handleStatement(Statements.VALUE_FACTORY.createStatement(subj, pred,
-                            obj, ctx));
+                    handler.handleStatement(
+                            Statements.VALUE_FACTORY.createStatement(subj, pred, obj, ctx));
                 }
             }
 
@@ -343,8 +511,8 @@ public interface Transformer {
         final String comp = components.trim().toLowerCase();
         for (int i = 0; i < comp.length(); ++i) {
             final char c = comp.charAt(i);
-            final int index = c == 's' ? 0 : c == 'p' ? 1 : c == 'o' ? 2
-                    : c == 'c' || c == 'g' ? 3 : -1;
+            final int index = c == 's' ? 0
+                    : c == 'p' ? 1 : c == 'o' ? 2 : c == 'c' || c == 'g' ? 3 : -1;
             if (index < 0 || flags[index]) {
                 throw new IllegalArgumentException("Invalid components '" + components + "'");
             }
@@ -353,11 +521,12 @@ public interface Transformer {
         }
 
         if (!flags[0] && !flags[1] && !flags[2] && !flags[3]) {
-            return IDENTITY;
+            return Transformer.IDENTITY;
 
-        } else if (vals[0] != null && !(vals[0] instanceof Resource) || vals[1] != null
-                && !(vals[1] instanceof URI) || vals[3] != null && !(vals[3] instanceof Resource)) {
-            return NIL;
+        } else if (vals[0] != null && !(vals[0] instanceof Resource)
+                || vals[1] != null && !(vals[1] instanceof IRI)
+                || vals[3] != null && !(vals[3] instanceof Resource)) {
+            return Transformer.NIL;
 
         } else {
             return new Transformer() {
@@ -372,7 +541,7 @@ public interface Transformer {
 
                 private final Resource subjVal = (Resource) vals[0];
 
-                private final URI predVal = (URI) vals[1];
+                private final IRI predVal = (IRI) vals[1];
 
                 private final Value objVal = vals[2];
 
@@ -383,7 +552,7 @@ public interface Transformer {
                         throws RDFHandlerException {
 
                     final Resource subj = this.subjFlag ? this.subjVal : statement.getSubject();
-                    final URI pred = this.predFlag ? this.predVal : statement.getPredicate();
+                    final IRI pred = this.predFlag ? this.predVal : statement.getPredicate();
                     final Value obj = this.objFlag ? this.objVal : statement.getObject();
                     final Resource ctx = this.ctxFlag ? this.ctxVal : statement.getContext();
 
@@ -414,7 +583,7 @@ public interface Transformer {
             throw new NullPointerException();
         }
         if (transformers.length == 0) {
-            return NIL;
+            return Transformer.NIL;
         } else if (transformers.length == 1) {
             return transformers[0];
         } else if (transformers.length == 2) {
@@ -437,8 +606,8 @@ public interface Transformer {
         } else {
             final Transformer[] newTransformers = new Transformer[transformers.length - 1];
             System.arraycopy(transformers, 2, newTransformers, 1, transformers.length - 2);
-            newTransformers[0] = sequence(transformers[0], transformers[1]);
-            return sequence(newTransformers); // recursion
+            newTransformers[0] = Transformer.sequence(transformers[0], transformers[1]);
+            return Transformer.sequence(newTransformers); // recursion
         }
     }
 
@@ -455,7 +624,7 @@ public interface Transformer {
             throw new NullPointerException();
         }
         if (transformers.length == 0) {
-            return NIL;
+            return Transformer.NIL;
         } else if (transformers.length == 1) {
             return transformers[0];
         } else {
@@ -478,24 +647,25 @@ public interface Transformer {
      * supplied string. Given {@code X} a quad component (values: {@code s}, {@code p}, {@code o},
      * {@code c}), the string contains three types of rules:
      * <ul>
-     * <li>{@code +X value list} - quad is dropped if {@code X} does not belong to {@code list};</li>
+     * <li>{@code +X value list} - quad is dropped if {@code X} does not belong to
+     * {@code list};</li>
      * <li>{@code -X value list} - quad is dropped if {@code X} belongs to {@code list};</li>
      * <li>{@code =X value} - quad component {@code X} is replaced with {@code value} (evaluated
      * after filters).</li>
      * </ul>
      * Values must be encoded in Turtle. The following wildcard values are supported:
      * <ul>
-     * <li>{@code <*>} - any URI;</li>
+     * <li>{@code <*>} - any IRI;</li>
      * <li>{@code _:*} - any BNode;</li>
      * <li>{@code *} - any literal;</li>
      * <li>{@code *@*} - any literal with a language;</li>
      * <li>{@code *@xyz} - any literal with language {@code xyz};</li>
      * <li>{@code *^^*} - any typed literal;</li>
-     * <li>{@code *^^<uri>} - any literal with datatype {@code <uri>};</li>
-     * <li>{@code *^^ns:uri} - any literal with datatype {@code ns:uri};</li>
+     * <li>{@code *^^<iri>} - any literal with datatype {@code <iri>};</li>
+     * <li>{@code *^^ns:iri} - any literal with datatype {@code ns:iri};</li>
      * <li>{@code *^^ns:*} - any typed literal with datatype prefixed with {@code ns:};</li>
-     * <li>{@code ns:*} - any URI prefixed with {@code ns:};</li>
-     * <li>{@code <ns*>} - any URI with namespace URI {@code ns}.</li>
+     * <li>{@code ns:*} - any IRI prefixed with {@code ns:};</li>
+     * <li>{@code <ns*>} - any IRI with namespace IRI {@code ns}.</li>
      * </ul>
      *
      * @param rules
@@ -517,13 +687,37 @@ public interface Transformer {
      */
     @Nullable
     static Transformer parse(@Nullable final String expression) {
+
         if (expression == null) {
             return null;
-        } else if (Scripting.isScript(expression)) {
-            return Scripting.compile(Transformer.class, expression, "q");
-        } else {
-            return rules(expression);
         }
+
+        Throwable error = null;
+
+        try {
+            return Transformer.rules(expression);
+        } catch (final Throwable ex) {
+            error = ex;
+        }
+
+        try {
+            return Transformer
+                    .filter(Algebra.parseValueExpr(expression, null, Namespaces.DEFAULT.uriMap()));
+        } catch (final Throwable ex) {
+            error.addSuppressed(ex);
+        }
+
+        try {
+            if (Scripting.isScript(expression)) {
+                return Scripting.compile(Transformer.class, expression, "q", "h");
+            }
+        } catch (final Throwable ex) {
+            error.addSuppressed(ex);
+        }
+
+        error.printStackTrace();
+        Exceptions.throwIfUnchecked(error);
+        throw new RuntimeException(error);
     }
 
     /**
@@ -577,17 +771,17 @@ final class RuleTransformer implements Transformer {
             if (ch0 == '+' || ch0 == '-' || ch0 == '=') {
                 action = ch0;
                 if (token.length() == 1) {
-                    throw new IllegalArgumentException("No component(s) specified in '" + spec
-                            + "'");
+                    throw new IllegalArgumentException(
+                            "No component(s) specified in '" + spec + "'");
                 }
                 components.clear();
                 for (int i = 1; i < token.length(); ++i) {
                     final char ch1 = Character.toLowerCase(token.charAt(i));
-                    final int component = ch1 == 's' ? 0 : ch1 == 'p' ? 1 : ch1 == 'o' ? 2
-                            : ch1 == 'c' ? 3 : -1;
+                    final int component = ch1 == 's' ? 0
+                            : ch1 == 'p' ? 1 : ch1 == 'o' ? 2 : ch1 == 'c' ? 3 : -1;
                     if (component < 0) {
-                        throw new IllegalArgumentException("Invalid component '" + ch1 + "' in '"
-                                + spec + "'");
+                        throw new IllegalArgumentException(
+                                "Invalid component '" + ch1 + "' in '" + spec + "'");
                     }
                     components.add(component);
                 }
@@ -640,10 +834,10 @@ final class RuleTransformer implements Transformer {
         }
 
         // Transform the predicate; abort if result is null
-        final URI oldPred = statement.getPredicate();
-        URI newPred = oldPred;
+        final IRI oldPred = statement.getPredicate();
+        IRI newPred = oldPred;
         if (this.predicateTransformer != null) {
-            newPred = (URI) this.predicateTransformer.transform(oldPred);
+            newPred = (IRI) this.predicateTransformer.transform(oldPred);
             if (newPred == null) {
                 return;
             }
@@ -674,11 +868,11 @@ final class RuleTransformer implements Transformer {
         if (newSubj == oldSubj && newPred == oldPred && newObj == oldObj && newCtx == oldCtx) {
             handler.handleStatement(statement); // unchanged;
         } else if (newCtx.equals(SESAME.NIL)) {
-            handler.handleStatement(Statements.VALUE_FACTORY.createStatement(newSubj, newPred,
-                    newObj));
+            handler.handleStatement(
+                    Statements.VALUE_FACTORY.createStatement(newSubj, newPred, newObj));
         } else {
-            handler.handleStatement(Statements.VALUE_FACTORY.createStatement(newSubj, newPred,
-                    newObj, newCtx));
+            handler.handleStatement(
+                    Statements.VALUE_FACTORY.createStatement(newSubj, newPred, newObj, newCtx));
         }
     }
 
@@ -689,13 +883,13 @@ final class RuleTransformer implements Transformer {
 
         private final boolean include;
 
-        // for URIs
+        // for IRIs
 
-        private final boolean matchAnyURI;
+        private final boolean matchAnyIRI;
 
-        private final Set<String> matchedURINamespaces;
+        private final Set<String> matchedIRINamespaces;
 
-        private final Set<URI> matchedURIs;
+        private final Set<IRI> matchedIRIs;
 
         // for BNodes
 
@@ -713,7 +907,7 @@ final class RuleTransformer implements Transformer {
 
         private final Set<String> matchedLanguages;
 
-        private final Set<URI> matchedDatatypeURIs;
+        private final Set<IRI> matchedDatatypeIRIs;
 
         private final Set<String> matchedDatatypeNamespaces;
 
@@ -725,15 +919,15 @@ final class RuleTransformer implements Transformer {
             this.replacement = replacement;
             this.include = include;
 
-            this.matchedURINamespaces = new HashSet<>();
-            this.matchedURIs = new HashSet<>();
+            this.matchedIRINamespaces = new HashSet<>();
+            this.matchedIRIs = new HashSet<>();
             this.matchedBNodes = new HashSet<>();
             this.matchedLanguages = new HashSet<>();
-            this.matchedDatatypeURIs = new HashSet<>();
+            this.matchedDatatypeIRIs = new HashSet<>();
             this.matchedDatatypeNamespaces = new HashSet<>();
             this.matchedLiterals = new HashSet<>();
 
-            boolean matchAnyURI = false;
+            boolean matchAnyIRI = false;
             boolean matchAnyBNode = false;
             boolean matchAnyPlainLiteral = false;
             boolean matchAnyLangLiteral = false;
@@ -741,7 +935,7 @@ final class RuleTransformer implements Transformer {
 
             for (final String expression : matchExpressions) {
                 if ("<*>".equals(expression)) {
-                    matchAnyURI = true;
+                    matchAnyIRI = true;
                 } else if ("_:*".equals(expression)) {
                     matchAnyBNode = true;
                 } else if ("*".equals(expression)) {
@@ -754,23 +948,23 @@ final class RuleTransformer implements Transformer {
                     this.matchedLanguages.add(expression.substring(2));
                 } else if (expression.startsWith("*^^")) {
                     if (expression.endsWith(":*")) {
-                        this.matchedDatatypeNamespaces.add(Namespaces.DEFAULT.uriFor(expression
-                                .substring(3, expression.length() - 2)));
+                        this.matchedDatatypeNamespaces.add(Namespaces.DEFAULT
+                                .uriFor(expression.substring(3, expression.length() - 2)));
                     } else {
-                        this.matchedDatatypeURIs.add((URI) Statements.parseValue(
-                                expression.substring(3), Namespaces.DEFAULT));
+                        this.matchedDatatypeIRIs.add((IRI) Statements
+                                .parseValue(expression.substring(3), Namespaces.DEFAULT));
                     }
                 } else if (expression.endsWith(":*")) {
-                    this.matchedURINamespaces.add(Namespaces.DEFAULT.uriFor(expression.substring(
-                            0, expression.length() - 2)));
+                    this.matchedIRINamespaces.add(Namespaces.DEFAULT
+                            .uriFor(expression.substring(0, expression.length() - 2)));
 
                 } else if (expression.endsWith("*>")) {
-                    this.matchedURINamespaces
-                    .add(expression.substring(1, expression.length() - 2));
+                    this.matchedIRINamespaces
+                            .add(expression.substring(1, expression.length() - 2));
                 } else {
                     final Value value = Statements.parseValue(expression, Namespaces.DEFAULT);
-                    if (value instanceof URI) {
-                        this.matchedURIs.add((URI) value);
+                    if (value instanceof IRI) {
+                        this.matchedIRIs.add((IRI) value);
                     } else if (value instanceof BNode) {
                         this.matchedBNodes.add((BNode) value);
                     } else if (value instanceof Literal) {
@@ -780,7 +974,7 @@ final class RuleTransformer implements Transformer {
                 }
             }
 
-            this.matchAnyURI = matchAnyURI;
+            this.matchAnyIRI = matchAnyIRI;
             this.matchAnyBNode = matchAnyBNode;
             this.matchAnyPlainLiteral = matchAnyPlainLiteral;
             this.matchAnyLangLiteral = matchAnyLangLiteral;
@@ -795,26 +989,28 @@ final class RuleTransformer implements Transformer {
         }
 
         private boolean match(final Value value) {
-            if (value instanceof URI) {
-                return this.matchAnyURI //
-                        || contains(this.matchedURIs, value)
-                        || containsNs(this.matchedURINamespaces, (URI) value);
+            if (value instanceof IRI) {
+                return this.matchAnyIRI //
+                        || ValueTransformer.contains(this.matchedIRIs, value)
+                        || ValueTransformer.containsNs(this.matchedIRINamespaces, (IRI) value);
             } else if (value instanceof Literal) {
                 final Literal lit = (Literal) value;
-                final String lang = lit.getLanguage();
-                final URI dt = lit.getDatatype();
-                return lang == null
-                        && (dt == null || XMLSchema.STRING.equals(dt))
+                final String lang = lit.getLanguage().orElse(null);
+                final IRI dt = lit.getDatatype();
+                return lang == null && (dt == null || XMLSchema.STRING.equals(dt))
                         && this.matchAnyPlainLiteral //
                         || lang != null //
-                        && (this.matchAnyLangLiteral || contains(this.matchedLanguages, lang)) //
+                                && (this.matchAnyLangLiteral
+                                        || ValueTransformer.contains(this.matchedLanguages, lang)) //
                         || dt != null //
-                        && (this.matchAnyTypedLiteral || contains(this.matchedDatatypeURIs, dt) || containsNs(
-                                this.matchedDatatypeNamespaces, dt)) //
-                                || contains(this.matchedLiterals, lit);
+                                && (this.matchAnyTypedLiteral
+                                        || ValueTransformer.contains(this.matchedDatatypeIRIs, dt)
+                                        || ValueTransformer
+                                                .containsNs(this.matchedDatatypeNamespaces, dt)) //
+                        || ValueTransformer.contains(this.matchedLiterals, lit);
             } else {
                 return this.matchAnyBNode //
-                        || contains(this.matchedBNodes, value);
+                        || ValueTransformer.contains(this.matchedBNodes, value);
             }
         }
 
@@ -822,16 +1018,16 @@ final class RuleTransformer implements Transformer {
             return !set.isEmpty() && set.contains(value);
         }
 
-        private static boolean containsNs(final Set<String> set, final URI uri) {
+        private static boolean containsNs(final Set<String> set, final IRI iri) {
             if (set.isEmpty()) {
                 return false;
             }
-            if (set.contains(uri.getNamespace())) {
+            if (set.contains(iri.getNamespace())) {
                 return true; // exact lookup
             }
-            final String uriString = uri.stringValue();
+            final String iriString = iri.stringValue();
             for (final String elem : set) {
-                if (uriString.startsWith(elem)) {
+                if (iriString.startsWith(elem)) {
                     return true; // prefix match
                 }
             }

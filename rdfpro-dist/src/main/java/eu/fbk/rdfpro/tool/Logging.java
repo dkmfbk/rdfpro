@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2014 by Francesco Corcoglioniti with support by Marco Amadori, Michele Mostarda,
  * Alessio Palmero Aprosio and Marco Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -33,8 +33,8 @@ import ch.qos.logback.core.status.ErrorStatus;
 
 public final class Logging {
 
-    private static final boolean ANSI_ENABLED = "true".equalsIgnoreCase(System
-            .getenv("RDFPRO_ANSI_ENABLED"));
+    private static final boolean ANSI_ENABLED = "true"
+            .equalsIgnoreCase(System.getenv("RDFPRO_ANSI_ENABLED"));
 
     private static final String SET_DEFAULT_COLOR = ANSIConstants.ESC_START + "0;"
             + ANSIConstants.DEFAULT_FG + ANSIConstants.ESC_END;
@@ -100,6 +100,8 @@ public final class Logging {
 
         private Encoder<E> encoder;
 
+        private OutputStream out;
+
         public synchronized Encoder<E> getEncoder() {
             return this.encoder;
         }
@@ -122,8 +124,8 @@ public final class Logging {
 
             // Abort with error if there is no encoder attached to the appender
             if (this.encoder == null) {
-                addStatus(new ErrorStatus("No encoder set for the appender named \"" + this.name
-                        + "\".", this));
+                addStatus(new ErrorStatus(
+                        "No encoder set for the appender named \"" + this.name + "\".", this));
                 return;
             }
 
@@ -139,12 +141,15 @@ public final class Logging {
 
             try {
                 // Setup encoder. On success, replace System.out and start the appender
-                this.encoder.init(generator);
+                final byte[] header = this.encoder.headerBytes();
+                this.out = generator;
+                this.out.write(header);
                 System.setOut(new PrintStream(acceptor));
                 super.start();
             } catch (final IOException ex) {
-                addStatus(new ErrorStatus("Failed to initialize encoder for appender named \""
-                        + this.name + "\".", this, ex));
+                addStatus(new ErrorStatus(
+                        "Failed to initialize encoder for appender named \"" + this.name + "\".",
+                        this, ex));
             }
         }
 
@@ -154,19 +159,22 @@ public final class Logging {
                 return;
             }
             try {
-                this.encoder.close();
+                final byte[] footer = this.encoder.footerBytes();
+                this.out.write(footer);
+                this.out = null;
                 // no need to restore System.out (due to buffering, better not to do that)
 
             } catch (final IOException ex) {
-                addStatus(new ErrorStatus("Failed to write footer for appender named \""
-                        + this.name + "\".", this, ex));
+                addStatus(new ErrorStatus(
+                        "Failed to write footer for appender named \"" + this.name + "\".", this,
+                        ex));
             } finally {
                 super.stop();
             }
         }
 
         @Override
-        protected synchronized void append(final E event) {
+        protected void append(final E event) {
             if (!isStarted()) {
                 return;
             }
@@ -174,7 +182,10 @@ public final class Logging {
                 if (event instanceof DeferredProcessingAware) {
                     ((DeferredProcessingAware) event).prepareForDeferredProcessing();
                 }
-                this.encoder.doEncode(event);
+                final byte[] byteArray = this.encoder.encode(event);
+                synchronized (this) {
+                    this.out.write(byteArray);
+                }
             } catch (final IOException ex) {
                 stop();
                 addStatus(new ErrorStatus("IO failure in appender named \"" + this.name + "\".",

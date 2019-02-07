@@ -23,20 +23,20 @@ import java.nio.charset.Charset;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
-import org.openrdf.rio.ParserConfig;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
-import org.openrdf.rio.RDFParseException;
-import org.openrdf.rio.RDFParser;
-import org.openrdf.rio.RDFParserFactory;
-import org.openrdf.rio.Rio;
-import org.openrdf.rio.helpers.BasicParserSettings;
-import org.openrdf.rio.helpers.RDFHandlerWrapper;
-import org.openrdf.rio.helpers.RDFParserBase;
-import org.openrdf.rio.helpers.XMLParserSettings;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.rio.ParserConfig;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RDFParser;
+import org.eclipse.rdf4j.rio.RDFParserFactory;
+import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
+import org.eclipse.rdf4j.rio.helpers.RDFHandlerWrapper;
+import org.eclipse.rdf4j.rio.helpers.XMLParserSettings;
 
 public class GeonamesRDF implements RDFParserFactory {
 
@@ -57,7 +57,7 @@ public class GeonamesRDF implements RDFParserFactory {
         return new Parser();
     }
 
-    public static class Parser extends RDFParserBase {
+    public static class Parser extends AbstractRDFParser {
 
         public Parser() {
             super();
@@ -73,8 +73,8 @@ public class GeonamesRDF implements RDFParserFactory {
         }
 
         @Override
-        public void parse(final InputStream in, final String baseURI) throws IOException,
-                RDFParseException, RDFHandlerException {
+        public void parse(final InputStream in, final String baseURI)
+                throws IOException, RDFParseException, RDFHandlerException {
 
             final RDFHandler handler = new RDFHandlerWrapper(getRDFHandler()) {
 
@@ -93,14 +93,14 @@ public class GeonamesRDF implements RDFParserFactory {
             final ZipInputStream stream = new ZipInputStream(in);
             try {
                 while (stream.getNextEntry() != null) {
-                    final BufferedReader reader = new BufferedReader(new InputStreamReader(stream,
-                            Charset.forName("UTF-8")));
+                    final BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(stream, Charset.forName("UTF-8")));
                     while (reader.readLine() != null) { // read and drop URI
                         final String entry = reader.readLine();
 
                         final RDFParser parser = Rio.createParser(RDFFormat.RDFXML);
                         parser.setRDFHandler(handler);
-                        parser.setValueFactory(ValueFactoryImpl.getInstance());
+                        parser.setValueFactory(SimpleValueFactory.getInstance());
 
                         final ParserConfig config = parser.getParserConfig();
                         config.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, false);
@@ -134,8 +134,8 @@ public class GeonamesRDF implements RDFParserFactory {
         }
 
         @Override
-        public void parse(final Reader reader, final String baseURI) throws IOException,
-                RDFParseException, RDFHandlerException {
+        public void parse(final Reader reader, final String baseURI)
+                throws IOException, RDFParseException, RDFHandlerException {
             throw new UnsupportedOperationException("Binary data expected");
         }
 

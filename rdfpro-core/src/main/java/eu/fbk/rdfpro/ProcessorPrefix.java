@@ -19,12 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Literal;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Namespaces;
 
@@ -52,14 +52,14 @@ final class ProcessorPrefix implements RDFProcessor {
         }
 
         @Override
-        public void handleNamespace(final String prefix, final String uri)
+        public void handleNamespace(final String prefix, final String iri)
                 throws RDFHandlerException {
-            if (this.collectedNs.put(uri, uri) == null) {
-                String p = ProcessorPrefix.this.sourceNsToPrefixMap.get(uri);
+            if (this.collectedNs.put(iri, iri) == null) {
+                String p = ProcessorPrefix.this.sourceNsToPrefixMap.get(iri);
                 if (p == null) {
                     p = prefix;
                 }
-                super.handleNamespace(p, uri);
+                super.handleNamespace(p, iri);
             }
         }
 
@@ -85,14 +85,14 @@ final class ProcessorPrefix implements RDFProcessor {
         }
 
         private void emitNamespacesFor(final Value value) throws RDFHandlerException {
-            if (value instanceof URI) {
-                final URI uri = (URI) value;
-                emitNamespace(uri.getNamespace());
+            if (value instanceof IRI) {
+                final IRI iri = (IRI) value;
+                emitNamespace(iri.getNamespace());
             } else if (value instanceof Literal) {
                 final Literal literal = (Literal) value;
-                final URI uri = literal.getDatatype();
-                if (uri != null) {
-                    emitNamespace(uri.getNamespace());
+                final IRI iri = literal.getDatatype();
+                if (iri != null) {
+                    emitNamespace(iri.getNamespace());
                 }
             }
         }

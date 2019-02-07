@@ -1,12 +1,10 @@
 package eu.fbk.rdfpro.util;
 
-import org.openrdf.model.Statement;
+import org.eclipse.rdf4j.model.Statement;
 
 import eu.fbk.rdfpro.RDFHandlers;
 import eu.fbk.rdfpro.RDFSource;
 import eu.fbk.rdfpro.RDFSources;
-import eu.fbk.rdfpro.util.IO;
-import eu.fbk.rdfpro.util.QuadModel;
 
 public class QuadModelLoadTest {
 
@@ -25,7 +23,7 @@ public class QuadModelLoadTest {
 
         final long ts = System.currentTimeMillis();
 
-        final RDFSource source = RDFSources.read(false, true, null, null, args);
+        final RDFSource source = RDFSources.read(false, true, null, null, null, true, args);
         source.emit(RDFHandlers.synchronize(RDFHandlers.wrap(model)), 1);
         Runtime.getRuntime().gc();
         final long mem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();

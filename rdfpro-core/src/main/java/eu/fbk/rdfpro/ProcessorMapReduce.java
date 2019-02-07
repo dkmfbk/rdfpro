@@ -21,13 +21,13 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,7 +171,7 @@ final class ProcessorMapReduce implements RDFProcessor {
             final int mask = ((Number) record[5]).intValue();
 
             final Resource s = (Resource) ((mask & 0x08) != 0 ? key : record[1]);
-            final URI p = (URI) ((mask & 0x04) != 0 ? key : record[2]);
+            final IRI p = (IRI) ((mask & 0x04) != 0 ? key : record[2]);
             final Value o = (Value) ((mask & 0x02) != 0 ? key : record[3]);
             final Resource c = (Resource) ((mask & 0x01) != 0 ? key : record[4]);
 

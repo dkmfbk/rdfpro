@@ -1,3 +1,5 @@
+/.project
+/.settings
 */.classpath
 */.project
 */.settings/
@@ -8,4 +10,4 @@ target/
 .idea/
 **/*.versionsBackup
 sync-demo.sh
-
+workspace

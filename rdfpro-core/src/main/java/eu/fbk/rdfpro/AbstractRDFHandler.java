@@ -13,9 +13,9 @@
  */
 package eu.fbk.rdfpro;
 
-import org.openrdf.model.Statement;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 /**
  * Base implementation of {@code RDFHandler} + {@code AutoCloseable}.

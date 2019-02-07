@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -19,14 +19,13 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Model;
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.ContextStatementImpl;
-import org.openrdf.model.util.ModelException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.ModelException;
 
 final class QuadModelModelAdapter extends QuadModel implements AutoCloseable {
 
@@ -50,22 +49,22 @@ final class QuadModelModelAdapter extends QuadModel implements AutoCloseable {
 
     @Override
     protected Namespace doGetNamespace(final String prefix) {
-        return this.model.getNamespace(prefix);
+        return this.model.getNamespace(prefix).orElse(null);
     }
 
     @Override
     protected Namespace doSetNamespace(final String prefix, @Nullable final String name) {
         if (name == null) {
-            return this.model.removeNamespace(prefix);
+            return this.model.removeNamespace(prefix).orElse(null);
         } else {
-            final Namespace namespace = this.model.getNamespace(prefix);
+            final Namespace namespace = this.model.getNamespace(prefix).orElse(null);
             this.model.setNamespace(prefix, name);
             return namespace;
         }
     }
 
     @Override
-    protected int doSize(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSize(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         return subj == null && pred == null && obj == null && ctxs.length == 0 ? this.model.size()
                 : this.model.filter(subj, pred, obj, ctxs).size();
@@ -73,34 +72,34 @@ final class QuadModelModelAdapter extends QuadModel implements AutoCloseable {
 
     @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
         return this.model.filter(subj, pred, obj, ctxs).iterator();
     }
 
     @Override
-    protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
+    protected boolean doAdd(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
         if (ctxs.length == 0) {
-            return doAddHelper(subj, pred, obj, CTX_DEFAULT);
+            return this.doAddHelper(subj, pred, obj, QuadModel.CTX_DEFAULT);
         } else if (ctxs.length == 1) {
-            return doAddHelper(subj, pred, obj, ctxs);
+            return this.doAddHelper(subj, pred, obj, ctxs);
         } else {
             boolean modified = false;
             for (final Resource ctx : ctxs) {
-                final boolean m = doAddHelper(subj, pred, obj, new Resource[] { ctx });
+                final boolean m = this.doAddHelper(subj, pred, obj, new Resource[] { ctx });
                 modified |= m;
             }
             return modified;
         }
     }
 
-    private boolean doAddHelper(final Resource subj, final URI pred, final Value obj,
+    private boolean doAddHelper(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctx) {
         final boolean added = this.model.add(subj, pred, obj, ctx);
         if (!added) {
             if (this.model.filter(subj, pred, obj, ctx).isEmpty()) {
                 throw new ModelException("Model already contains statement "
-                        + new ContextStatementImpl(subj, pred, obj, ctx[0]));
+                        + Statements.VALUE_FACTORY.createStatement(subj, pred, obj, ctx[0]));
             }
             return false;
         }
@@ -108,7 +107,7 @@ final class QuadModelModelAdapter extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+    protected boolean doRemove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         return this.model.remove(subj, pred, obj, ctxs);
     }

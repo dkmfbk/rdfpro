@@ -25,12 +25,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterators;
 
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 
 final class QuadModelSubModel extends QuadModel {
 
@@ -43,31 +43,32 @@ final class QuadModelSubModel extends QuadModel {
     private static final int TYPE_HASH = hash(RDF.TYPE);
 
     private static final Sorting.ArrayComparator<Value> VALUE_ARRAY_COMPARATOR //
-    = new Sorting.ArrayComparator<Value>() {
+            = new Sorting.ArrayComparator<Value>() {
 
-        @Override
-        public int size() {
-            return 4;
-        }
-
-        @Override
-        public int compare(final Value[] leftArray, final int leftIndex, final Value[] rightArray,
-                final int rightIndex) {
-            // POSC order
-            int result = hash(leftArray[leftIndex + 1]) - hash(rightArray[rightIndex + 1]);
-            if (result == 0) {
-                result = hash(leftArray[leftIndex + 2]) - hash(rightArray[rightIndex + 2]);
-                if (result == 0) {
-                    result = hash(leftArray[leftIndex]) - hash(rightArray[rightIndex]);
-                    if (result == 0) {
-                        result = hash(leftArray[leftIndex + 3]) - hash(rightArray[rightIndex + 3]);
-                    }
+                @Override
+                public int size() {
+                    return 4;
                 }
-            }
-            return result;
-        }
 
-    };
+                @Override
+                public int compare(final Value[] leftArray, final int leftIndex,
+                        final Value[] rightArray, final int rightIndex) {
+                    // POSC order
+                    int result = hash(leftArray[leftIndex + 1]) - hash(rightArray[rightIndex + 1]);
+                    if (result == 0) {
+                        result = hash(leftArray[leftIndex + 2]) - hash(rightArray[rightIndex + 2]);
+                        if (result == 0) {
+                            result = hash(leftArray[leftIndex]) - hash(rightArray[rightIndex]);
+                            if (result == 0) {
+                                result = hash(leftArray[leftIndex + 3])
+                                        - hash(rightArray[rightIndex + 3]);
+                            }
+                        }
+                    }
+                    return result;
+                }
+
+            };
 
     private final QuadModel model;
 
@@ -112,7 +113,7 @@ final class QuadModelSubModel extends QuadModel {
     }
 
     @Override
-    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, @Nullable final Resource ctx) {
 
         // Return 0 if view is empty
@@ -141,7 +142,7 @@ final class QuadModelSubModel extends QuadModel {
 
     @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
 
         // In case of a wildcard <?s ?p ?o ?c> returns all the statements in the delta
         if (subj == null && pred == null && obj == null && ctxs.length == 0) {
@@ -252,7 +253,7 @@ final class QuadModelSubModel extends QuadModel {
     }
 
     @Override
-    protected int doSize(final Resource subj, final URI pred, final Value obj,
+    protected int doSize(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
         if (subj == null && pred == null && obj == null && ctxs.length == 0) {
             return this.data.length / 4;
@@ -264,13 +265,13 @@ final class QuadModelSubModel extends QuadModel {
     }
 
     @Override
-    protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
+    protected boolean doAdd(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected boolean doRemove(final Resource subj, final URI pred, final Value obj,
+    protected boolean doRemove(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
         throw new UnsupportedOperationException(); // not invoked
     }
@@ -280,7 +281,7 @@ final class QuadModelSubModel extends QuadModel {
         return this.model.normalize(value);
     }
 
-    private Value[] prefixFor(@Nullable final Resource subj, @Nullable final URI pred,
+    private Value[] prefixFor(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj) {
 
         // Compute prefix length
@@ -325,7 +326,7 @@ final class QuadModelSubModel extends QuadModel {
 
     private Statement statementAt(final int offset) {
         final Resource subj = (Resource) QuadModelSubModel.this.data[offset];
-        final URI pred = (URI) QuadModelSubModel.this.data[offset + 1];
+        final IRI pred = (IRI) QuadModelSubModel.this.data[offset + 1];
         final Value obj = QuadModelSubModel.this.data[offset + 2];
         final Resource ctx = (Resource) QuadModelSubModel.this.data[offset + 3];
         return ctx == null ? Statements.VALUE_FACTORY.createStatement(subj, pred, obj)

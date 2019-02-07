@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -20,23 +20,22 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Namespace;
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.impl.NamespaceImpl;
-import org.openrdf.model.util.ModelException;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.Dataset;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.impl.EmptyBindingSet;
-import org.openrdf.sail.NotifyingSailConnection;
-import org.openrdf.sail.SailConnection;
-import org.openrdf.sail.SailConnectionListener;
-import org.openrdf.sail.SailException;
-
-import info.aduna.iteration.CloseableIteration;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.util.ModelException;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.Dataset;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
+import org.eclipse.rdf4j.sail.NotifyingSailConnection;
+import org.eclipse.rdf4j.sail.SailConnection;
+import org.eclipse.rdf4j.sail.SailConnectionListener;
+import org.eclipse.rdf4j.sail.SailException;
 
 final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
 
@@ -105,7 +104,7 @@ final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
     protected Namespace doGetNamespace(final String prefix) {
         try {
             final String name = this.connection.getNamespace(prefix);
-            return name == null ? null : new NamespaceImpl(prefix, name);
+            return name == null ? null : new SimpleNamespace(prefix, name);
         } catch (final SailException ex) {
             throw new ModelException(ex);
         }
@@ -115,8 +114,8 @@ final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
     protected Namespace doSetNamespace(final String prefix, @Nullable final String name) {
         try {
             final String oldName = this.connection.getNamespace(prefix);
-            final Namespace oldNamespace = oldName == null ? null : new NamespaceImpl(prefix,
-                    oldName);
+            final Namespace oldNamespace = oldName == null ? null
+                    : new SimpleNamespace(prefix, oldName);
             if (name == null) {
                 this.connection.removeNamespace(prefix);
             } else {
@@ -129,7 +128,7 @@ final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected int doSize(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSize(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         try {
             if (subj == null && pred == null && obj == null) {
@@ -154,24 +153,24 @@ final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final URI pred,
+    protected int doSizeEstimate(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, @Nullable final Resource ctx) {
         return Integer.MAX_VALUE; // no way to efficiently estimate cardinality
     }
 
     @Override
     protected Iterator<Statement> doIterator(@Nullable final Resource subj,
-            @Nullable final URI pred, @Nullable final Value obj, final Resource[] ctxs) {
+            @Nullable final IRI pred, @Nullable final Value obj, final Resource[] ctxs) {
         try {
-            return Iterators.forIteration(this.connection.getStatements(subj, pred, obj, false,
-                    ctxs));
+            return Iterators
+                    .forIteration(this.connection.getStatements(subj, pred, obj, false, ctxs));
         } catch (final SailException ex) {
             throw new ModelException(ex);
         }
     }
 
     @Override
-    protected boolean doAdd(final Resource subj, final URI pred, final Value obj,
+    protected boolean doAdd(final Resource subj, final IRI pred, final Value obj,
             final Resource[] ctxs) {
         try {
             if (!this.trackChanges) {
@@ -206,7 +205,7 @@ final class QuadModelSailAdapter extends QuadModel implements AutoCloseable {
     }
 
     @Override
-    protected boolean doRemove(@Nullable final Resource subj, @Nullable final URI pred,
+    protected boolean doRemove(@Nullable final Resource subj, @Nullable final IRI pred,
             @Nullable final Value obj, final Resource[] ctxs) {
         try {
             if (!this.trackChanges) {

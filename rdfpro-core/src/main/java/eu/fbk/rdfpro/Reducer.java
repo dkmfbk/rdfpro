@@ -13,18 +13,17 @@
  */
 package eu.fbk.rdfpro;
 
-import java.util.Arrays;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.Resource;
-import org.openrdf.model.Statement;
-import org.openrdf.model.URI;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 import eu.fbk.rdfpro.util.Namespaces;
 import eu.fbk.rdfpro.util.Scripting;
@@ -208,10 +207,10 @@ public interface Reducer {
                     }
                 }
 
-                if (values[0] instanceof Resource && values[1] instanceof URI
+                if (values[0] instanceof Resource && values[1] instanceof IRI
                         && values[2] instanceof Value) {
                     final Resource s = (Resource) values[0];
-                    final URI p = (URI) values[1];
+                    final IRI p = (IRI) values[1];
                     final Value o = values[2];
                     if (values[3] instanceof Resource) {
                         final Resource c = (Resource) values[3];

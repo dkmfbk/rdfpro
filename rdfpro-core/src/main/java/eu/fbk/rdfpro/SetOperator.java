@@ -47,8 +47,8 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
     /**
      * Multiset union. This {@code SetOperator} returns an element if it occurs in at least one
      * argument of the operation, with a multiplicity equal to the one of the argument it occurs
-     * the most. The corresponding textual representation is "U". See <a
-     * href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
+     * the most. The corresponding textual representation is "U". See
+     * <a href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
      */
     public static final SetOperator UNION_MULTISET = new SetOperator("U") {
 
@@ -71,8 +71,8 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
      * Multiset sum (a.k.a. union all). This {@code SetOperator} returns an element if it occurs
      * at least in one argument of the operation, with a multiplicity that is the sum of the
      * multiplicities of the element in the multisets coming from the operation arguments. The
-     * corresponding textual representation is "a". See <a
-     * href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
+     * corresponding textual representation is "a". See
+     * <a href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
      */
     public static final SetOperator SUM_MULTISET = new SetOperator("a") {
 
@@ -113,8 +113,8 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
     /**
      * Multiset intersection. This {@code SetOperator} returns an element if it occurs in all the
      * arguments of the operation, with a multiplicity equal to the one of the argument it occurs
-     * the least. The corresponding textual representation is "I". See <a
-     * href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
+     * the least. The corresponding textual representation is "I". See
+     * <a href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
      */
     public static final SetOperator INTERSECTION_MULTISET = new SetOperator("I") {
 
@@ -164,8 +164,8 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
      * {@code A0 \ A1 ... \An} or equivalently {@code A0 \ (A1 + ... + An)} where {@code +}
      * denotes multiset sum). The multiplicity of a returned element is equal to its multiplicity
      * in the first argument minus the sum of its multiplicities in the other arguments (rounded
-     * to 0 if negative). The corresponding textual representation is "D". See <a
-     * href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
+     * to 0 if negative). The corresponding textual representation is "D". See
+     * <a href="http://en.wikipedia.org/wiki/Multiset">this page</a> for more information.
      */
     public static final SetOperator DIFFERENCE_MULTISET = new SetOperator("D") {
 
@@ -258,9 +258,10 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
             public int apply(final int[] counts) {
                 int result = 0;
                 for (int i = 0; i < counts.length; ++i) {
-                    if (counts[i] > 0) {
-                        ++result;
-                    }
+                    result += counts[i];
+                    // if (counts[i] > 0) {
+                    // ++result;
+                    // }
                 }
                 return result >= n ? 1 : 0;
             }
@@ -370,9 +371,9 @@ public abstract class SetOperator implements Serializable, Comparable<SetOperato
      */
     public static SetOperator valueOf(final String string) {
         Objects.requireNonNull(string);
-        for (final SetOperator operation : new SetOperator[] { UNION, UNION_MULTISET,
-                SUM_MULTISET, INTERSECTION, INTERSECTION_MULTISET, DIFFERENCE,
-                DIFFERENCE_MULTISET, SYMMETRIC_DIFFERENCE, SYMMETRIC_DIFFERENCE_MULTISET }) {
+        for (final SetOperator operation : new SetOperator[] { UNION, UNION_MULTISET, SUM_MULTISET,
+                INTERSECTION, INTERSECTION_MULTISET, DIFFERENCE, DIFFERENCE_MULTISET,
+                SYMMETRIC_DIFFERENCE, SYMMETRIC_DIFFERENCE_MULTISET }) {
             if (operation.string.equals(string)) {
                 return operation;
             }

@@ -1,13 +1,13 @@
 /*
  * RDFpro - An extensible tool for building stream-oriented RDF processing libraries.
- * 
+ *
  * Written in 2015 by Francesco Corcoglioniti with support by Alessio Palmero Aprosio and Marco
  * Rospocher. Contact info on http://rdfpro.fbk.eu/
- * 
+ *
  * To the extent possible under law, the authors have dedicated all copyright and related and
  * neighboring rights to this software to the public domain worldwide. This software is
  * distributed without any warranty.
- * 
+ *
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
@@ -27,101 +27,101 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.model.BNode;
-import org.openrdf.model.Literal;
-import org.openrdf.model.URI;
-import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.vocabulary.FN;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.query.BindingSet;
-import org.openrdf.query.Dataset;
-import org.openrdf.query.algebra.Add;
-import org.openrdf.query.algebra.And;
-import org.openrdf.query.algebra.ArbitraryLengthPath;
-import org.openrdf.query.algebra.Avg;
-import org.openrdf.query.algebra.BNodeGenerator;
-import org.openrdf.query.algebra.BinaryValueOperator;
-import org.openrdf.query.algebra.BindingSetAssignment;
-import org.openrdf.query.algebra.Bound;
-import org.openrdf.query.algebra.Clear;
-import org.openrdf.query.algebra.Coalesce;
-import org.openrdf.query.algebra.Compare;
-import org.openrdf.query.algebra.Compare.CompareOp;
-import org.openrdf.query.algebra.CompareAll;
-import org.openrdf.query.algebra.CompareAny;
-import org.openrdf.query.algebra.Copy;
-import org.openrdf.query.algebra.Count;
-import org.openrdf.query.algebra.Create;
-import org.openrdf.query.algebra.Datatype;
-import org.openrdf.query.algebra.DeleteData;
-import org.openrdf.query.algebra.DescribeOperator;
-import org.openrdf.query.algebra.Difference;
-import org.openrdf.query.algebra.Distinct;
-import org.openrdf.query.algebra.EmptySet;
-import org.openrdf.query.algebra.Exists;
-import org.openrdf.query.algebra.Extension;
-import org.openrdf.query.algebra.ExtensionElem;
-import org.openrdf.query.algebra.Filter;
-import org.openrdf.query.algebra.FunctionCall;
-import org.openrdf.query.algebra.Group;
-import org.openrdf.query.algebra.GroupConcat;
-import org.openrdf.query.algebra.GroupElem;
-import org.openrdf.query.algebra.IRIFunction;
-import org.openrdf.query.algebra.If;
-import org.openrdf.query.algebra.In;
-import org.openrdf.query.algebra.InsertData;
-import org.openrdf.query.algebra.Intersection;
-import org.openrdf.query.algebra.IsBNode;
-import org.openrdf.query.algebra.IsLiteral;
-import org.openrdf.query.algebra.IsNumeric;
-import org.openrdf.query.algebra.IsResource;
-import org.openrdf.query.algebra.IsURI;
-import org.openrdf.query.algebra.Join;
-import org.openrdf.query.algebra.Label;
-import org.openrdf.query.algebra.Lang;
-import org.openrdf.query.algebra.LangMatches;
-import org.openrdf.query.algebra.LeftJoin;
-import org.openrdf.query.algebra.Like;
-import org.openrdf.query.algebra.ListMemberOperator;
-import org.openrdf.query.algebra.Load;
-import org.openrdf.query.algebra.LocalName;
-import org.openrdf.query.algebra.MathExpr;
-import org.openrdf.query.algebra.MathExpr.MathOp;
-import org.openrdf.query.algebra.Max;
-import org.openrdf.query.algebra.Min;
-import org.openrdf.query.algebra.Modify;
-import org.openrdf.query.algebra.Move;
-import org.openrdf.query.algebra.MultiProjection;
-import org.openrdf.query.algebra.Namespace;
-import org.openrdf.query.algebra.Not;
-import org.openrdf.query.algebra.Or;
-import org.openrdf.query.algebra.Order;
-import org.openrdf.query.algebra.OrderElem;
-import org.openrdf.query.algebra.Projection;
-import org.openrdf.query.algebra.ProjectionElem;
-import org.openrdf.query.algebra.ProjectionElemList;
-import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.QueryModelVisitor;
-import org.openrdf.query.algebra.QueryRoot;
-import org.openrdf.query.algebra.Reduced;
-import org.openrdf.query.algebra.Regex;
-import org.openrdf.query.algebra.SameTerm;
-import org.openrdf.query.algebra.Sample;
-import org.openrdf.query.algebra.Service;
-import org.openrdf.query.algebra.SingletonSet;
-import org.openrdf.query.algebra.Slice;
-import org.openrdf.query.algebra.StatementPattern;
-import org.openrdf.query.algebra.StatementPattern.Scope;
-import org.openrdf.query.algebra.Str;
-import org.openrdf.query.algebra.Sum;
-import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.query.algebra.UnaryTupleOperator;
-import org.openrdf.query.algebra.Union;
-import org.openrdf.query.algebra.ValueConstant;
-import org.openrdf.query.algebra.ValueExpr;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.algebra.ZeroLengthPath;
-import org.openrdf.query.algebra.helpers.QueryModelVisitorBase;
+import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.FN;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.Dataset;
+import org.eclipse.rdf4j.query.algebra.Add;
+import org.eclipse.rdf4j.query.algebra.And;
+import org.eclipse.rdf4j.query.algebra.ArbitraryLengthPath;
+import org.eclipse.rdf4j.query.algebra.Avg;
+import org.eclipse.rdf4j.query.algebra.BNodeGenerator;
+import org.eclipse.rdf4j.query.algebra.BinaryValueOperator;
+import org.eclipse.rdf4j.query.algebra.BindingSetAssignment;
+import org.eclipse.rdf4j.query.algebra.Bound;
+import org.eclipse.rdf4j.query.algebra.Clear;
+import org.eclipse.rdf4j.query.algebra.Coalesce;
+import org.eclipse.rdf4j.query.algebra.Compare;
+import org.eclipse.rdf4j.query.algebra.Compare.CompareOp;
+import org.eclipse.rdf4j.query.algebra.CompareAll;
+import org.eclipse.rdf4j.query.algebra.CompareAny;
+import org.eclipse.rdf4j.query.algebra.Copy;
+import org.eclipse.rdf4j.query.algebra.Count;
+import org.eclipse.rdf4j.query.algebra.Create;
+import org.eclipse.rdf4j.query.algebra.Datatype;
+import org.eclipse.rdf4j.query.algebra.DeleteData;
+import org.eclipse.rdf4j.query.algebra.DescribeOperator;
+import org.eclipse.rdf4j.query.algebra.Difference;
+import org.eclipse.rdf4j.query.algebra.Distinct;
+import org.eclipse.rdf4j.query.algebra.EmptySet;
+import org.eclipse.rdf4j.query.algebra.Exists;
+import org.eclipse.rdf4j.query.algebra.Extension;
+import org.eclipse.rdf4j.query.algebra.ExtensionElem;
+import org.eclipse.rdf4j.query.algebra.Filter;
+import org.eclipse.rdf4j.query.algebra.FunctionCall;
+import org.eclipse.rdf4j.query.algebra.Group;
+import org.eclipse.rdf4j.query.algebra.GroupConcat;
+import org.eclipse.rdf4j.query.algebra.GroupElem;
+import org.eclipse.rdf4j.query.algebra.IRIFunction;
+import org.eclipse.rdf4j.query.algebra.If;
+import org.eclipse.rdf4j.query.algebra.In;
+import org.eclipse.rdf4j.query.algebra.InsertData;
+import org.eclipse.rdf4j.query.algebra.Intersection;
+import org.eclipse.rdf4j.query.algebra.IsBNode;
+import org.eclipse.rdf4j.query.algebra.IsLiteral;
+import org.eclipse.rdf4j.query.algebra.IsNumeric;
+import org.eclipse.rdf4j.query.algebra.IsResource;
+import org.eclipse.rdf4j.query.algebra.IsURI;
+import org.eclipse.rdf4j.query.algebra.Join;
+import org.eclipse.rdf4j.query.algebra.Label;
+import org.eclipse.rdf4j.query.algebra.Lang;
+import org.eclipse.rdf4j.query.algebra.LangMatches;
+import org.eclipse.rdf4j.query.algebra.LeftJoin;
+import org.eclipse.rdf4j.query.algebra.Like;
+import org.eclipse.rdf4j.query.algebra.ListMemberOperator;
+import org.eclipse.rdf4j.query.algebra.Load;
+import org.eclipse.rdf4j.query.algebra.LocalName;
+import org.eclipse.rdf4j.query.algebra.MathExpr;
+import org.eclipse.rdf4j.query.algebra.MathExpr.MathOp;
+import org.eclipse.rdf4j.query.algebra.Max;
+import org.eclipse.rdf4j.query.algebra.Min;
+import org.eclipse.rdf4j.query.algebra.Modify;
+import org.eclipse.rdf4j.query.algebra.Move;
+import org.eclipse.rdf4j.query.algebra.MultiProjection;
+import org.eclipse.rdf4j.query.algebra.Namespace;
+import org.eclipse.rdf4j.query.algebra.Not;
+import org.eclipse.rdf4j.query.algebra.Or;
+import org.eclipse.rdf4j.query.algebra.Order;
+import org.eclipse.rdf4j.query.algebra.OrderElem;
+import org.eclipse.rdf4j.query.algebra.Projection;
+import org.eclipse.rdf4j.query.algebra.ProjectionElem;
+import org.eclipse.rdf4j.query.algebra.ProjectionElemList;
+import org.eclipse.rdf4j.query.algebra.QueryModelNode;
+import org.eclipse.rdf4j.query.algebra.QueryModelVisitor;
+import org.eclipse.rdf4j.query.algebra.QueryRoot;
+import org.eclipse.rdf4j.query.algebra.Reduced;
+import org.eclipse.rdf4j.query.algebra.Regex;
+import org.eclipse.rdf4j.query.algebra.SameTerm;
+import org.eclipse.rdf4j.query.algebra.Sample;
+import org.eclipse.rdf4j.query.algebra.Service;
+import org.eclipse.rdf4j.query.algebra.SingletonSet;
+import org.eclipse.rdf4j.query.algebra.Slice;
+import org.eclipse.rdf4j.query.algebra.StatementPattern;
+import org.eclipse.rdf4j.query.algebra.StatementPattern.Scope;
+import org.eclipse.rdf4j.query.algebra.Str;
+import org.eclipse.rdf4j.query.algebra.Sum;
+import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.UnaryTupleOperator;
+import org.eclipse.rdf4j.query.algebra.Union;
+import org.eclipse.rdf4j.query.algebra.ValueConstant;
+import org.eclipse.rdf4j.query.algebra.ValueExpr;
+import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.algebra.ZeroLengthPath;
+import org.eclipse.rdf4j.query.algebra.helpers.AbstractQueryModelVisitor;
 
 final class SPARQLRenderer {
 
@@ -193,14 +193,14 @@ final class SPARQLRenderer {
                     continue; // do not emit Virtuoso bif: binding, as Virtuoso will complain
                 }
                 builder.append("PREFIX ").append(prefix).append(": <");
-                escape(namespace, builder);
+                SPARQLRenderer.escape(namespace, builder);
                 builder.append(">\n");
                 newline = true;
             }
         }
         if (rendering.base != null) {
             builder.append("BASE <");
-            escape(rendering.base, builder);
+            SPARQLRenderer.escape(rendering.base, builder);
             builder.append(">\n");
             newline = true;
         }
@@ -276,8 +276,8 @@ final class SPARQLRenderer {
             return null;
         }
         final Join j = (Join) n;
-        final List<StatementPattern> l = getBGP(j.getLeftArg());
-        final List<StatementPattern> r = getBGP(j.getRightArg());
+        final List<StatementPattern> l = SPARQLRenderer.getBGP(j.getLeftArg());
+        final List<StatementPattern> r = SPARQLRenderer.getBGP(j.getRightArg());
         if (l == null || r == null) {
             return null;
         }
@@ -285,7 +285,8 @@ final class SPARQLRenderer {
             return r;
         } else if (r.isEmpty()) {
             return l;
-        } else if (!equalOrNull(l.get(0).getContextVar(), r.get(0).getContextVar())) {
+        } else if (!SPARQLRenderer.equalOrNull(l.get(0).getContextVar(),
+                r.get(0).getContextVar())) {
             return null;
         } else {
             final List<StatementPattern> s = new ArrayList<StatementPattern>(l.size() + r.size());
@@ -297,7 +298,7 @@ final class SPARQLRenderer {
 
     private static int getVarRefs(final QueryModelNode node, final String name) {
         final AtomicInteger count = new AtomicInteger(0);
-        node.visit(new QueryModelVisitorBase<RuntimeException>() {
+        node.visit(new AbstractQueryModelVisitor<RuntimeException>() {
 
             @Override
             public void meet(final Var var) {
@@ -312,7 +313,7 @@ final class SPARQLRenderer {
 
     private static ValueExpr getVarExpr(final QueryModelNode node, final String name) {
         final AtomicReference<ValueExpr> result = new AtomicReference<ValueExpr>(null);
-        node.visit(new QueryModelVisitorBase<RuntimeException>() {
+        node.visit(new AbstractQueryModelVisitor<RuntimeException>() {
 
             @Override
             protected void meetNode(final QueryModelNode node) throws RuntimeException {
@@ -379,9 +380,9 @@ final class SPARQLRenderer {
             this.namespaces = new HashSet<>();
             this.indent = 0;
             if (query) {
-                emit(Query.create(this.root, this.dataset, SPARQLRenderer.this.forceSelect));
+                this.emit(Query.create(this.root, this.dataset, SPARQLRenderer.this.forceSelect));
             } else {
-                emit(node);
+                this.emit(node);
             }
             this.body = this.builder.toString();
             this.builder.setLength(0);
@@ -391,7 +392,7 @@ final class SPARQLRenderer {
 
         private Rendering emitIf(final boolean condition, final Object object) {
             if (condition) {
-                emit(object);
+                this.emit(object);
             }
             return this;
         }
@@ -400,9 +401,9 @@ final class SPARQLRenderer {
             boolean first = true;
             for (final Object value : values) {
                 if (!first) {
-                    emit(separator);
+                    this.emit(separator);
                 }
-                emit(value);
+                this.emit(value);
                 first = false;
             }
             return this;
@@ -411,19 +412,19 @@ final class SPARQLRenderer {
         @SuppressWarnings("unchecked")
         private Rendering emit(final Object value) {
             if (value instanceof String) {
-                return emit((String) value);
+                return this.emit((String) value);
             } else if (value instanceof QueryModelNode) {
-                emit((QueryModelNode) value);
+                this.emit((QueryModelNode) value);
             } else if (value instanceof BNode) {
-                emit((BNode) value);
-            } else if (value instanceof URI) {
-                emit((URI) value);
+                this.emit((BNode) value);
+            } else if (value instanceof IRI) {
+                this.emit((IRI) value);
             } else if (value instanceof Literal) {
-                emit((Literal) value);
+                this.emit((Literal) value);
             } else if (value instanceof List<?>) {
-                emit((List<StatementPattern>) value);
+                this.emit((List<StatementPattern>) value);
             } else if (value instanceof Query) {
-                emit((Query) value);
+                this.emit((Query) value);
             }
             return this;
         }
@@ -438,13 +439,13 @@ final class SPARQLRenderer {
                 this.builder.append(literal.getLabel());
             } else {
                 this.builder.append("\"");
-                escape(literal.getLabel(), this.builder);
+                SPARQLRenderer.escape(literal.getLabel(), this.builder);
                 this.builder.append("\"");
-                if (literal.getLanguage() != null) {
-                    this.builder.append("@").append(literal.getLanguage());
+                if (literal.getLanguage().isPresent()) {
+                    this.builder.append("@").append(literal.getLanguage().get());
                 } else if (literal.getDatatype() != null) {
                     this.builder.append("^^");
-                    emit(literal.getDatatype());
+                    this.emit(literal.getDatatype());
                 }
             }
             return this;
@@ -455,19 +456,19 @@ final class SPARQLRenderer {
             return this;
         }
 
-        private Rendering emit(final URI uri) {
-            if (uri.getNamespace().equals("http://www.openlinksw.com/schema/sparql/extensions#")) {
-                this.builder.append("bif:").append(uri.getLocalName()); // for Virtuoso builtins
+        private Rendering emit(final IRI iri) {
+            if (iri.getNamespace().equals("http://www.openlinksw.com/schema/sparql/extensions#")) {
+                this.builder.append("bif:").append(iri.getLocalName()); // for Virtuoso builtins
             } else {
-                final String prefix = SPARQLRenderer.this.prefixes.get(uri.getNamespace());
+                final String prefix = SPARQLRenderer.this.prefixes.get(iri.getNamespace());
                 if (prefix != null) {
                     if (this.namespaces != null) {
-                        this.namespaces.add(uri.getNamespace());
+                        this.namespaces.add(iri.getNamespace());
                     }
-                    this.builder.append(prefix).append(':').append(uri.getLocalName());
+                    this.builder.append(prefix).append(':').append(iri.getLocalName());
                 } else {
                     this.builder.append("<");
-                    escape(uri.toString(), this.builder);
+                    SPARQLRenderer.escape(iri.toString(), this.builder);
                     this.builder.append(">");
                 }
             }
@@ -480,7 +481,7 @@ final class SPARQLRenderer {
             }
             final Var c = bgp.get(0).getContextVar();
             if (c != null) {
-                emit("GRAPH ").emit(c).emit(" ").openBrace();
+                this.emit("GRAPH ").emit(c).emit(" ").openBrace();
             }
             StatementPattern l = null;
             for (final StatementPattern n : bgp) {
@@ -488,97 +489,99 @@ final class SPARQLRenderer {
                 final Var p = n.getPredicateVar();
                 final Var o = n.getObjectVar();
                 if (l == null) {
-                    emit(s).emit(" ").emit(p).emit(" ").emit(o); // s p o
+                    this.emit(s).emit(" ").emit(p).emit(" ").emit(o); // s p o
                 } else if (!l.getSubjectVar().equals(n.getSubjectVar())) {
-                    emit(" .").newline().emit(s).emit(" ").emit(p).emit(" ").emit(o); // .\n s p o
+                    this.emit(" .").newline().emit(s).emit(" ").emit(p).emit(" ").emit(o); // .\n
+                                                                                           // s p
+                                                                                           // o
                 } else if (!l.getPredicateVar().equals(n.getPredicateVar())) {
-                    emit(" ;").newline().emit("\t").emit(p).emit(" ").emit(o); // ;\n\t p o
+                    this.emit(" ;").newline().emit("\t").emit(p).emit(" ").emit(o); // ;\n\t p o
                 } else if (!l.getObjectVar().equals(n.getObjectVar())) {
-                    emit(" , ").emit(o); // , o
+                    this.emit(" , ").emit(o); // , o
                 }
                 l = n;
             }
-            emit(" .");
+            this.emit(" .");
             if (c != null) {
-                closeBrace();
+                this.closeBrace();
             }
             return this;
         }
 
         private Rendering emit(final Query query) {
             if (query.root != this.root) {
-                openBrace();
+                this.openBrace();
             }
             if (query.form == Form.ASK) {
-                emit("ASK");
+                this.emit("ASK");
             } else if (query.form == Form.CONSTRUCT) {
-                emit("CONSTRUCT ").openBrace().emit(query.construct).closeBrace();
+                this.emit("CONSTRUCT ").openBrace().emit(query.construct).closeBrace();
             } else if (query.form == Form.DESCRIBE) {
-                emit("DESCRIBE");
+                this.emit("DESCRIBE");
                 for (final ProjectionElem p : query.select) {
                     final ExtensionElem e = p.getSourceExpression();
-                    emit(" ").emit(
+                    this.emit(" ").emit(
                             e != null && e.getExpr() instanceof ValueConstant ? e.getExpr() : p);
                 }
             } else if (query.form == Form.SELECT) {
-                emit("SELECT");
+                this.emit("SELECT");
                 if (query.modifier != null) {
-                    emit(" ").emit(query.modifier.toString().toUpperCase());
+                    this.emit(" ").emit(query.modifier.toString().toUpperCase());
                 }
                 if (query.select.isEmpty()) {
                     int count = 0;
                     for (final String var : query.where.getBindingNames()) {
-                        final ValueExpr expr = getVarExpr(query.where, var);
+                        final ValueExpr expr = SPARQLRenderer.getVarExpr(query.where, var);
                         if (!var.startsWith("-")) {
                             if (expr == null) {
-                                emit(" ?").emit(var);
+                                this.emit(" ?").emit(var);
                             } else {
-                                emit(" (").emit(expr).emit(" AS ?").emit(var).emit(")");
+                                this.emit(" (").emit(expr).emit(" AS ?").emit(var).emit(")");
                             }
                             ++count;
                         }
                     }
                     if (count == 0) {
-                        emit(" *");
+                        this.emit(" *");
                     }
                 } else {
-                    emit(" ").emit(query.select, " ");
+                    this.emit(" ").emit(query.select, " ");
                 }
             }
             if (query.from != null) {
-                for (final URI uri : query.from.getDefaultGraphs()) {
-                    newline().emit("FROM ").emit(uri);
+                for (final IRI iri : query.from.getDefaultGraphs()) {
+                    this.newline().emit("FROM ").emit(iri);
                 }
-                for (final URI uri : query.from.getNamedGraphs()) {
-                    newline().emit("FROM NAMED ").emit(uri);
+                for (final IRI iri : query.from.getNamedGraphs()) {
+                    this.newline().emit("FROM NAMED ").emit(iri);
                 }
             }
             if (query.form != Form.DESCRIBE || !(query.where instanceof SingletonSet)) {
-                newline().emit("WHERE ").openBrace().emit(query.where).closeBrace();
+                this.newline().emit("WHERE ").openBrace().emit(query.where).closeBrace();
             }
             if (!query.groupBy.isEmpty()) {
-                newline().emit("GROUP BY");
+                this.newline().emit("GROUP BY");
                 for (final ProjectionElem n : query.groupBy) {
-                    emit(" ?").emit(n.getTargetName());
+                    this.emit(" ?").emit(n.getTargetName());
                 }
             }
             if (query.having != null) {
-                newline().emit("HAVING (").emit(query.having).emit(")");
+                this.newline().emit("HAVING (").emit(query.having).emit(")");
             }
             if (!query.orderBy.isEmpty()) {
-                newline().emit("ORDER BY ").emit(query.orderBy, " ");
+                this.newline().emit("ORDER BY ").emit(query.orderBy, " ");
             }
             if (query.form != Form.ASK) {
                 if (query.offset != null) {
-                    newline().emit("OFFSET " + query.offset);
+                    this.newline().emit("OFFSET " + query.offset);
                 }
                 if (query.limit != null) {
-                    newline().emit("LIMIT " + query.limit);
+                    this.newline().emit("LIMIT " + query.limit);
                     // newline().emit("LIMIT " + (query.limit + 1)); // TODO Virtuoso fix :-(
                 }
             }
             if (query.root != this.root) {
-                closeBrace();
+                this.closeBrace();
             }
             return this;
         }
@@ -588,11 +591,11 @@ final class SPARQLRenderer {
             final boolean braces = n instanceof TupleExpr && p != null
                     && !(p instanceof TupleExpr);
             if (braces) {
-                openBrace();
+                this.openBrace();
             }
             n.visit(this);
             if (braces) {
-                closeBrace();
+                this.closeBrace();
             }
             return this;
         }
@@ -600,40 +603,40 @@ final class SPARQLRenderer {
         private Rendering emit(final QueryModelNode node, final boolean parenthesis) { // TODO
             if (parenthesis) {
                 if (node instanceof TupleExpr) {
-                    openBrace();
+                    this.openBrace();
                 } else {
-                    emit("(");
+                    this.emit("(");
                 }
             }
-            emit(node);
+            this.emit(node);
             if (parenthesis) {
                 if (node instanceof TupleExpr) {
-                    closeBrace();
+                    this.closeBrace();
                 } else {
-                    emit(")");
+                    this.emit(")");
                 }
             }
             return this;
         }
 
         private Rendering openBrace() {
-            emit("{");
+            this.emit("{");
             ++this.indent;
-            newline();
+            this.newline();
             return this;
         }
 
         private Rendering closeBrace() {
             --this.indent;
-            newline();
-            emit("}");
+            this.newline();
+            this.emit("}");
             return this;
         }
 
         private Rendering newline() {
-            emit("\n");
+            this.emit("\n");
             for (int i = 0; i < this.indent; ++i) {
-                emit("\t");
+                this.emit("\t");
             }
             return this;
         }
@@ -647,12 +650,12 @@ final class SPARQLRenderer {
 
         @Override
         public void meet(final OrderElem n) {
-            emit(n.isAscending() ? "ASC(" : "DESC(").emit(n.getExpr()).emit(")");
+            this.emit(n.isAscending() ? "ASC(" : "DESC(").emit(n.getExpr()).emit(")");
         }
 
         @Override
         public void meet(final ProjectionElemList node) {
-            emit(node.getElements(), " ");
+            this.emit(node.getElements(), " ");
         }
 
         @Override
@@ -660,19 +663,20 @@ final class SPARQLRenderer {
 
             final String source = n.getSourceName();
             final String target = n.getTargetName();
-            final ValueExpr expr = n.getSourceExpression() == null ? null : n
-                    .getSourceExpression().getExpr();
+            final ValueExpr expr = n.getSourceExpression() == null ? null
+                    : n.getSourceExpression().getExpr();
 
             if (target.startsWith("-")) {
                 if (expr != null) {
-                    emit("(").emit(expr).emit(" AS ?").emit(sanitize(target)).emit(")");
+                    this.emit("(").emit(expr).emit(" AS ?").emit(SPARQLRenderer.sanitize(target))
+                            .emit(")");
                 }
             } else if (expr != null) {
-                emit("(").emit(expr).emit(" AS ?").emit(target).emit(")");
-            } else if (!equalOrNull(source, target)) {
-                emit("(?").emit(source).emit(" AS ?").emit(target).emit(")");
+                this.emit("(").emit(expr).emit(" AS ?").emit(target).emit(")");
+            } else if (!SPARQLRenderer.equalOrNull(source, target)) {
+                this.emit("(?").emit(source).emit(" AS ?").emit(target).emit(")");
             } else {
-                emit("?").emit(target);
+                this.emit("?").emit(target);
             }
         }
 
@@ -682,52 +686,52 @@ final class SPARQLRenderer {
             e.setTargetName(n.getName());
             e.setSourceName(n.getName());
             e.setSourceExpression(new ExtensionElem(n.getOperator(), n.getName()));
-            meet(e);
+            this.meet(e);
         }
 
         @Override
         public void meet(final DescribeOperator n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final QueryRoot n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Projection n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final MultiProjection n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Distinct n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Reduced n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Group n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Order n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         @Override
         public void meet(final Slice n) {
-            emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
+            this.emit(Query.create(n, null, SPARQLRenderer.this.forceSelect));
         }
 
         // TupleExpr: leaf nodes
@@ -739,7 +743,7 @@ final class SPARQLRenderer {
                 throw new IllegalArgumentException(
                         "Cannot translate EmptySet inside the body of a query / update operation");
             }
-            emit("CONSTRUCT {} WHERE {}");
+            this.emit("CONSTRUCT {} WHERE {}");
         }
 
         @Override
@@ -753,59 +757,61 @@ final class SPARQLRenderer {
             final Set<String> names = n.getBindingNames();
 
             if (names.isEmpty()) {
-                emit("VALUES {}");
+                this.emit("VALUES {}");
 
             } else if (names.size() == 1) {
                 final String name = names.iterator().next();
-                emit("VALUES ?").emit(name).emit(" ").openBrace();
+                this.emit("VALUES ?").emit(name).emit(" ").openBrace();
                 boolean first = true;
                 for (final BindingSet bindings : n.getBindingSets()) {
-                    emitIf(!first, " ").emit(defaultIfNull(bindings.getValue(name), "UNDEF"));
+                    this.emitIf(!first, " ")
+                            .emit(SPARQLRenderer.defaultIfNull(bindings.getValue(name), "UNDEF"));
                     first = false;
                 }
-                closeBrace();
+                this.closeBrace();
 
             } else {
-                emit("VALUES (?").emit(names, " ?").emit(") ").openBrace();
+                this.emit("VALUES (?").emit(names, " ?").emit(") ").openBrace();
                 boolean firstBinding = true;
                 for (final BindingSet bindings : n.getBindingSets()) {
                     if (!firstBinding) {
-                        newline();
+                        this.newline();
                     }
-                    emit("(");
+                    this.emit("(");
                     boolean first = true;
                     for (final String name : names) {
-                        emitIf(!first, " ").emit(defaultIfNull(bindings.getValue(name), "UNDEF"));
+                        this.emitIf(!first, " ").emit(
+                                SPARQLRenderer.defaultIfNull(bindings.getValue(name), "UNDEF"));
                         first = false;
                     }
-                    emit(")");
+                    this.emit(")");
                     firstBinding = false;
                 }
-                closeBrace();
+                this.closeBrace();
             }
         }
 
         @Override
         public void meet(final StatementPattern n) {
-            emit(getBGP(n));
+            this.emit(SPARQLRenderer.getBGP(n));
         }
 
         // TupleExpr: unary
 
         @Override
         public void meet(final Extension n) {
-            emit(n.getArg());
+            this.emit(n.getArg());
             if (!(n.getArg() instanceof SingletonSet)) {
-                newline();
+                this.newline();
             }
             boolean first = true;
             for (final ExtensionElem e : n.getElements()) {
                 final ValueExpr expr = e.getExpr();
                 if (!(expr instanceof Var) || !((Var) expr).getName().equals(e.getName())) {
                     if (!first) {
-                        newline();
+                        this.newline();
                     }
-                    emit("BIND (").emit(expr).emit(" AS ?").emit(e.getName()).emit(")");
+                    this.emit("BIND (").emit(expr).emit(" AS ?").emit(e.getName()).emit(")");
                     first = false;
                 }
             }
@@ -819,18 +825,18 @@ final class SPARQLRenderer {
         @Override
         public void meet(final Filter n) {
             final ValueExpr cond = n.getCondition();
-            final boolean nopar = cond instanceof Exists || cond instanceof Not
-                    && ((Not) cond).getArg() instanceof Exists;
-            emit(n.getArg());
+            final boolean nopar = cond instanceof Exists
+                    || cond instanceof Not && ((Not) cond).getArg() instanceof Exists;
+            this.emit(n.getArg());
             if (!(n.getArg() instanceof SingletonSet)) {
-                newline();
+                this.newline();
             }
-            emit("FILTER ").emit(cond, !nopar);
+            this.emit("FILTER ").emit(cond, !nopar);
         }
 
         @Override
         public void meet(final Service n) {
-            newline().emit("SERVICE ").emitIf(n.isSilent(), "SILENT ").openBrace()
+            this.newline().emit("SERVICE ").emitIf(n.isSilent(), "SILENT ").openBrace()
                     .emit(n.getServiceExpr()).closeBrace().emit(" ").emit(n.getServiceRef());
         }
 
@@ -838,16 +844,16 @@ final class SPARQLRenderer {
 
         @Override
         public void meet(final Join n) {
-            final List<StatementPattern> bgp = getBGP(n);
+            final List<StatementPattern> bgp = SPARQLRenderer.getBGP(n);
             if (bgp != null) {
-                emit(bgp);
+                this.emit(bgp);
             } else {
                 final TupleExpr l = n.getLeftArg();
                 final TupleExpr r = n.getRightArg();
                 final boolean norpar = r instanceof Join || r instanceof StatementPattern
                         || r instanceof SingletonSet || r instanceof Service || r instanceof Union
                         || r instanceof BindingSetAssignment || r instanceof ArbitraryLengthPath;
-                emit(l).newline().emit(r, !norpar);
+                this.emit(l).newline().emit(r, !norpar);
             }
         }
 
@@ -856,11 +862,11 @@ final class SPARQLRenderer {
             final TupleExpr l = n.getLeftArg();
             final TupleExpr r = n.getCondition() == null ? n.getRightArg() : //
                     new Filter(n.getRightArg(), n.getCondition());
-            emit(l);
+            this.emit(l);
             if (!(l instanceof SingletonSet)) {
-                newline();
+                this.newline();
             }
-            emit("OPTIONAL ").emit(r, true);
+            this.emit("OPTIONAL ").emit(r, true);
         }
 
         @Override
@@ -870,17 +876,17 @@ final class SPARQLRenderer {
             final ZeroLengthPath p = l instanceof ZeroLengthPath ? (ZeroLengthPath) l
                     : r instanceof ZeroLengthPath ? (ZeroLengthPath) r : null;
             if (p == null) {
-                emit(l, !(l instanceof Union)).emit(" UNION ").emit(r, !(r instanceof Union));
+                this.emit(l, !(l instanceof Union)).emit(" UNION ").emit(r, !(r instanceof Union));
             } else {
                 final Var s = p.getSubjectVar();
                 final Var o = p.getObjectVar();
                 final Var c = p.getContextVar();
                 if (c != null) {
-                    emit("GRAPH ").emit(c).emit(" ").openBrace();
+                    this.emit("GRAPH ").emit(c).emit(" ").openBrace();
                 }
-                emit(s).emit(" ").emitPropertyPath(n, s, o).emit(" ").emit(o);
+                this.emit(s).emit(" ").emitPropertyPath(n, s, o).emit(" ").emit(o);
                 if (c != null) {
-                    closeBrace();
+                    this.closeBrace();
                 }
             }
         }
@@ -889,7 +895,7 @@ final class SPARQLRenderer {
         public void meet(final Difference n) {
             final TupleExpr l = n.getLeftArg();
             final TupleExpr r = n.getRightArg();
-            emit(l, true).emit(" MINUS ").emit(r, true);
+            this.emit(l, true).emit(" MINUS ").emit(r, true);
         }
 
         // TupleExpr: paths
@@ -900,11 +906,11 @@ final class SPARQLRenderer {
             final Var o = n.getObjectVar();
             final Var c = n.getContextVar();
             if (c != null) {
-                emit("GRAPH ").emit(c).openBrace();
+                this.emit("GRAPH ").emit(c).openBrace();
             }
-            emit(s).emit(" ").emitPropertyPath(n, s, o).emit(" ").emit(o).emit(" .");
+            this.emit(s).emit(" ").emitPropertyPath(n, s, o).emit(" ").emit(o).emit(" .");
             if (c != null) {
-                closeBrace();
+                this.closeBrace();
             }
         }
 
@@ -915,23 +921,23 @@ final class SPARQLRenderer {
 
         private Rendering emitPropertyPath(final TupleExpr node, final Var start, final Var end) {
 
-            // Note: elt1 / elt2 and ^(complex exp) do not occur in Sesame algebra
+            // Note: elt1 / elt2 and ^(complex exp) do not occur in RDF4J algebra
 
             final boolean parenthesis = !(node instanceof StatementPattern)
-                    && (node.getParentNode() instanceof ArbitraryLengthPath || node
-                            .getParentNode() instanceof Union);
+                    && (node.getParentNode() instanceof ArbitraryLengthPath
+                            || node.getParentNode() instanceof Union);
 
-            emitIf(parenthesis, "(");
+            this.emitIf(parenthesis, "(");
 
             if (node instanceof StatementPattern) {
                 // handles iri, ^iri
                 final StatementPattern pattern = (StatementPattern) node;
-                final boolean inverse = isInversePath(pattern, start, end);
+                final boolean inverse = this.isInversePath(pattern, start, end);
                 if (!pattern.getPredicateVar().hasValue()
                         || !pattern.getPredicateVar().isAnonymous()) {
-                    fail("Unsupported path expression. Check node: ", node);
+                    this.fail("Unsupported path expression. Check node: ", node);
                 }
-                emitIf(inverse, "^").emit(pattern.getPredicateVar().getValue());
+                this.emitIf(inverse, "^").emit(pattern.getPredicateVar().getValue());
 
             } else if (node instanceof Join) {
                 final Join j = (Join) node;
@@ -940,99 +946,106 @@ final class SPARQLRenderer {
                 final StatementPattern s = l instanceof StatementPattern ? (StatementPattern) l
                         : r instanceof StatementPattern ? (StatementPattern) r : null;
                 if (s == null) {
-                    return fail("Cannot process property path", node);
+                    return this.fail("Cannot process property path", node);
                 }
-                final Var m = s.getSubjectVar().equals(start) || s.getSubjectVar().equals(end) ? s
-                        .getObjectVar() : s.getSubjectVar();
-                emitPropertyPath(l, start, m);
-                emit("/");
-                emitPropertyPath(r, m, end);
+                final Var m = s.getSubjectVar().equals(start) || s.getSubjectVar().equals(end)
+                        ? s.getObjectVar() : s.getSubjectVar();
+                this.emitPropertyPath(l, start, m);
+                this.emit("/");
+                this.emitPropertyPath(r, m, end);
 
             } else if (node instanceof ArbitraryLengthPath) {
                 // handles elt*, elt+
                 final ArbitraryLengthPath path = (ArbitraryLengthPath) node;
-                check(path.getMinLength() <= 1, "Invalid path length");
-                emitPropertyPath(path.getPathExpression(), start, end).emit(
-                        path.getMinLength() == 0 ? "*" : "+");
+                SPARQLRenderer.check(path.getMinLength() <= 1, "Invalid path length");
+                this.emitPropertyPath(path.getPathExpression(), start, end)
+                        .emit(path.getMinLength() == 0 ? "*" : "+");
 
             } else if (node instanceof Union) {
                 // handles elt?, elt1|elt2|...
                 final Union union = (Union) node;
                 if (union.getLeftArg() instanceof ZeroLengthPath) {
-                    emitPropertyPath(union.getRightArg(), start, end).emit("?");
+                    this.emitPropertyPath(union.getRightArg(), start, end).emit("?");
                 } else if (union.getRightArg() instanceof ZeroLengthPath) {
-                    emitPropertyPath(union.getLeftArg(), start, end).emit("?");
+                    this.emitPropertyPath(union.getLeftArg(), start, end).emit("?");
                 } else {
-                    emitPropertyPath(union.getLeftArg(), start, end);
-                    emit("|");
-                    emitPropertyPath(union.getRightArg(), start, end);
+                    this.emitPropertyPath(union.getLeftArg(), start, end);
+                    this.emit("|");
+                    this.emitPropertyPath(union.getRightArg(), start, end);
                 }
 
             } else if (node instanceof Filter) {
                 // handles !iri, !(iri1,iri2,...) with possibly inverse properties
                 final Filter filter = (Filter) node;
 
-                check(filter.getArg() instanceof StatementPattern, "Invalid path expression");
+                SPARQLRenderer.check(filter.getArg() instanceof StatementPattern,
+                        "Invalid path expression");
                 final StatementPattern pattern = (StatementPattern) filter.getArg();
-                final boolean inverse = isInversePath(pattern, start, end);
-                check(!pattern.getPredicateVar().hasValue()
-                        && pattern.getPredicateVar().isAnonymous(), "Invalid path expression");
+                final boolean inverse = this.isInversePath(pattern, start, end);
+                SPARQLRenderer.check(
+                        !pattern.getPredicateVar().hasValue()
+                                && pattern.getPredicateVar().isAnonymous(),
+                        "Invalid path expression");
 
-                final Set<URI> negatedProperties = new LinkedHashSet<>();
-                extractNegatedProperties(filter.getCondition(), negatedProperties);
+                final Set<IRI> negatedProperties = new LinkedHashSet<>();
+                this.extractNegatedProperties(filter.getCondition(), negatedProperties);
 
                 if (negatedProperties.size() == 1) {
-                    emit("!").emitIf(inverse, "^").emit(negatedProperties.iterator().next());
+                    this.emit("!").emitIf(inverse, "^").emit(negatedProperties.iterator().next());
 
                 } else {
-                    emit("!(");
+                    this.emit("!(");
                     boolean first = true;
-                    for (final URI negatedProperty : negatedProperties) {
-                        emitIf(!first, "|").emitIf(inverse, "^").emit(negatedProperty);
+                    for (final IRI negatedProperty : negatedProperties) {
+                        this.emitIf(!first, "|").emitIf(inverse, "^").emit(negatedProperty);
                         first = false;
                     }
-                    emit(")");
+                    this.emit(")");
                 }
 
             } else {
-                fail("Unsupported path expression node", node);
+                this.fail("Unsupported path expression node", node);
             }
 
-            return emitIf(parenthesis, ")");
+            return this.emitIf(parenthesis, ")");
         }
 
         private void extractNegatedProperties(final ValueExpr condition,
-                final Set<URI> negatedProperties) {
+                final Set<IRI> negatedProperties) {
             if (condition instanceof And) {
                 final And and = (And) condition;
-                extractNegatedProperties(and.getLeftArg(), negatedProperties);
-                extractNegatedProperties(and.getRightArg(), negatedProperties);
+                this.extractNegatedProperties(and.getLeftArg(), negatedProperties);
+                this.extractNegatedProperties(and.getRightArg(), negatedProperties);
 
             } else if (condition instanceof Compare) {
                 final Compare compare = (Compare) condition;
-                check(compare.getOperator() == CompareOp.NE, "Invalid path expression");
+                SPARQLRenderer.check(compare.getOperator() == CompareOp.NE,
+                        "Invalid path expression");
                 if (compare.getLeftArg() instanceof ValueConstant) {
-                    check(compare.getRightArg() instanceof Var, "Invalid path expression");
-                    negatedProperties.add((URI) ((ValueConstant) compare.getLeftArg()).getValue());
+                    SPARQLRenderer.check(compare.getRightArg() instanceof Var,
+                            "Invalid path expression");
+                    negatedProperties.add((IRI) ((ValueConstant) compare.getLeftArg()).getValue());
                 } else if (compare.getRightArg() instanceof ValueConstant) {
-                    check(compare.getLeftArg() instanceof Var, "Invalid path expression");
+                    SPARQLRenderer.check(compare.getLeftArg() instanceof Var,
+                            "Invalid path expression");
                     negatedProperties
-                            .add((URI) ((ValueConstant) compare.getRightArg()).getValue());
+                            .add((IRI) ((ValueConstant) compare.getRightArg()).getValue());
                 } else {
-                    fail("Unsupported path expression. Check condition node: ", condition);
+                    this.fail("Unsupported path expression. Check condition node: ", condition);
                 }
             }
         }
 
-        private boolean isInversePath(final StatementPattern node, final Var start, final Var end) {
+        private boolean isInversePath(final StatementPattern node, final Var start,
+                final Var end) {
             if (node.getSubjectVar().equals(start)) {
-                check(node.getObjectVar().equals(end), "Invalid path expression");
+                SPARQLRenderer.check(node.getObjectVar().equals(end), "Invalid path expression");
                 return false;
             } else if (node.getObjectVar().equals(start)) {
-                check(node.getSubjectVar().equals(end), "Invalid path expression");
+                SPARQLRenderer.check(node.getSubjectVar().equals(end), "Invalid path expression");
                 return true;
             } else {
-                fail("Unsupported path expression. Check node: ", node);
+                this.fail("Unsupported path expression. Check node: ", node);
                 return false;
             }
         }
@@ -1041,7 +1054,7 @@ final class SPARQLRenderer {
 
         @Override
         public void meet(final Intersection n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         // === SPARQL UPDATE ===
@@ -1097,24 +1110,24 @@ final class SPARQLRenderer {
 
         @Override
         public void meet(final ValueConstant n) {
-            emit(n.getValue());
+            this.emit(n.getValue());
         }
 
         @Override
         public void meet(final Var n) {
             final String name = n.getName();
             if (n.getValue() != null) {
-                emit(n.getValue());
+                this.emit(n.getValue());
             } else if (!n.isAnonymous()) {
-                emit("?" + n.getName());
+                this.emit("?" + n.getName());
             } else {
-                final ValueExpr expr = getVarExpr(this.root, n.getName());
+                final ValueExpr expr = SPARQLRenderer.getVarExpr(this.root, n.getName());
                 if (expr != null) {
-                    emit(expr);
-                } else if (getVarRefs(this.root, n.getName()) <= 1) {
-                    emit("[]");
+                    this.emit(expr);
+                } else if (SPARQLRenderer.getVarRefs(this.root, n.getName()) <= 1) {
+                    this.emit("[]");
                 } else {
-                    emit("?").emit(sanitize(name));
+                    this.emit("?").emit(SPARQLRenderer.sanitize(name));
                 }
             }
         }
@@ -1125,7 +1138,7 @@ final class SPARQLRenderer {
         public void meet(final Compare n) {
             final QueryModelNode p = n.getParentNode();
             final boolean par = p instanceof Not || p instanceof MathExpr;
-            emitIf(par, "(").emit(n.getLeftArg()).emit(" ").emit(n.getOperator().getSymbol())
+            this.emitIf(par, "(").emit(n.getLeftArg()).emit(" ").emit(n.getOperator().getSymbol())
                     .emit(" ").emit(n.getRightArg()).emitIf(par, ")");
         }
 
@@ -1134,7 +1147,7 @@ final class SPARQLRenderer {
             final QueryModelNode p = n.getParentNode();
             final boolean par = p instanceof Not || p instanceof MathExpr;
             final List<ValueExpr> args = n.getArguments();
-            emitIf(par, "(").emit(args.get(0)).emit(" in (")
+            this.emitIf(par, "(").emit(args.get(0)).emit(" in (")
                     .emit(args.subList(1, args.size()), ", ").emit(")").emitIf(par, ")");
         }
 
@@ -1146,11 +1159,10 @@ final class SPARQLRenderer {
             final boolean r = p instanceof BinaryValueOperator
                     && n == ((BinaryValueOperator) p).getRightArg();
             final boolean par = p instanceof Not //
-                    || (op == MathOp.PLUS || op == MathOp.MINUS)
-                    && (pop == MathOp.MINUS && r //
+                    || (op == MathOp.PLUS || op == MathOp.MINUS) && (pop == MathOp.MINUS && r //
                             || pop == MathOp.DIVIDE || pop == MathOp.MULTIPLY)
                     || (op == MathOp.MULTIPLY || op == MathOp.DIVIDE) && pop == MathOp.DIVIDE && r;
-            emitIf(par, "(").emit(n.getLeftArg()).emit(" ").emit(op.getSymbol()).emit(" ")
+            this.emitIf(par, "(").emit(n.getLeftArg()).emit(" ").emit(op.getSymbol()).emit(" ")
                     .emit(n.getRightArg()).emitIf(par, ")");
         }
 
@@ -1159,7 +1171,7 @@ final class SPARQLRenderer {
             final QueryModelNode p = n.getParentNode();
             final boolean needPar = p instanceof Not || p instanceof MathExpr
                     || p instanceof ListMemberOperator || p instanceof Compare;
-            emitIf(needPar, "(").emit(n.getLeftArg()).emit(" && ").emit(n.getRightArg())
+            this.emitIf(needPar, "(").emit(n.getLeftArg()).emit(" && ").emit(n.getRightArg())
                     .emitIf(needPar, ")");
         }
 
@@ -1168,88 +1180,90 @@ final class SPARQLRenderer {
             final QueryModelNode p = n.getParentNode();
             final boolean needPar = p instanceof Not || p instanceof And || p instanceof MathExpr
                     || p instanceof ListMemberOperator || p instanceof Compare;
-            emitIf(needPar, "(").emit(n.getLeftArg()).emit(" || ").emit(n.getRightArg())
+            this.emitIf(needPar, "(").emit(n.getLeftArg()).emit(" || ").emit(n.getRightArg())
                     .emitIf(needPar, ")");
         }
 
         @Override
         public void meet(final Not n) {
             final String op = n.getArg() instanceof Exists ? "NOT " : "!";
-            emit(op).emit(n.getArg());
+            this.emit(op).emit(n.getArg());
         }
 
         // ValueExpr: aggregates
 
         @Override
         public void meet(final Count node) {
-            emit("COUNT(").emitIf(node.isDistinct(), "DISTINCT ")
-                    .emit(defaultIfNull(node.getArg(), "*")).emit(")");
+            this.emit("COUNT(").emitIf(node.isDistinct(), "DISTINCT ")
+                    .emit(SPARQLRenderer.defaultIfNull(node.getArg(), "*")).emit(")");
         }
 
         @Override
         public void meet(final Sum node) {
-            emit("SUM(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
+            this.emit("SUM(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Min node) {
-            emit("MIN(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
+            this.emit("MIN(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Max node) {
-            emit("MAX(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
+            this.emit("MAX(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Avg node) {
-            emit("AVG(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
+            this.emit("AVG(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Sample node) {
-            emit("SAMPLE(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg()).emit(")");
+            this.emit("SAMPLE(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg())
+                    .emit(")");
         }
 
         @Override
         public void meet(final GroupConcat node) {
-            emit("GROUP_CONCAT(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg());
+            this.emit("GROUP_CONCAT(").emitIf(node.isDistinct(), "DISTINCT ").emit(node.getArg());
             if (node.getSeparator() != null) {
-                emit(" ; separator=").emit(node.getSeparator());
+                this.emit(" ; separator=").emit(node.getSeparator());
             }
-            emit(")");
+            this.emit(")");
         }
 
         // ValueExpr: function calls
 
         @Override
         public void meet(final Str n) {
-            emit("STR(").emit(n.getArg()).emit(")");
+            this.emit("STR(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Lang n) {
-            emit("LANG(").emit(n.getArg()).emit(")");
+            this.emit("LANG(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final LangMatches n) {
-            emit("LANGMATCHES(").emit(n.getLeftArg()).emit(", ").emit(n.getRightArg()).emit(")");
+            this.emit("LANGMATCHES(").emit(n.getLeftArg()).emit(", ").emit(n.getRightArg())
+                    .emit(")");
         }
 
         @Override
         public void meet(final Datatype n) {
-            emit("DATATYPE(").emit(n.getArg()).emit(")");
+            this.emit("DATATYPE(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Bound n) {
-            emit("BOUND(").emit(n.getArg()).emit(")");
+            this.emit("BOUND(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final IRIFunction n) {
-            emit("IRI(").emit(n.getArg()).emit(")");
+            this.emit("IRI(").emit(n.getArg()).emit(")");
             if (n.getBaseURI() != null) {
                 this.base = n.getBaseURI();
             }
@@ -1258,117 +1272,117 @@ final class SPARQLRenderer {
         @Override
         public void meet(final BNodeGenerator n) {
             final ValueExpr expr = n.getNodeIdExpr();
-            emit("BNODE(").emitIf(expr != null, expr).emit(")");
+            this.emit("BNODE(").emitIf(expr != null, expr).emit(")");
         }
 
         @Override
         public void meet(final FunctionCall n) {
-            final String uri = n.getURI();
-            String name = NAMES.get(uri);
-            if (name == null && NAMES.values().contains(uri.toUpperCase())) {
+            final String iri = n.getURI();
+            String name = SPARQLRenderer.NAMES.get(iri);
+            if (name == null && SPARQLRenderer.NAMES.values().contains(iri.toUpperCase())) {
                 name = n.getURI().toUpperCase();
             }
-            emit(name != null ? name : new URIImpl(uri)).emit("(").emit(n.getArgs(), ", ")
-                    .emit(")");
+            this.emit(name != null ? name : SimpleValueFactory.getInstance().createIRI(iri))
+                    .emit("(").emit(n.getArgs(), ", ").emit(")");
         }
 
         @Override
         public void meet(final Coalesce n) {
-            emit("COALESCE(").emit(n.getArguments(), ", ").emit(")");
+            this.emit("COALESCE(").emit(n.getArguments(), ", ").emit(")");
         }
 
         @Override
         public void meet(final If n) {
-            emit("IF(").emit(n.getCondition()).emit(", ").emit(n.getResult()).emit(", ")
+            this.emit("IF(").emit(n.getCondition()).emit(", ").emit(n.getResult()).emit(", ")
                     .emit(n.getAlternative()).emit(")");
         }
 
         @Override
         public void meet(final SameTerm n) {
-            emit("sameTerm(").emit(n.getLeftArg()).emit(", ").emit(n.getRightArg()).emit(")");
+            this.emit("sameTerm(").emit(n.getLeftArg()).emit(", ").emit(n.getRightArg()).emit(")");
         }
 
         @Override
         public void meet(final IsURI n) {
-            emit("isIRI(").emit(n.getArg()).emit(")");
+            this.emit("isIRI(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final IsBNode n) {
-            emit("isBLANK(").emit(n.getArg()).emit(")");
+            this.emit("isBLANK(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final IsLiteral n) {
-            emit("isLITERAL(").emit(n.getArg()).emit(")");
+            this.emit("isLITERAL(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final IsNumeric n) {
-            emit("isNUMERIC(").emit(n.getArg()).emit(")");
+            this.emit("isNUMERIC(").emit(n.getArg()).emit(")");
         }
 
         @Override
         public void meet(final Regex n) {
-            emit("REGEX(").emit(n.getArg()).emit(", ").emit(n.getPatternArg());
+            this.emit("REGEX(").emit(n.getArg()).emit(", ").emit(n.getPatternArg());
             if (n.getFlagsArg() != null) {
-                emit(", ").emit(n.getFlagsArg());
+                this.emit(", ").emit(n.getFlagsArg());
             }
-            emit(")");
+            this.emit(")");
         }
 
         @Override
         public void meet(final Exists node) {
-            emit("EXISTS ").emit(node.getSubQuery());
+            this.emit("EXISTS ").emit(node.getSubQuery());
         }
 
         // ValueExpr: unsupported nodes
 
         @Override
         public void meet(final IsResource n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final Label n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final Like n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final LocalName n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final Namespace n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final In n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final CompareAll n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         @Override
         public void meet(final CompareAny n) {
-            fail("Not a SPARQL 1.1 node", n);
+            this.fail("Not a SPARQL 1.1 node", n);
         }
 
         // OTHER
 
         @Override
         public void meetOther(final QueryModelNode n) {
-            fail("Unknown node", n);
+            this.fail("Unknown node", n);
         }
 
     }
@@ -1420,8 +1434,8 @@ final class SPARQLRenderer {
 
             // Handle special trivial case
             if (rootNode instanceof EmptySet) {
-                return new Query(rootNode, Form.CONSTRUCT, null, null, rootNode, dataset,
-                        rootNode, null, null, null, null, null);
+                return new Query(rootNode, Form.CONSTRUCT, null, null, rootNode, dataset, rootNode,
+                        null, null, null, null, null);
             }
 
             // Local variables
@@ -1436,7 +1450,7 @@ final class SPARQLRenderer {
             Long offset = null;
             Long limit = null;
 
-            final List<UnaryTupleOperator> nodes = extractQueryNodes(rootNode, false);
+            final List<UnaryTupleOperator> nodes = Query.extractQueryNodes(rootNode, false);
 
             where = nodes.size() > 0 ? nodes.get(nodes.size() - 1).getArg() : rootNode;
 
@@ -1452,7 +1466,7 @@ final class SPARQLRenderer {
                     modifier = Modifier.REDUCED;
 
                 } else if (node instanceof Projection) {
-                    final Map<String, ExtensionElem> extensions = extractExtensions(node);
+                    final Map<String, ExtensionElem> extensions = Query.extractExtensions(node);
                     final List<ProjectionElem> projections = ((Projection) node)
                             .getProjectionElemList().getElements();
                     final boolean isConstruct = projections.size() >= 3
@@ -1463,7 +1477,7 @@ final class SPARQLRenderer {
                                     && "context".equals(projections.get(3).getTargetName()));
                     if (isConstruct && !forceSelect) {
                         form = Form.CONSTRUCT;
-                        construct = extractConstructExpression(extensions,
+                        construct = Query.extractConstructExpression(extensions,
                                 Collections.singleton(((Projection) node) //
                                         .getProjectionElemList()));
                     } else {
@@ -1477,29 +1491,32 @@ final class SPARQLRenderer {
                             final ProjectionElem newProjection = new ProjectionElem();
                             newProjection.setTargetName(variable);
                             newProjection.setSourceExpression(extension);
-                            newProjection.setSourceName(extension == null
-                                    || !(extension.getExpr() instanceof Var) ? projection
-                                    .getSourceName() : ((Var) extension.getExpr()).getName());
+                            newProjection.setSourceName(
+                                    extension == null || !(extension.getExpr() instanceof Var)
+                                            ? projection.getSourceName()
+                                            : ((Var) extension.getExpr()).getName());
                             select.add(newProjection);
                         }
                     }
 
                 } else if (node instanceof MultiProjection) {
                     form = Form.CONSTRUCT;
-                    construct = extractConstructExpression(extractExtensions(node),
+                    construct = Query.extractConstructExpression(Query.extractExtensions(node),
                             ((MultiProjection) node).getProjections());
 
                 } else if (node instanceof Group) {
                     final Group group = (Group) node;
-                    final Map<String, ExtensionElem> extensions = extractExtensions(group.getArg());
+                    final Map<String, ExtensionElem> extensions = Query
+                            .extractExtensions(group.getArg());
                     for (final String variableName : group.getGroupBindingNames()) {
                         final ExtensionElem extension = extensions.get(variableName);
                         final ProjectionElem projection = new ProjectionElem();
                         projection.setTargetName(variableName);
                         projection.setSourceExpression(extension);
-                        projection.setSourceName(extension == null
-                                || !(extension.getExpr() instanceof Var) ? variableName
-                                : ((Var) extension.getExpr()).getName());
+                        projection.setSourceName(
+                                extension == null || !(extension.getExpr() instanceof Var)
+                                        ? variableName
+                                        : ((Var) extension.getExpr()).getName());
                         groupBy.add(projection);
                     }
 
@@ -1525,7 +1542,7 @@ final class SPARQLRenderer {
                 }
             }
 
-            form = defaultIfNull(form, Form.SELECT);
+            form = SPARQLRenderer.defaultIfNull(form, Form.SELECT);
             if (form == Form.CONSTRUCT && construct == null) {
                 construct = new SingletonSet();
             }
@@ -1601,7 +1618,7 @@ final class SPARQLRenderer {
 
         private static Map<String, ExtensionElem> extractExtensions(final TupleExpr rootNode) {
             final Map<String, ExtensionElem> map = new HashMap<>();
-            for (final UnaryTupleOperator node : extractQueryNodes(rootNode, true)) {
+            for (final UnaryTupleOperator node : Query.extractQueryNodes(rootNode, true)) {
                 if (node instanceof Extension) {
                     for (final ExtensionElem elem : ((Extension) node).getElements()) {
                         final String variable = elem.getName();
@@ -1621,11 +1638,14 @@ final class SPARQLRenderer {
                 final Iterable<? extends ProjectionElemList> multiProjections) {
             TupleExpr expression = null;
             for (final ProjectionElemList projections : multiProjections) {
-                final Var subj = extractConstructVar(extensions, projections.getElements().get(0));
-                final Var pred = extractConstructVar(extensions, projections.getElements().get(1));
-                final Var obj = extractConstructVar(extensions, projections.getElements().get(2));
-                final Var ctx = projections.getElements().size() < 4 ? null : extractConstructVar(
-                        extensions, projections.getElements().get(3));
+                final Var subj = Query.extractConstructVar(extensions,
+                        projections.getElements().get(0));
+                final Var pred = Query.extractConstructVar(extensions,
+                        projections.getElements().get(1));
+                final Var obj = Query.extractConstructVar(extensions,
+                        projections.getElements().get(2));
+                final Var ctx = projections.getElements().size() < 4 ? null
+                        : Query.extractConstructVar(extensions, projections.getElements().get(3));
                 final StatementPattern pattern = new StatementPattern(
                         ctx == null ? Scope.DEFAULT_CONTEXTS : Scope.NAMED_CONTEXTS, subj, pred,
                         obj, ctx);
@@ -1671,13 +1691,16 @@ final class SPARQLRenderer {
             this.root = Objects.requireNonNull(root);
             this.form = Objects.requireNonNull(form);
             this.modifier = modifier;
-            this.select = selectList == null ? Collections.emptyList() : list(selectList);
+            this.select = selectList == null ? Collections.emptyList()
+                    : SPARQLRenderer.list(selectList);
             this.construct = construct;
             this.from = from;
             this.where = Objects.requireNonNull(where);
-            this.groupBy = groupBy == null ? Collections.emptyList() : list(groupBy);
+            this.groupBy = groupBy == null ? Collections.emptyList()
+                    : SPARQLRenderer.list(groupBy);
             this.having = having;
-            this.orderBy = orderBy == null ? Collections.emptyList() : list(orderBy);
+            this.orderBy = orderBy == null ? Collections.emptyList()
+                    : SPARQLRenderer.list(orderBy);
             this.offset = offset;
             this.limit = limit;
         }

@@ -28,7 +28,7 @@ import java.util.Properties;
 
 import javax.annotation.Nullable;
 
-import org.openrdf.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,8 +95,8 @@ public final class Main {
             final Logger root = LoggerFactory.getLogger("eu.fbk");
             final Class<?> levelClass = Class.forName("ch.qos.logback.classic.Level");
             final Class<?> loggerClass = Class.forName("ch.qos.logback.classic.Logger");
-            final Object level = levelClass.getDeclaredMethod("valueOf", String.class).invoke(
-                    null, logLevel);
+            final Object level = levelClass.getDeclaredMethod("valueOf", String.class).invoke(null,
+                    logLevel);
             loggerClass.getDeclaredMethod("setLevel", levelClass).invoke(root, level);
         } catch (final Throwable ex) {
             // ignore - no control on logging level
@@ -152,8 +152,8 @@ public final class Main {
     private static String readVersion(final String groupId, final String artifactId,
             @Nullable final String defaultValue) {
 
-        final URL url = RDFProcessor.class.getClassLoader().getResource(
-                "META-INF/maven/" + groupId + "/" + artifactId + "/pom.properties");
+        final URL url = RDFProcessor.class.getClassLoader()
+                .getResource("META-INF/maven/" + groupId + "/" + artifactId + "/pom.properties");
 
         if (url != null) {
             try {
@@ -176,8 +176,8 @@ public final class Main {
 
     private static String readResource(final URL url) {
         try {
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    url.openStream(), Charset.forName("UTF-8")));
+            final BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(url.openStream(), Charset.forName("UTF-8")));
             final StringBuilder builder = new StringBuilder();
             try {
                 String line;
