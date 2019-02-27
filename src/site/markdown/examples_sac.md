@@ -34,16 +34,22 @@ The figures below show how to use RDFpro to extract TBox and VOID statistics (le
 
 We use the `@tbox` and `@stats` processors to extract TBox and VOID statistics. The two processors can be used separately by invoking RDFpro twice as follows (note the use of the `-t 100` option: it require to emit statistics of classes and properties with at least 100 instances, which is necessary in order to load the generated statistics in tools such as Protégé - see below):
 
-    rdfpro @read freebase_new.nt.gz @tbox @write tbox.tql.gz
-    rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read freebase_new.nt.gz @tbox @write tbox.tql.gz
+rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
+]]></pre>
 
 The two processors can also be composed in a single pipeline where Freebase data is read once and fed to both processors in parallel, as in the figure above. The corresponding RDFpro command is:
 
-    rdfpro @read freebase_new.nt.gz { @tbox @write tbox.tql.gz , @stats -t 100 @write stats.tql.gz }
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read freebase_new.nt.gz { @tbox @write tbox.tql.gz , @stats -t 100 @write stats.tql.gz }
+]]></pre>
 
 Extraction of newly added triples can be done exploiting the parallel composition with the difference set operator (flag `d`) to combine quads, using the command:
 
-    rdfpro { @read freebase_new.nt.gz , @read freebase_old.nt.gz }d @write new-triples.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro { @read freebase_new.nt.gz , @read freebase_old.nt.gz }d @write new-triples.tql.gz
+]]></pre>
 
 ### Results
 
@@ -147,19 +153,22 @@ We implement the filtering task with two invocations of RDFpro as shown in the f
 
 The first invocation (marked as 1 in the figure) generates an RDF file listing as subjects the URIs of the entities of interest. This is done with two parallel `@groovy` processors, extracting respectively musical groups and no more active musical entities, whose outputs are combined with the difference merge criterion using the following RDFpro command:
 
-    rdfpro @read freebase.nt.gz \
-           { @groovy -p 'emitIf(t == fb:music.musical_group)' , \
-             @groovy -p 'if(p == fb:music.artist.active_end) emit(s, rdf:type, fb:music.musical_group, null)' }d \
-           @write entities.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read freebase.nt.gz \
+       { @groovy -p 'emitIf(t == fb:music.musical_group)' , \
+         @groovy -p 'if(p == fb:music.artist.active_end) emit(s, rdf:type, fb:music.musical_group, null)' }d \
+       @write entities.tql.gz
+]]></pre>
 
 The second invocation (marked as 2 in the figure) uses another `@groovy` processor to extract the desired quads, testing predicates and requiring subjects to be contained in the previously extracted file (whose URIs are indexed in memory by a specific function in the `@groovy` expression). The corresponding RDFpro command is:
 
-    rdfpro @read freebase.nt.gz \
-           @groovy 'def init(args) { instances = loadSet("./instances.tql", "s"); };
-                    emitIf((p == rdfs:label || p == fb:music.artist.genre || p == fb:music.artist.origin)
-                           && instances.match(s) );' \
-           @write output.tql.gz
-
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read freebase.nt.gz \
+       @groovy 'def init(args) { instances = loadSet("./instances.tql", "s"); };
+                emitIf((p == rdfs:label || p == fb:music.artist.genre || p == fb:music.artist.origin)
+                       && instances.match(s) );' \
+       @write output.tql.gz
+]]></pre>
 
 ### Results
 
@@ -272,80 +281,94 @@ The five steps can be executed both individually (bash script [process_single.sh
 
   * *Transform*. Data transformation serves (i) to track provenance, by placing quads in different named graphs based on the source dataset; and (ii) to adopt optimal serialization format (Turtle Quads) and compression scheme (gzip) that speed up further processing.
 
-        rdfpro { @read metadata.trig , \
-                 @read vocab/* @transform '=c <graph:vocab>' , \
-                 @read freebase/* @transform '-spo fb:type.object.name fb:type.object.type <http://rdf.freebase.com/key/*>
-                     <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*> =c <graph:freebase>' , \
-                 @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
-                     @transform '-p gn:childrenFeatures gn:locationMap gn:nearbyFeatures gn:neighbouringFeatures
-                         gn:countryCode gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy rdf:type =c <graph:geonames>' , \
-                 { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
-                   @read dbp_es/* @transform '=c <graph:dbp_es>' , \
-                   @read dbp_it/* @transform '=c <graph:dbp_it>' , \
-                   @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
-                     @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
-               @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
-               @transform '-o "" ""@en ""@es ""@it ""@nl' \
-               @write filtered.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro { @read metadata.trig , \
+             @read vocab/* @transform '=c <graph:vocab>' , \
+             @read freebase/* @transform '-spo fb:type.object.name fb:type.object.type <http://rdf.freebase.com/key/*>
+                 <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*> =c <graph:freebase>' , \
+             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+                 @transform '-p gn:childrenFeatures gn:locationMap gn:nearbyFeatures gn:neighbouringFeatures
+                     gn:countryCode gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy rdf:type =c <graph:geonames>' , \
+             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+           @transform '-o "" ""@en ""@es ""@it ""@nl' \
+           @write filtered.tql.gz
+    ]]></pre>
 
   * *TBox extraction*. This step extracts the TBox needed for RDFS inference.
 
-        rdfpro @read filtered.tql.gz \
-               @tbox \
-               @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-               @write tbox.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro @read filtered.tql.gz \
+           @tbox \
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+           @write tbox.tql.gz
+    ]]></pre>
 
   * *Smushing*. Smushing identifies `owl:sameAs` equivalence classes and assigns a canonical URI to each of them.
 
-        rdfpro @read filtered.tql.gz \
-               @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>'
-                      '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
-               @write smushed.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro @read filtered.tql.gz \
+           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>'
+                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
+           @write smushed.tql.gz
+    ]]></pre>
 
   * *Inference*. RDFS inference excludes rules `rdfs4a`, `rdfs4b` and `rdfs8` to avoid materializing uninformative `<X rdf:type rdfs:Resource>` quads.
 
-        rdfpro @read smushed.tql.gz \
-               @rdfs -c '<graph:vocab>' -d tbox.tql.gz \
-               @write inferred.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro @read smushed.tql.gz \
+           @rdfs -c '<graph:vocab>' -d tbox.tql.gz \
+           @write inferred.tql.gz
+    ]]></pre>
 
   * *Deduplication*. Deduplication takes quads with the same subject, predicate and object (possibly produced by previous steps) and merges them in a single quad inside a graph linked to all the original sources.
 
-        rdfpro @read inferred.tql.gz \
-               @unique -m \
-               @write dataset.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro @read inferred.tql.gz \
+           @unique -m \
+           @write dataset.tql.gz
+    ]]></pre>
 
 The RDFpro commands for the aggregated steps are reported below:
 
   * *Transform + TBox extraction*
 
-        rdfpro { @read metadata.trig , \
-                 @read vocab/* @transform '=c <graph:vocab>' , \
-                 @read freebase/* @transform '-spo fb:type.object.name fb:type.object.type <http://rdf.freebase.com/key/*>
-                     <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*> =c <graph:freebase>' , \
-                 @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
-                     @transform '-p gn:childrenFeatures gn:locationMap gn:nearbyFeatures gn:neighbouringFeatures
-                         gn:countryCode gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy rdf:type =c <graph:geonames>' , \
-                 { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
-                   @read dbp_es/* @transform '=c <graph:dbp_es>' , \
-                   @read dbp_it/* @transform '=c <graph:dbp_it>' , \
-                   @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
-                     @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
-               @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
-               @transform '-o "" ""@en ""@es ""@it ""@nl' \
-               @write filtered.tql.gz \
-               @tbox \
-               @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-               @write tbox.tql.gz
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro { @read metadata.trig , \
+             @read vocab/* @transform '=c <graph:vocab>' , \
+             @read freebase/* @transform '-spo fb:type.object.name fb:type.object.type <http://rdf.freebase.com/key/*>
+                 <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*> =c <graph:freebase>' , \
+             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+                 @transform '-p gn:childrenFeatures gn:locationMap gn:nearbyFeatures gn:neighbouringFeatures
+                     gn:countryCode gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy rdf:type =c <graph:geonames>' , \
+             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+           @transform '-o "" ""@en ""@es ""@it ""@nl' \
+           @write filtered.tql.gz \
+           @tbox \
+           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+           @write tbox.tql.gz
+    ]]></pre>
 
   * *Smushing + Inference + Deduplication*
-
-        rdfpro @read filtered.tql.gz \
-               @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
-                      '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
-               @rdfs -c '<graph:vocab>' -d tbox.tql.gz \
-               @unique -m \
-               @write dataset.tql.gz
-
+  
+    <pre class="prettyprint lang-sh"><![CDATA[
+    rdfpro @read filtered.tql.gz \
+           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
+                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
+           @rdfs -c '<graph:vocab>' -d tbox.tql.gz \
+           @unique -m \
+           @write dataset.tql.gz
+    ]]></pre>
+    
 ### Results
 
 The table below reports the execution times, throughputs and input and output sizes of each step, covering both the cases where steps are performed separately via intermediate files and multiple invocations of RDFpro (upper part of the table), or aggregated per processing phase using composition capabilities (lower part). RDFpro also reported the use of ∼2 GB of memory for smushing an `owl:sameAs` graph of ∼38M URIs and ∼8M equivalence classes (∼56 bytes/URI).

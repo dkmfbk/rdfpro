@@ -2,7 +2,7 @@
     <h1>RDFpro web interface</h1>
 </div>
 
-<a style='float: right' href="https://knowledgestore2.fbk.eu/rdfpro-demo/"><img id='demo-img' src='images/demo.png' /></a>
+<a style='float: right' class='' href="https://knowledgestore2.fbk.eu/rdfpro-demo/"><img id='demo-img' src='images/demo.png' /></a>
 
 RDFpro 0.4 comes with a web interface, written in [php](http://www.php.net/).
 To install it in your webserver (for example [Apache](http://httpd.apache.org/)), you have first to install the RDFpro command line tool (invoked from the web interface) as described [here](install.html).

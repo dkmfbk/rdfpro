@@ -742,6 +742,7 @@ http://webtlab.it.uc3m.es/ webtlab
 http://webtlab.it.uc3m.es/2010/10/WebAppsOntology# wao
 http://west.uni-koblenz.de/ontologies/2010/07/dgfoaf.owl# dgfoaf
 http://wifo-ravensburg.de/semanticweb.rdf# rv
+http://wikiba.se/ontology# wikibase
 http://wiktionary.dbpedia.org/terms/ wikterms
 http://wiss-ki.eu/ wisski
 http://worldbank.270a.info/classification/ wbc
@@ -1027,6 +1028,12 @@ http://www.w3.org/ns/sparql-service-description# sd
 http://www.w3.org/ns/ui# ui
 http://www.who.int/vocab/ontology# who
 http://www.wikidata.org/entity/ wd wikidata
+http://www.wikidata.org/entity/statement/ wds
+http://www.wikidata.org/prop/ p
+http://www.wikidata.org/prop/direct/ wdt
+http://www.wikidata.org/prop/qualifier/ pq
+http://www.wikidata.org/prop/statement/ ps
+http://www.wikidata.org/value/ wdv
 http://www.wiwiss.fu-berlin.de/suhl/bizer/D2RQ/0.1# d2rq
 http://www.wsmo.org/ns/wsmo-lite# wsl wl
 http://www.xbrl.org/2003/instance# xbrli
@@ -1051,5 +1058,5 @@ http://zbw.eu/namespaces/zbw-extensions/ zbwext
 http://zeitkunst.org/bibtex/0.1/bibtex.owl# bib
 https://vg.no/ namespaces
 https://w3id.org/cc# curr
-https://w3id.org/payswarm# ps
+https://w3id.org/payswarm# payswarm
 https://w3id.org/security# sec

@@ -1,13 +1,13 @@
+<div id="page-index">
+
 <div class="well sidebar" id="well-home">
     <h1>
         <img src='images/rdfpro-150.png' />
         RDF<sub>pro</sub>
     </h1>
-
     <p class='title2'>
         The Swiss-Army tool for RDF and Named Graph manipulation
     </p>
-
     <p class='title2'>
         <a class="btn btn-primary btn-large" href="install.html">Download</a>
         <a class="btn btn-primary btn-large" href="https://knowledgestore2.fbk.eu/rdfpro-demo/">Online demo</a>
@@ -15,9 +15,7 @@
     </p>
 </div>
 
----------------------------------------
-
-<h3 class='no-before'>About</h3>
+<h3 class='no-before span4'>About</h3>
 
 **RDFpro** (RDF Processor) is a public domain, Java command line tool and library for **RDF processing**.
 RDFpro offers a suite of stream-oriented, highly optimized **RDF processors** for common tasks that can be assembled in complex **pipelines** to efficiently process RDF data in one or more passes.
@@ -25,7 +23,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 
 [learn more...](model.html)
 
-<h3 class='no-before'>Features</h3>
+<h3 class='no-before span4'>Features</h3>
 
 - RDF quad (triple + graph) filtering and replacement (with [JavaScript](http://openjdk.java.net/projects/nashorn/) and [Groovy](http://groovy.codehaus.org/) scripting support)
 - SPARQL-like rule inference, incl. RDFS, OWL2RL
@@ -38,8 +36,7 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 - based on [Java 8](http://www.oracle.com/technetwork/java/javase/overview/java8-2100321.html) and [Sesame](http://www.openrdf.org/)
 - public domain software ([Creative Commons CC0](license.html))
 
-
-<h3 class='no-before'>News</h3>
+<h3 class='no-before span4'>News</h3>
 
 - 2016-07-22 Version 0.6 has been released
 - 2015-10-13 Version 0.5.1 has been released
@@ -52,3 +49,5 @@ RDFpro originated from the need of a tool supporting typical **Linked Data integ
 - 2014-09-01 [Paper](https://dkm-static.fbk.eu/people/rospocher/files/pubs/2014iswcSemDev01.pdf) accepted at [ISWC 2014 SemDev](http://iswc2014.semdev.org/) workshop
 - 2014-08-04 Version 0.2 has been released
 - 2014-07-24 Version 0.1 has been released
+
+</div>

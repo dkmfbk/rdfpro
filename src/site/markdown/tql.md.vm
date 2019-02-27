@@ -5,7 +5,7 @@ TQL Library
 Turtle Quads (TQL) is a line-oriented RDF format similar to NQuads but using the more permissive (and efficient!) Turtle encoding for characters.
 It has been introduced by [DBpedia](http://wiki.dbpedia.org/Internationalization/Guide) for its dump files and it is supported in input by the Virtuoso triple store. TQL is the preferred format for manipulating RDF data in RDFpro.
 
-The `rdfpro-tql` module extends Sesame RIO with support for the TQL format. In order to use it you have to include the following dependency in your `pom.xml`:
+The `rdfpro-tql` module extends RDF4J RIO with support for the TQL format. In order to use it you have to include the following dependency in your `pom.xml`:
 
     <dependency>
       <groupId>eu.fbk.rdfpro</groupId>
@@ -17,14 +17,13 @@ If you don't use Maven, you have to download and include the following JARs in t
 
   * [rdfpro-tql-${project-version}.jar](http://central.maven.org/maven2/eu/fbk/rdfpro/rdfpro-jsonld/${project-version}/rdfpro-tql-${project-version}.jar)
   * [slf4j-api-${slf4j-version}.jar](http://central.maven.org/maven2/org/slf4j/slf4j-api/${slf4j-version}/slf4j-api-${slf4j-version}.jar) (or newer version)
-  * [guava-${google-guava-version}.jar](http://central.maven.org/maven2/com/google/guava/guava/${google-guava-version}/guava-${google-guava-version}.jar) (or newer version)
-  * [sesame-rio-api-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-rio-api/${sesame-version}/sesame-rio-api-${sesame-version}.jar) (or newer version)
-  * [sesame-model-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-model/${sesame-version}/sesame-model-${sesame-version}.jar) (or newer version)
-  * [sesame-util-${sesame-version}.jar](http://central.maven.org/maven2/org/openrdf/sesame/sesame-util/${sesame-version}/sesame-util-${sesame-version}.jar) (or newer version)
+  * [guava-${guava-version}.jar](http://central.maven.org/maven2/com/google/guava/guava/${guava-version}/guava-${guava-version}.jar) (or newer version)
+  * [rdf4j-rio-api-${rdf4j-version}.jar](http://central.maven.org/maven2/org/eclipse/rdf4j/rdf4j-rio-api/${rdf4j-version}/rdf4j-rio-api-${rdf4j-version}.jar) (or newer version)
+  * [rdf4j-model-${rdf4j-version}.jar](http://central.maven.org/maven2/org/eclipse/rdf4j/rdf4j-model/${rdf4j-version}/rdf4j-model-${rdf4j-version}.jar) (or newer version)
+  * [rdf4j-util-${rdf4j-version}.jar](http://central.maven.org/maven2/org/eclipse/rdf4j/rdf4j-util/${rdf4j-version}/rdf4j-util-${rdf4j-version}.jar) (or newer version)
 
-Note that the three Sesame JARs are not necessary in case the `openrdf-sesame-${sesame-version}-onejar.jar` file is already included. The SLF4J API is used by Sesame for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
+Note that the abovementioned RDF4J JARs are not necessary in case the [eclipse-rdf4j-${rdf4j-version}-onejar.jar](http://www.eclipse.org/downloads/download.php?file=/rdf4j/eclipse-rdf4j-${rdf4j-version}-onejar.jar) file is already included. The SLF4J API is used by RDF4J and RDFpro for logging. You need to include also an implementation (e.g., [Logback](http://logback.qos.ch/)) for logging to work.
 
-As TQL is not part of the predefined set of Sesame [`RDFFormat`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFFormat.html)s, it is necessary to register it.
-This can be done either via [`RDFFormat#register()`](http://rdf4j.org/sesame/2.7/apidocs/org/openrdf/rio/RDFFormat.html#register\(org.openrdf.rio.RDFFormat\)), passing the [`TQL.FORMAT`](apidocs/eu/fbk/rdfpro/tql/TQL.html#FORMAT) constant, or by simply calling method [`TQL.register()`](apidocs/eu/fbk/rdfpro/tql/TQL.html#register--) on the `TQL` class, which ensures that multiple calls will result in a single registration.
+Constant [`TQL.FORMAT`](apidocs/eu/fbk/rdfpro/tql/TQL.html#FORMAT) can be used to refer to the TQL format, e.g., when creating a parser or writer, as TQL is not part of the predefined set of RDF4J [`RDFFormat`s](http://docs.rdf4j.org/javadoc/latest/org/eclipse/rdf4j/rio/RDFFormat.html). Differently from the past, it is no more necessary to register the TQL format, as its supporting classes are automatically detected and loaded by RDF4J via the Java [ServiceLoader](https://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html) mechanism. 
 
-A note on performances. The TQL parser and writer operate by reading / writing a character at a time, relying on the underlying stream for proper buffering. For optimal performances, make sure to use them with a [`BufferedReader`](http://docs.oracle.com/javase/7/docs/api/java/io/BufferedReader.html) or [`BufferedWriter`](http://docs.oracle.com/javase/7/docs/api/java/io/BufferedWriter.html), or, better, with their corresponding unsynchronized variants produced by methods `IO.buffer()` of the [`IO`](apidocs/eu/fbk/rdfpro/util/IO.html) utility class.
+A note on performance. The TQL parser and writer operate by reading / writing a character at a time, relying on the underlying stream for proper buffering. For optimal performances, make sure to use them with a [`BufferedReader`](http://docs.oracle.com/javase/8/docs/api/java/io/BufferedReader.html) or [`BufferedWriter`](http://docs.oracle.com/javase/8/docs/api/java/io/BufferedWriter.html), or, better, with their corresponding unsynchronized variants produced by methods `IO.buffer()` of the [`IO`](apidocs/eu/fbk/rdfpro/util/IO.html) utility class.

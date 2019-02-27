@@ -59,28 +59,30 @@ Bash script [process_single.sh](example/process_single.sh) can be used to issue 
 
 ##### Step 1 Filtering
 
-    rdfpro { @read metadata.trig , \
-             @read vocab/* @transform '=c <graph:vocab>' , \
-             @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
-                 fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
-                 <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
-                 <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
-                 <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
-                 <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*> <http://rdf.freebase.com/ns/community.*>
-                 =c <graph:freebase>' , \
-             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
-                 @transform '-p gn:childrenFeatures gn:locationMap
-                     gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
-                     gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
-                     rdf:type =c <graph:geonames>' , \
-             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
-               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
-               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
-               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
-                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
-           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
-           @transform '-o "" ""@en ""@es ""@it ""@nl' \
-           @write filtered.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro { @read metadata.trig , \
+         @read vocab/* @transform '=c <graph:vocab>' , \
+         @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
+             fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
+             <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
+             <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
+             <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
+             <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*> <http://rdf.freebase.com/ns/community.*>
+             =c <graph:freebase>' , \
+         @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+             @transform '-p gn:childrenFeatures gn:locationMap
+                 gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
+                 gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
+                 rdf:type =c <graph:geonames>' , \
+         { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+           @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+           @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+           @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+             @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+       @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+       @transform '-o "" ""@en ""@es ""@it ""@nl' \
+       @write filtered.tql.gz
+]]></pre>
 
 Downloaded dump files are filtered to extract desired RDF quads and place them in separate graphs to track provenance.
 A [metadata file](example/metadata.trig) is added to link each graph to the URI of the associated source (e.g. Freebase).
@@ -95,43 +97,53 @@ Some notes on the implemented filtering rules:
 
 ##### Step 2 TBox extraction
 
-    rdfpro @read filtered.tql.gz \
-           @tbox \
-           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-           @write tbox.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read filtered.tql.gz \
+       @tbox \
+       @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+       @write tbox.tql.gz
+]]></pre>
 
 TBox quads are extracted from filtered data and stored, filtering out unwanted top level classes (`owl:Thing`, `schema:Thing`, `foaf:Document`) and vocabulary alignments (to [`bibo`](http://purl.org/ontology/bibo/) and [`con`](http://www.w3.org/2000/10/swap/pim/contact#) terms and `dc:subject`).
 
 ##### Step 3 Smushing
 
-    rdfpro @read filtered.tql.gz \
-           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
-                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
-           @write smushed.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read filtered.tql.gz \
+       @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
+              '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
+       @write smushed.tql.gz
+]]></pre>
 
 Filtered data is smushed so to use canonical URIs for each `owl:sameAs` equivalence class, producing an intermediate smushed file. Note the specification of a ranked list of namespaces for selecting the canonical URIs.
 
 ##### Step 4 Inference
 
-    rdfpro @read smushed.tql.gz \
-           @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
-           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-           @write inferred.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read smushed.tql.gz \
+       @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
+       @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+       @write inferred.tql.gz
+]]></pre>
 
 The deductive closure of smushed data is computed and saved, using the extracted TBox and excluding RDFS rules `rdfs4a`, `rdfs4b` and `rdfs8` (and keeping the remaining ones) to avoid inferring uninformative `X rdf:type rdfs:Resource` quads.
 The closed TBox is placed in graph `<graph:vocab>`. A further filtering is done to be sure that no unwanted triple is present in the result dataset due to inference.
 
 ##### Step 5 Merging
 
-    rdfpro @read inferred.tql.gz \
-           @unique -m \
-           @write dataset.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read inferred.tql.gz \
+       @unique -m \
+       @write dataset.tql.gz
+]]></pre>
 
 Quads with the same subject, predicate and object are merged and placed in a graph linked to the original sources to track provenance (note the use of the `-m` option).
 
 ##### Step 6 Statistics extraction
 
-    rdfpro { @read tbox.tql.gz , @read dataset.tql.gz @stats } @write statistics.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro { @read tbox.tql.gz , @read dataset.tql.gz @stats } @write statistics.tql.gz
+]]></pre>
 
 VOID statistics are extracted and merged with TBox data, forming an annotated ontology that documents the produced dataset.
 
@@ -141,44 +153,48 @@ VOID statistics are extracted and merged with TBox data, forming an annotated on
 The 6 steps previously listed can be also aggregated to reduce overhead for writing and reading back intermediate files, exploiting RDFpro capability to arbitrarily compose processors and write intermediate results.
 In particular, steps 1-2 can be aggregated as follows:
 
-    rdfpro { @read metadata.trig , \
-             @read vocab/* @transform '=c <graph:vocab>' , \
-             @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
-                 fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
-                 <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
-                 <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
-                 <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
-                 <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*>  <http://rdf.freebase.com/ns/community.*>
-                 =c <graph:freebase>' , \
-             @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
-                 @transform '-p gn:childrenFeatures gn:locationMap
-                     gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
-                     gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
-                     rdf:type =c <graph:geonames>' , \
-             { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
-               @read dbp_es/* @transform '=c <graph:dbp_es>' , \
-               @read dbp_it/* @transform '=c <graph:dbp_it>' , \
-               @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
-                 @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
-           @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
-           @transform '-o "" ""@en ""@es ""@it ""@nl' \
-           @write filtered.tql.gz \
-           @tbox \
-           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-           @write tbox.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro { @read metadata.trig , \
+         @read vocab/* @transform '=c <graph:vocab>' , \
+         @read freebase/* @transform '-spo fb:common.topic fb:common.topic.article fb:common.topic.notable_for
+             fb:common.topic.notable_types fb:common.topic.topic_equivalent_webpage <http://rdf.freebase.com/key/*>
+             <http://rdf.freebase.com/ns/common.notable_for*> <http://rdf.freebase.com/ns/common.document*>
+             <http://rdf.freebase.com/ns/type.*> <http://rdf.freebase.com/ns/user.*> <http://rdf.freebase.com/ns/base.*>
+             <http://rdf.freebase.com/ns/freebase.*> <http://rdf.freebase.com/ns/dataworld.*>
+             <http://rdf.freebase.com/ns/pipeline.*> <http://rdf.freebase.com/ns/atom.*>  <http://rdf.freebase.com/ns/community.*>
+             =c <graph:freebase>' , \
+         @read geonames/*.rdf .geonames:geonames/all-geonames-rdf.zip \
+             @transform '-p gn:childrenFeatures gn:locationMap
+                 gn:nearbyFeatures gn:neighbouringFeatures gn:countryCode
+                 gn:parentFeature gn:wikipediaArticle rdfs:isDefinedBy
+                 rdf:type =c <graph:geonames>' , \
+         { @read dbp_en/* @transform '=c <graph:dbp_en>' , \
+           @read dbp_es/* @transform '=c <graph:dbp_es>' , \
+           @read dbp_it/* @transform '=c <graph:dbp_it>' , \
+           @read dbp_nl/* @transform '=c <graph:dbp_nl>' } \
+             @transform '-o bibo:* -p dc:rights dc:language foaf:primaryTopic' } \
+       @transform '+o <*> _:* * *^^xsd:* *@en *@es *@it *@nl' \
+       @transform '-o "" ""@en ""@es ""@it ""@nl' \
+       @write filtered.tql.gz \
+       @tbox \
+       @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+       @write tbox.tql.gz
+]]></pre>
 
 Similarly, steps 3-6 can be aggregated in a single macro-step:
 
-    rdfpro @read filtered.tql.gz \
-           @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
-                  '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
-           @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
-           @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
-           @unique -m \
-           @write dataset.tql.gz \
-           @stats \
-           @read tbox.tql.gz \
-           @write statistics.tql.gz
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro @read filtered.tql.gz \
+       @smush '<http://dbpedia>' '<http://it.dbpedia>' '<http://es.dbpedia>' \
+              '<http://nl.dbpedia>' '<http://rdf.freebase.com>' '<http://sws.geonames.org>' \
+       @rdfs -c '<graph:vocab>' -e rdfs4a,rdfs4b,rdfs8 -d tbox.tql.gz \
+       @transform '-o owl:Thing schema:Thing foaf:Document bibo:* con:* -p dc:subject foaf:page dct:relation bibo:* con:*' \
+       @unique -m \
+       @write dataset.tql.gz \
+       @stats \
+       @read tbox.tql.gz \
+       @write statistics.tql.gz
+]]></pre>
 
 Bash script [process_aggregated.sh](example/process_aggregated.sh) can be used to issue these two commands.
 

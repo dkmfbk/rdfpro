@@ -27,7 +27,9 @@ RDFpro usage
 
 The command line tool can be invoked using the `rdfpro` script. Its syntax is:
 
-    rdfpro -v | -h | [-V] SPEC
+<pre class="prettyprint lang-sh"><![CDATA[
+rdfpro -v | -h | [-V] SPEC
+]]></pre>
 
 where options -v and -h display respectively the tool version and its online help text, while `SPEC` is the specification of the RDF processing pipeline that is built and executed by the tool; option -V enables the 'verbose' mode where additional debugging information is logged.
 
@@ -70,7 +72,9 @@ The builtin processors `@read`, `@write`, `@query` and `@update` allow to move d
 
 #### <a class="anchor" id="read"></a> @read
 
-    @read|@r [-b BASE] [-w] URL...
+<pre class="prettyprint lang-sh"><![CDATA[
+@read|@r [-b BASE] [-w] URL...
+]]></pre>
 
 Reads quads from one or more files, injecting them in the input stream to produce the emitted output stream.
 Multiple files are read in parallel and multiple threads are used to parse files that use a line-oriented RDF syntax (NTriples, NQuads, TQL).
