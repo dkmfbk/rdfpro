@@ -486,7 +486,7 @@
 		<site-root>${site.root}</site-root>
 		<rdfpro-version>${project.version}</rdfpro-version>
 		<rdfpro-version-released>0.7</rdfpro-version-released>
-		<rdf4j-version>2.4.1</rdf4j-version>
+		<rdf4j-version>2.5.2</rdf4j-version>
 		<semargl-jsonld-version>0.7</semargl-jsonld-version>
 		<guava-version>18.0</guava-version> <!-- 27.0.1-jre latest, 18.0 used in RDF4J -->
 		<slf4j-version>1.7.10</slf4j-version> <!-- 1.7.25 latest, 1.7.10 used in RDF4J -->

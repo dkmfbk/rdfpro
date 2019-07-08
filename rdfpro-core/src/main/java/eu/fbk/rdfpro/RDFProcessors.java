@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -182,6 +183,19 @@ public final class RDFProcessors {
             final String[] locations = options.getPositionalArgs(String.class)
                     .toArray(new String[0]);
             return RDFProcessors.write(null, chunkSize, locations);
+        }
+
+        case "nop": {
+            Options.parse("", args);
+            return RDFProcessors.IDENTITY;
+        }
+
+        case "pseudoclass": {
+            final Options options = Options.parse("n!|i!|c!", args);
+            final String namespace = options.getOptionArg("n", String.class);
+            final Integer minInstances = options.getOptionArg("i", Integer.class);
+            final Integer maxClasses = options.getOptionArg("c", Integer.class);
+            return RDFProcessors.pseudoClass(namespace, minInstances, maxClasses);
         }
 
         case "tsv": {
@@ -909,6 +923,14 @@ public final class RDFProcessors {
             }
 
         };
+    }
+
+    public static RDFProcessor pseudoClass(@Nullable final String namespace,
+            @Nullable final Integer minInstances, @Nullable final Integer maxClasses) {
+
+        Preconditions.checkArgument(minInstances == null || minInstances >= 0);
+        Preconditions.checkArgument(maxClasses == null || maxClasses >= 0);
+        return new ProcessorPseudoClass(namespace, minInstances, maxClasses);
     }
 
     public static RDFProcessor tsv(@Nullable final Mapper mapper, final String query,
