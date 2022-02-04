@@ -155,7 +155,7 @@
     </build>
 
     <properties>
-        <site.root>http://rdfpro.fbk.eu/</site.root>
+        <site.root>https://rdfpro.fbk.eu/</site.root>
         <rdfpro-version>${project.version}</rdfpro-version>
     </properties>
 

@@ -41,9 +41,9 @@
 
         <menu name="Maven Reports" ref="reports" inherit="top"/>
 
-        <menu ref="modules" inherit="top"/>
+        <!-- <menu ref="modules" inherit="top"/> -->
 
-        <menu ref="parent" inherit="top"/>
+        <!-- <menu ref="parent" inherit="top"/> -->
 
         <menu name="Links">
             <item name="GitHub project" href="https://github.com/dkmfbk/rdfpro"/>
@@ -88,7 +88,8 @@
               <tocTopMax>6</tocTopMax>
               <tocTopFlatten>false</tocTopFlatten>
             -->
-            <topNav>About|Tool|Libraries|Maven Reports|Modules|Parent Project|Links</topNav>
+            <!-- <topNav>About|Tool|Libraries|Maven Reports|Modules|Parent Project|Links</topNav> -->
+            <topNav>About|Tool|Libraries|Maven Reports|Links</topNav>
 
             <bottomNav maxSpan="8">
                 <column>About</column>
