@@ -17,7 +17,6 @@
 		<link href="./css/docs.css" rel="stylesheet" />
 		<link href="./css/reflow-skin.css" rel="stylesheet" />
 
-		<link href="http://yandex.st/highlightjs/7.5/styles/googlecode.min.css" rel="stylesheet" />
 
 		<link href="./css/lightbox.css" rel="stylesheet" />
 
@@ -33,6 +32,11 @@
 		
 <link rel="stylesheet" href="https://rdfpro.fbk.eu//css/custom.css"/>
 <link rel="icon" href="https://rdfpro.fbk.eu//images/rdfpro-150.png" type="image/png"/>
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://yandex.st/highlightjs/7.5/styles/googlecode.min.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script src="https://yandex.st/highlightjs/7.5/highlight.min.js"></script>
 	</head>
 
 	<body class="page-plugin-updates-report project-rdfpro" data-spy="scroll" data-offset="60" data-target="#toc-scroll-target">
@@ -148,7 +152,7 @@
   <h2 id="Overview">Overview</h2>
  </div> 
  <p>This report summarizes newer versions that may be available for your project's various plugins.</p> 
- <table border="0" class="bodyTable table table-striped table-hover"> 
+ <table border="0" class="bodyTable"> 
   <tbody> 
    <tr class="a"> 
     <td><i class="icon-ok"></i></td> 
@@ -184,34 +188,19 @@
  </table> 
  <div class="section"> 
   <h3 id="Plugin_Management">Plugin Management</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th>Status</th> 
-     <th>Group Id</th> 
-     <th>Artifact Id</th> 
-     <th>Current Version</th> 
-     <th>Next Version</th> 
-     <th>Next Incremental</th> 
-     <th>Next Minor</th> 
-     <th>Next Major</th> 
-     <th>Dependency status</th> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th>Status</th> 
-     <th>Group Id</th> 
-     <th>Artifact Id</th> 
-     <th>Current Version</th> 
-     <th>Next Version</th> 
-     <th>Next Incremental</th> 
-     <th>Next Minor</th> 
-     <th>Next Major</th> 
-     <th>Dependency status</th> 
-    </tr> 
-   </thead> 
+  <table border="0" class="bodyTable"> 
    <tbody> 
+    <tr class="a"> 
+     <th>Status</th> 
+     <th>Group Id</th> 
+     <th>Artifact Id</th> 
+     <th>Current Version</th> 
+     <th>Next Version</th> 
+     <th>Next Incremental</th> 
+     <th>Next Minor</th> 
+     <th>Next Major</th> 
+     <th>Dependency status</th> 
+    </tr> 
     <tr class="b"> 
      <td><i class="icon-ok"></i></td> 
      <td>com.coderplus.maven.plugins</td> 
@@ -531,6 +520,17 @@
      <td></td> 
      <td><i class="icon-ok"></i></td> 
     </tr> 
+    <tr class="a"> 
+     <th>Status</th> 
+     <th>Group Id</th> 
+     <th>Artifact Id</th> 
+     <th>Current Version</th> 
+     <th>Next Version</th> 
+     <th>Next Incremental</th> 
+     <th>Next Minor</th> 
+     <th>Next Major</th> 
+     <th>Dependency status</th> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
@@ -544,731 +544,527 @@
  <p></p> 
  <div class="section"> 
   <h3 id="Plugin_com.coderplus.maven.plugins:copy-rename-maven-plugin">Plugin com.coderplus.maven.plugins:copy-rename-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Current Version</th> 
-     <td>1.0.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Artifact Id</th> 
-     <td>copy-rename-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Group Id</th> 
-     <td>com.coderplus.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="b"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="a"> 
+     <th width="80%">Group Id</th> 
+     <td>com.coderplus.maven.plugins</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Artifact Id</th> 
+     <td>copy-rename-maven-plugin</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Current Version</th> 
+     <td>1.0.1</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-antrun-plugin">Plugin org.apache.maven.plugins:maven-antrun-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>1.8</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-antrun-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-antrun-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>1.8</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-assembly-plugin">Plugin org.apache.maven.plugins:maven-assembly-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.5.5</b>&nbsp;<i>Next Incremental</i><br /><b>2.6</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.5.4</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-assembly-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-assembly-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.5.4</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.5.5</b>&nbsp;<i>Next Incremental</i><br /><b>2.6</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-changelog-plugin">Plugin org.apache.maven.plugins:maven-changelog-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.3</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-changelog-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-changelog-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.3</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-checkstyle-plugin">Plugin org.apache.maven.plugins:maven-checkstyle-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.15</b>&nbsp;<i>Next Minor</i><br />2.16<br /><b>2.17</b>&nbsp;<i>Latest Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.14</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-checkstyle-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-checkstyle-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.14</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.15</b>&nbsp;<i>Next Minor</i><br />2.16<br /><b>2.17</b>&nbsp;<i>Latest Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-clean-plugin">Plugin org.apache.maven.plugins:maven-clean-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.1.0</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.6.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-clean-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer major version available. Major updates are rarely passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-clean-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.6.1</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.1.0</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-compiler-plugin">Plugin org.apache.maven.plugins:maven-compiler-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.5</b>&nbsp;<i>Next Minor</i><br />3.5.1<br />3.6.0<br />3.6.1<br />3.6.2<br />3.7.0<br /><b>3.8.0</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>3.3</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-compiler-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-compiler-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>3.3</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.5</b>&nbsp;<i>Next Minor</i><br />3.5.1<br />3.6.0<br />3.6.1<br />3.6.2<br />3.7.0<br /><b>3.8.0</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-dependency-plugin">Plugin org.apache.maven.plugins:maven-dependency-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.0.1<br />3.0.2<br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.10</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-dependency-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer major version available. Major updates are rarely passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-dependency-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.10</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.0.1<br />3.0.2<br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-deploy-plugin">Plugin org.apache.maven.plugins:maven-deploy-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.8.2</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-deploy-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-deploy-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.8.2</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-eclipse-plugin">Plugin org.apache.maven.plugins:maven-eclipse-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.10</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-eclipse-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-eclipse-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.10</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-gpg-plugin">Plugin org.apache.maven.plugins:maven-gpg-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>1.6</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-gpg-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-gpg-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>1.6</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-install-plugin">Plugin org.apache.maven.plugins:maven-install-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.5.2</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-install-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-install-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.5.2</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-jar-plugin">Plugin org.apache.maven.plugins:maven-jar-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.0.1<br />3.0.2<br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.6</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-jar-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer major version available. Major updates are rarely passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-jar-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.6</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.0.1<br />3.0.2<br />3.1.0<br /><b>3.1.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-javadoc-plugin">Plugin org.apache.maven.plugins:maven-javadoc-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.10.2</b>&nbsp;<i>Next Incremental</i><br />2.10.3<br /><b>2.10.4</b>&nbsp;<i>Latest Incremental</i><br /><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.0.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.10.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-javadoc-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-javadoc-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.10.1</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.10.2</b>&nbsp;<i>Next Incremental</i><br />2.10.3<br /><b>2.10.4</b>&nbsp;<i>Latest Incremental</i><br /><b>3.0.0-M1</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.0.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-jxr-plugin">Plugin org.apache.maven.plugins:maven-jxr-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.5</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-jxr-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer major version available. Major updates are rarely passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-jxr-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.5</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-pmd-plugin">Plugin org.apache.maven.plugins:maven-pmd-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.6</b>&nbsp;<i>Next Minor</i><br />3.7<br />3.8<br />3.9.0<br />3.10.0<br /><b>3.11.0</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>3.5</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-pmd-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-pmd-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>3.5</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.6</b>&nbsp;<i>Next Minor</i><br />3.7<br />3.8<br />3.9.0<br />3.10.0<br /><b>3.11.0</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-project-info-reports-plugin">Plugin org.apache.maven.plugins:maven-project-info-reports-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.8.1</b>&nbsp;<i>Next Incremental</i><br /><b>2.9</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.8</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-project-info-reports-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-project-info-reports-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.8</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.8.1</b>&nbsp;<i>Next Incremental</i><br /><b>2.9</b>&nbsp;<i>Next Minor</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-release-plugin">Plugin org.apache.maven.plugins:maven-release-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.5.3</b>&nbsp;<i>Next Incremental</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.5.2</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-release-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-release-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.5.2</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.5.3</b>&nbsp;<i>Next Incremental</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-shade-plugin">Plugin org.apache.maven.plugins:maven-shade-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.4.1</b>&nbsp;<i>Next Incremental</i><br />2.4.2<br /><b>2.4.3</b>&nbsp;<i>Latest Incremental</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.1.0<br />3.1.1<br />3.2.0<br /><b>3.2.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.4</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-shade-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-shade-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.4</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.4.1</b>&nbsp;<i>Next Incremental</i><br />2.4.2<br /><b>2.4.3</b>&nbsp;<i>Latest Incremental</i><br /><b>3.0.0</b>&nbsp;<i>Next Major</i><br />3.1.0<br />3.1.1<br />3.2.0<br /><b>3.2.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-site-plugin">Plugin org.apache.maven.plugins:maven-site-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.5</b>&nbsp;<i>Next Minor</i><br />3.5.1<br />3.6<br />3.7<br /><b>3.7.1</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>3.4</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-site-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-site-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>3.4</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.5</b>&nbsp;<i>Next Minor</i><br />3.5.1<br />3.6<br />3.7<br /><b>3.7.1</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
   <div class="section"> 
    <h4 id="Dependencies_of_org.apache.maven.plugins:maven-site-plugin">Dependencies of org.apache.maven.plugins:maven-site-plugin</h4> 
-   <table border="0" class="bodyTable table table-striped table-hover"> 
-    <thead> 
-     <tr class="b"> 
-      <th>Status</th> 
-      <th>Group Id</th> 
-      <th>Artifact Id</th> 
-      <th>Current Version</th> 
-      <th>Classifier</th> 
-      <th>Type</th> 
-      <th>Next Version</th> 
-      <th>Next Incremental</th> 
-      <th>Next Minor</th> 
-      <th>Next Major</th> 
-     </tr> 
-    </thead> 
-    <thead> 
+   <table border="0" class="bodyTable"> 
+    <tbody> 
      <tr class="a"> 
       <th>Status</th> 
       <th>Group Id</th> 
@@ -1281,8 +1077,6 @@
       <th>Next Minor</th> 
       <th>Next Major</th> 
      </tr> 
-    </thead> 
-    <tbody> 
      <tr class="b"> 
       <td><i class="icon-ok"></i></td> 
       <td>lt.velykis.maven.skins</td> 
@@ -1330,513 +1124,387 @@
       <td></td> 
       <td></td> 
       <td></td> 
+     </tr> 
+     <tr class="b"> 
+      <th>Status</th> 
+      <th>Group Id</th> 
+      <th>Artifact Id</th> 
+      <th>Current Version</th> 
+      <th>Classifier</th> 
+      <th>Type</th> 
+      <th>Next Version</th> 
+      <th>Next Incremental</th> 
+      <th>Next Minor</th> 
+      <th>Next Major</th> 
      </tr> 
     </tbody> 
    </table> 
   </div> 
   <div class="section"> 
    <h4 id="Dependency_lt.velykis.maven.skins:reflow-velocity-tools">Dependency lt.velykis.maven.skins:reflow-velocity-tools</h4> 
-   <table border="0" class="bodyTable table table-striped table-hover"> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Type</th> 
-      <td>jar</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Classifier</th> 
-      <td></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Current Version</th> 
-      <td>1.1.1</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Artifact Id</th> 
-      <td>reflow-velocity-tools</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Group Id</th> 
-      <td>lt.velykis.maven.skins</td> 
-     </tr> 
-    </thead> 
-    <thead> 
+   <table border="0" class="bodyTable"> 
+    <tbody> 
      <tr class="a"> 
       <th width="80%">Status</th> 
       <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
      </tr> 
-    </thead> 
-    <tbody> 
+     <tr class="b"> 
+      <th width="80%">Group Id</th> 
+      <td>lt.velykis.maven.skins</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Artifact Id</th> 
+      <td>reflow-velocity-tools</td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Current Version</th> 
+      <td>1.1.1</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Classifier</th> 
+      <td></td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Type</th> 
+      <td>jar</td> 
+     </tr> 
     </tbody> 
    </table> 
   </div> 
   <div class="section"> 
    <h4 id="Dependency_org.apache.maven.doxia:doxia-module-markdown">Dependency org.apache.maven.doxia:doxia-module-markdown</h4> 
-   <table border="0" class="bodyTable table table-striped table-hover"> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Newer versions</th> 
-      <td><b>1.7</b>&nbsp;<i>Next Minor</i><br />1.8<br />1.9<br />1.9.1<br />1.10<br />1.11.1<br /><b>2.0.0-M1</b>&nbsp;<i>Latest Minor</i></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Type</th> 
-      <td>jar</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Classifier</th> 
-      <td></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Current Version</th> 
-      <td>1.6</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Artifact Id</th> 
-      <td>doxia-module-markdown</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Group Id</th> 
-      <td>org.apache.maven.doxia</td> 
-     </tr> 
-    </thead> 
-    <thead> 
+   <table border="0" class="bodyTable"> 
+    <tbody> 
      <tr class="a"> 
       <th width="80%">Status</th> 
       <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
      </tr> 
-    </thead> 
-    <tbody> 
+     <tr class="b"> 
+      <th width="80%">Group Id</th> 
+      <td>org.apache.maven.doxia</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Artifact Id</th> 
+      <td>doxia-module-markdown</td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Current Version</th> 
+      <td>1.6</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Classifier</th> 
+      <td></td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Type</th> 
+      <td>jar</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Newer versions</th> 
+      <td><b>1.7</b>&nbsp;<i>Next Minor</i><br />1.8<br />1.9<br />1.9.1<br />1.10<br />1.11.1<br /><b>2.0.0-M1</b>&nbsp;<i>Latest Minor</i></td> 
+     </tr> 
     </tbody> 
    </table> 
   </div> 
   <div class="section"> 
    <h4 id="Dependency_org.apache.maven.doxia:doxia-module-xhtml">Dependency org.apache.maven.doxia:doxia-module-xhtml</h4> 
-   <table border="0" class="bodyTable table table-striped table-hover"> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Newer versions</th> 
-      <td><b>1.7</b>&nbsp;<i>Next Minor</i><br />1.8<br />1.9<br />1.9.1<br />1.10<br />1.11.1<br /><b>2.0.0-M1</b>&nbsp;<i>Latest Minor</i></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Type</th> 
-      <td>jar</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Classifier</th> 
-      <td></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Current Version</th> 
-      <td>1.6</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Artifact Id</th> 
-      <td>doxia-module-xhtml</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Group Id</th> 
-      <td>org.apache.maven.doxia</td> 
-     </tr> 
-    </thead> 
-    <thead> 
+   <table border="0" class="bodyTable"> 
+    <tbody> 
      <tr class="a"> 
       <th width="80%">Status</th> 
       <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
      </tr> 
-    </thead> 
-    <tbody> 
+     <tr class="b"> 
+      <th width="80%">Group Id</th> 
+      <td>org.apache.maven.doxia</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Artifact Id</th> 
+      <td>doxia-module-xhtml</td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Current Version</th> 
+      <td>1.6</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Classifier</th> 
+      <td></td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Type</th> 
+      <td>jar</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Newer versions</th> 
+      <td><b>1.7</b>&nbsp;<i>Next Minor</i><br />1.8<br />1.9<br />1.9.1<br />1.10<br />1.11.1<br /><b>2.0.0-M1</b>&nbsp;<i>Latest Minor</i></td> 
+     </tr> 
     </tbody> 
    </table> 
   </div> 
   <div class="section"> 
    <h4 id="Dependency_org.apache.velocity:velocity">Dependency org.apache.velocity:velocity</h4> 
-   <table border="0" class="bodyTable table table-striped table-hover"> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Type</th> 
-      <td>jar</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Classifier</th> 
-      <td></td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Current Version</th> 
-      <td>1.7</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="a"> 
-      <th width="80%">Artifact Id</th> 
-      <td>velocity</td> 
-     </tr> 
-    </thead> 
-    <thead> 
-     <tr class="b"> 
-      <th width="80%">Group Id</th> 
-      <td>org.apache.velocity</td> 
-     </tr> 
-    </thead> 
-    <thead> 
+   <table border="0" class="bodyTable"> 
+    <tbody> 
      <tr class="a"> 
       <th width="80%">Status</th> 
       <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
      </tr> 
-    </thead> 
-    <tbody> 
+     <tr class="b"> 
+      <th width="80%">Group Id</th> 
+      <td>org.apache.velocity</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Artifact Id</th> 
+      <td>velocity</td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Current Version</th> 
+      <td>1.7</td> 
+     </tr> 
+     <tr class="a"> 
+      <th width="80%">Classifier</th> 
+      <td></td> 
+     </tr> 
+     <tr class="b"> 
+      <th width="80%">Type</th> 
+      <td>jar</td> 
+     </tr> 
     </tbody> 
    </table> 
   </div> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-source-plugin">Plugin org.apache.maven.plugins:maven-source-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.0.1</b>&nbsp;<i>Latest Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.4</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-source-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer major version available. Major updates are rarely passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-source-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.4</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>3.0.0</b>&nbsp;<i>Next Major</i><br /><b>3.0.1</b>&nbsp;<i>Latest Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-surefire-plugin">Plugin org.apache.maven.plugins:maven-surefire-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.19</b>&nbsp;<i>Next Minor</i><br />2.19.1<br />2.20<br />2.20.1<br />2.21.0<br />2.22.0<br />2.22.1<br />3.0.0-M1<br />3.0.0-M2<br /><b>3.0.0-M3</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.18.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-surefire-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-surefire-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.18.1</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.19</b>&nbsp;<i>Next Minor</i><br />2.19.1<br />2.20<br />2.20.1<br />2.21.0<br />2.22.0<br />2.22.1<br />3.0.0-M1<br />3.0.0-M2<br /><b>3.0.0-M3</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.apache.maven.plugins:maven-surefire-report-plugin">Plugin org.apache.maven.plugins:maven-surefire-report-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.19</b>&nbsp;<i>Next Minor</i><br />2.19.1<br />2.20<br />2.20.1<br />2.21.0<br />2.22.0<br />2.22.1<br />3.0.0-M1<br />3.0.0-M2<br /><b>3.0.0-M3</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.18.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-surefire-report-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.apache.maven.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.apache.maven.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-surefire-report-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.18.1</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.19</b>&nbsp;<i>Next Minor</i><br />2.19.1<br />2.20<br />2.20.1<br />2.21.0<br />2.22.0<br />2.22.1<br />3.0.0-M1<br />3.0.0-M2<br /><b>3.0.0-M3</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.codehaus.enunciate:maven-enunciate-plugin">Plugin org.codehaus.enunciate:maven-enunciate-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>1.31</b>&nbsp;<i>Next Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>1.30.1</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>maven-enunciate-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.codehaus.enunciate</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.codehaus.enunciate</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>maven-enunciate-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>1.30.1</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>1.31</b>&nbsp;<i>Next Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.codehaus.mojo:jdepend-maven-plugin">Plugin org.codehaus.mojo:jdepend-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.0</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>jdepend-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.codehaus.mojo</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.codehaus.mojo</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>jdepend-maven-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.0</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.codehaus.mojo:license-maven-plugin">Plugin org.codehaus.mojo:license-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>1.9</b>&nbsp;<i>Next Minor</i><br />1.10<br />1.11<br />1.12<br />1.13<br />1.14<br />1.15<br />1.16<br />1.17<br />1.18<br />1.19<br /><b>1.20</b>&nbsp;<i>Latest Minor</i><br /><b>2.0.0</b>&nbsp;<i>Next Major</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>1.8</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>license-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.codehaus.mojo</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.codehaus.mojo</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>license-maven-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>1.8</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>1.9</b>&nbsp;<i>Next Minor</i><br />1.10<br />1.11<br />1.12<br />1.13<br />1.14<br />1.15<br />1.16<br />1.17<br />1.18<br />1.19<br /><b>1.20</b>&nbsp;<i>Latest Minor</i><br /><b>2.0.0</b>&nbsp;<i>Next Major</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.codehaus.mojo:taglist-maven-plugin">Plugin org.codehaus.mojo:taglist-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.4</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>taglist-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.codehaus.mojo</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-ok"></i>&nbsp;No newer versions available.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.codehaus.mojo</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>taglist-maven-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.4</td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.codehaus.mojo:versions-maven-plugin">Plugin org.codehaus.mojo:versions-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>2.3</b>&nbsp;<i>Next Minor</i><br />2.4<br />2.5<br />2.6<br /><b>2.7</b>&nbsp;<i>Latest Minor</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>2.2</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>versions-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.codehaus.mojo</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer minor version available. Minor updates are sometimes passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.codehaus.mojo</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>versions-maven-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>2.2</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>2.3</b>&nbsp;<i>Next Minor</i><br />2.4<br />2.5<br />2.6<br /><b>2.7</b>&nbsp;<i>Latest Minor</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
  <div class="section"> 
   <h3 id="Plugin_org.sonatype.plugins:nexus-staging-maven-plugin">Plugin org.sonatype.plugins:nexus-staging-maven-plugin</h3> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Newer versions</th> 
-     <td><b>1.6.6</b>&nbsp;<i>Next Incremental</i><br />1.6.7<br /><b>1.6.8</b>&nbsp;<i>Latest Incremental</i></td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Current Version</th> 
-     <td>1.6.5</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="a"> 
-     <th width="80%">Artifact Id</th> 
-     <td>nexus-staging-maven-plugin</td> 
-    </tr> 
-   </thead> 
-   <thead> 
-    <tr class="b"> 
-     <th width="80%">Group Id</th> 
-     <td>org.sonatype.plugins</td> 
-    </tr> 
-   </thead> 
-   <thead> 
+  <table border="0" class="bodyTable"> 
+   <tbody> 
     <tr class="a"> 
      <th width="80%">Status</th> 
      <td><i class="icon-warning-sign"></i>&nbsp;There is at least one newer incremental version available. Incremental updates are typically passive.</td> 
     </tr> 
-   </thead> 
-   <tbody> 
+    <tr class="b"> 
+     <th width="80%">Group Id</th> 
+     <td>org.sonatype.plugins</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Artifact Id</th> 
+     <td>nexus-staging-maven-plugin</td> 
+    </tr> 
+    <tr class="b"> 
+     <th width="80%">Current Version</th> 
+     <td>1.6.5</td> 
+    </tr> 
+    <tr class="a"> 
+     <th width="80%">Newer versions</th> 
+     <td><b>1.6.6</b>&nbsp;<i>Next Incremental</i><br />1.6.7<br /><b>1.6.8</b>&nbsp;<i>Latest Incremental</i></td> 
+    </tr> 
    </tbody> 
   </table> 
  </div> 
@@ -1971,7 +1639,6 @@
 
 	<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 	<script src="./js/lightbox.min.js"></script>
-	<script src="http://yandex.st/highlightjs/7.5/highlight.min.js"></script>
 	
 <div style="font: normal 14px/1.5em sans-serif !important;" id="dkmbar-container">
   <div id="dkmbar">

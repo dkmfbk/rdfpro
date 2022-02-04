@@ -17,7 +17,6 @@
 		<link href="./css/docs.css" rel="stylesheet" />
 		<link href="./css/reflow-skin.css" rel="stylesheet" />
 
-		<link href="http://yandex.st/highlightjs/7.5/styles/googlecode.min.css" rel="stylesheet" />
 
 		<link href="./css/lightbox.css" rel="stylesheet" />
 
@@ -33,6 +32,11 @@
 		
 <link rel="stylesheet" href="https://rdfpro.fbk.eu//css/custom.css"/>
 <link rel="icon" href="https://rdfpro.fbk.eu//images/rdfpro-150.png" type="image/png"/>
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://yandex.st/highlightjs/7.5/styles/googlecode.min.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script src="https://yandex.st/highlightjs/7.5/highlight.min.js"></script>
 	</head>
 
 	<body class="page-examples_sac project-rdfpro" data-spy="scroll" data-offset="60" data-target="#toc-scroll-target">
@@ -161,7 +165,7 @@
   <h3 id="Processing">Processing</h3> 
   <p>We assume the latest version of Freebase is available as file <tt>freebase_new.nt.gz</tt>, while a previous version is available as file <tt>freebase_old.nt.gz</tt>. The figures below show how to use RDFpro to extract TBox and VOID statistics (left figure) and to identify newly added triples (right figure) in the considered scenario:</p> 
   <div style="text-align: center; padding-top: 20px; padding-bottom: 20px"> 
-   <table border="0" class="bodyTable table table-striped table-hover" style="width=100%"> 
+   <table border="0" class="bodyTable" style="width=100%"> 
     <tbody> 
      <tr class="a"> 
       <td style="border: none; background-color: white!important; text-align: center"><img src="examples_sac/analysis1.png" alt="Dataset analysis processing steps" /></td> 
@@ -202,7 +206,7 @@ rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
     2. Statistics extraction   2788992097 29842317645 131222     1391663     7819
     1-2 Aggregated             2788992097 29842317645 365240     4149342     7784
     3. Comparison              5412372266 57895816562 338909781  3062713292  14207 --> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
+  <table border="0" class="bodyTable"> 
    <thead> 
     <tr class="a"> 
      <th rowspan="2">Task</th> 
@@ -309,7 +313,7 @@ rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
                                Quads      Size        Quads      Size
     1. Select entities         2788992097 29842317645 207758     867960      1467
     2. Extract quads           2789199855 29843185605 413908     5306945     2689 --> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
+  <table border="0" class="bodyTable"> 
    <thead> 
     <tr class="a"> 
      <th rowspan="2">Task</th> 
@@ -510,7 +514,7 @@ rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
     Step 5 - Deduplication     5657929231 52559464635 4031696443 34653266025 16759
     Steps 1-2 aggregated       3309523311 35230880150 3309849659 38426567593 6930
     Steps 3-5 aggregated       3309849659 38426567593 4031696443 34637997211 19557 --> 
-  <table border="0" class="bodyTable table table-striped table-hover"> 
+  <table border="0" class="bodyTable"> 
    <thead> 
     <tr class="a"> 
      <th rowspan="2">Step</th> 
@@ -734,7 +738,6 @@ rdfpro @read freebase_new.nt.gz @stats -t 100 @write stats.tql.gz
 
 	<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 	<script src="./js/lightbox.min.js"></script>
-	<script src="http://yandex.st/highlightjs/7.5/highlight.min.js"></script>
 	
 <div style="font: normal 14px/1.5em sans-serif !important;" id="dkmbar-container">
   <div id="dkmbar">
